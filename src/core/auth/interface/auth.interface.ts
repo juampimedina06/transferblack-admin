@@ -3,7 +3,10 @@ export type UserRole = 'passenger' | 'driver' | 'admin';
 export interface UserProfile {
   id: string;
   email: string;
-  roles?: UserRole[];
+  first_name?: string | null;
+  last_name?: string | null;
+  roles?: UserRole[] | string[];
+  status?: string;
 }
 
 export interface AuthTokens {
@@ -13,9 +16,11 @@ export interface AuthTokens {
 
 export interface AuthResponse {
   data: {
-    user: UserProfile; // Using "user" since the previous code had "user", although the other project had "profile". We will adapt to admin-web's current backend.
-    access_token: string;
-    refresh_token?: string;
+    profile: UserProfile;
+    tokens: {
+      access_token: string;
+      refresh_token?: string;
+    };
   };
 }
 

@@ -15,12 +15,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!authStorage.getAccessToken(),
   
   setSession: (authData: AuthResponse) => {
-    const { user, access_token, refresh_token } = authData.data;
+    const { profile, tokens } = authData.data;
 
-    authStorage.setTokens(access_token, refresh_token);
+    authStorage.setTokens(tokens.access_token, tokens.refresh_token);
     
     set({
-      user,
+      user: profile,
       isAuthenticated: true,
     });
   },

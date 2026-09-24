@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './presentation/screens/Login';
 import Dashboard from './presentation/screens/Dashboard';
+import TrackTrip from './presentation/screens/TrackTrip';
 import ProtectedRoute from './presentation/components/ProtectedRoute';
 import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
 
@@ -9,7 +10,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
-        
+
+        {/* Publica: la abre un invitado sin sesion desde un link de WhatsApp/email */}
+        <Route path="/track" element={<TrackTrip />} />
+
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
           <Route element={<PrivateLayout />}>

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './presentation/screens/Login';
 import Dashboard from './presentation/screens/Dashboard';
 import ProtectedRoute from './presentation/components/ProtectedRoute';
+import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
 
 function App() {
   return (
@@ -11,8 +12,19 @@ function App() {
         
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route element={<PrivateLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            {/* Rutas pendientes con placeholder */}
+            <Route path="/mapa" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/viajes" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/conductores" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/retiros" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/empresas" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/configuracion" element={<Navigate to="/dashboard" replace />} />
+            
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          </Route>
         </Route>
         
         {/* Catch all */}

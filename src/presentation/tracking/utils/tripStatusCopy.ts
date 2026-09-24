@@ -82,14 +82,18 @@ export function buildTripTimeline(trip: TripTracking): TripTimelineStep[] {
     { key: 'finished', label: 'Finalizado', status: 'completed', timestamp: trip.finishedAt },
   ];
 
+  // Un viaje finalizado no tiene paso "en curso": el ultimo tambien queda hecho.
+  const isFinished = trip.status === 'completed';
+
   return stepDefinitions.map(({ key, label, status, timestamp }) => {
     const stepIndex = STATUS_ORDER.indexOf(status);
+    const isCurrent = currentIndex >= 0 && currentIndex === stepIndex;
     return {
       key,
       label,
       timestamp,
-      isDone: currentIndex >= 0 && currentIndex > stepIndex,
-      isActive: currentIndex >= 0 && currentIndex === stepIndex,
+      isDone: (currentIndex >= 0 && currentIndex > stepIndex) || (isFinished && isCurrent),
+      isActive: isCurrent && !isFinished,
     };
   });
 }

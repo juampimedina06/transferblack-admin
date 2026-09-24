@@ -28,7 +28,13 @@ export function useElapsedLabel(isoTimestamp: string | null): string | null {
     return null;
   }
 
-  const elapsedSeconds = Math.max(0, Math.floor((now - new Date(isoTimestamp).getTime()) / 1000));
+  const timestampMs = new Date(isoTimestamp).getTime();
+
+  if (Number.isNaN(timestampMs)) {
+    return null;
+  }
+
+  const elapsedSeconds = Math.max(0, Math.floor((now - timestampMs) / 1000));
 
   if (elapsedSeconds < 60) {
     return `hace ${elapsedSeconds} s`;

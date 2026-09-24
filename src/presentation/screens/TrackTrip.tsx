@@ -58,14 +58,15 @@ export default function TrackTrip() {
 
         {token && isLoading && <TrackingSkeleton />}
 
-        {token && !isLoading && error instanceof TripTrackingError && error.status === 404 && (
+        {/* Con un viaje ya cargado, un sondeo fallido no tapa la pantalla: se sigue mostrando el ultimo dato. */}
+        {token && !isLoading && !trip && error instanceof TripTrackingError && error.status === 404 && (
           <ErrorState
             title="El enlace no es válido"
             description="El enlace no es válido o el viaje ya no está disponible."
           />
         )}
 
-        {token && !isLoading && error instanceof TripTrackingError && error.status !== 404 && (
+        {token && !isLoading && !trip && error instanceof TripTrackingError && error.status !== 404 && (
           <ErrorState
             title="No pudimos cargar el viaje"
             description={error.message}

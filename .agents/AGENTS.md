@@ -6,6 +6,14 @@
 - **Optimización y Accesibilidad:** Mantener HTML semántico, etiquetas descriptivas y rendimiento óptimo.
 - **Calidad de Código:** Favorecer código modular, limpio, testeable. No sacrificar solidez por velocidad.
 
+## Experiencia de Usuario (UX) — Hacerle la vida más fácil al usuario
+
+- **Reducir la Fricción:** El objetivo principal en cada pantalla es que el usuario (admin, conductor, etc.) entienda exactamente qué está pasando y qué tiene que hacer sin dudar.
+- **Anticipar Errores:** Si una acción no se puede realizar (ej. aprobar un conductor sin todos los documentos), la UI debe comunicarlo claramente _antes_ o _en el momento_ de intentarlo, explicando por qué y dando la solución (ej. "Falta agendar reunión").
+- **Estados Visibles y Dinámicos:** Evitar transiciones bruscas (como que algo desaparezca sin más). Usar feedback visual continuo (loaders, banners rojos de error, checks verdes, animaciones sutiles) para que el usuario nunca se pregunte "Qué pasó, funcionó mi click?".
+- **Guiar al Usuario:** Nunca lo dejes "atrapado" en un error de servidor incomprensible. Traducir siempre los errores técnicos a instrucciones humanas.
+- **En resumen:** Si tu diseño le requiere pensar de más al usuario para hacer su tarea diaria, hay que rediseñarlo. Siempre ponte en sus zapatos.
+
 ## Backend — solo lectura, nunca modificar
 
 - El proyecto de backend es `transferblack/backend`. El agente **nunca** modifica archivos de este repo (ni "arreglos rápidos", ni refactors, ni ajustes de tipos).

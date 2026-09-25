@@ -25,13 +25,19 @@ src/
 │   ├── api/               # Cliente Axios e interceptores centralizados (adminApi)
 │   ├── auth/              # Interfaces y acciones de autenticación
 │   ├── dashboard/         # Interfaces y acciones para métricas y KPIs
-│   └── drivers/           # Interfaces y acciones de gestión de conductores
+│   └── drivers/           # Interfaces y acciones de gestión y expediente de conductores
+│       ├── actions/       # Acciones atómicas de API (listado, detalle, documentos, reuniones)
+│       ├── interfaces/    # Contratos y tipos de datos de conductor, vehículos y legajos
+│       └── utils/         # Helpers de formateo y resolución de URLs de medios
 │
 ├── presentation/          # Capa de interfaz de usuario y estado visual
 │   ├── auth/store/        # Store de autenticación (Zustand con persistencia)
-│   ├── components/        # Layout principal (Header, Sidebar, PrivateLayout) y comunes
+│   ├── components/        # Layout principal y componentes base (Button, Input, Badge, Card, etc.)
 │   ├── dashboard/         # Componentes y hooks de métricas (KPIs, gráficos, skeletons)
-│   ├── drivers/           # Vistas, tablas, badges y hooks del módulo de conductores
+│   ├── drivers/           # Vistas, tablas, expediente, auditoría documental y modales
+│   │   ├── components/    # Subcomponentes (DriverDetail, DocumentCard, RejectionModal, Skeletons)
+│   │   └── hooks/         # Custom hooks de TanStack Query (useDrivers, useDriverDetail)
+│   ├── hooks/             # Hooks globales de UI y monitoreo (useServerHealth)
 │   ├── providers/         # Proveedores de contexto global (QueryProvider)
 │   ├── screens/           # Páginas completas (Login, Dashboard, DriversScreen)
 │   └── store/             # Store de interfaz de usuario (tema claro/oscuro, sidebar colapsable)
@@ -49,13 +55,25 @@ src/
   - Filtro dinámico por período (Hoy, Últimos 7 días, Últimos 30 días, Este mes).
   - Gráfico interactivo de actividad de viajes y cancelaciones (`ActivityChart`).
   - Skeletons de carga integrados para transiciones suaves.
-- **🚗 Directorio de Conductores**:
-  - Listado estructurado con paginación, filtros y búsqueda.
-  - Badges de estado visual con código de colores (Activo, Pendiente, Suspendido, Inactivo).
-  - Consulta y sincronización eficiente mediante TanStack Query.
-- **🎨 Sistema de UI y Temas**:
-  - Modo oscuro y modo claro conmutables y recordados en el navegador.
-  - Barra lateral colapsable con accesos rápidos y estado del servicio en vivo.
+- **🚗 Gestión y Expediente de Conductores**:
+  - **Directorio Principal**: listado paginado, búsqueda por nombre/documento y filtrado reactivo por estado.
+  - **Expediente Integral (`DriverDetailScreen`)**:
+    - Ficha completa del postulante/conductor: datos personales, licencia, antecedentes, vehículo y fecha de postulación.
+    - Skeletons de carga optimizados (`DriverDetailSkeleton`).
+  - **Auditoría Documental Interactiva**:
+    - Inspección visual de documentos de conductor y vehículo (`DocumentCard`) con preview y visor ampliado.
+    - Aprobación inmediata y rechazo motivado mediante modal estructurado (`RejectionModal`).
+    - Detección visual automática de documentación vencida o próxima a expirar.
+    - Mutaciones optimistas con rollback automático en caso de falla de red.
+  - **Coordinación y Cierre de Entrevistas**:
+    - Agendamiento de reunión presencial con validación de requisitos previos (bloqueo si restan documentos pendientes).
+    - Gestión del ciclo de vida de la entrevista: `completed`, `no_show` o `cancelled` con notas del administrador.
+  - **Resolución de Legajo**:
+    - Aprobación o rechazo definitivo del legajo del conductor con sincronización en tiempo real vía TanStack Query.
+- **🎨 Sistema de Diseño y UI**:
+  - Soporte completo de temas Claro y Oscuro con tokens Tailwind armonizados.
+  - Biblioteca de componentes base accesibles y reutilizables (`Button`, `Input`, `Textarea`, `Badge`, `Card`, `AnimatedNumber`).
+  - Monitoreo en vivo del estado del backend (`useServerHealth`).
 
 ## 🛠 Instalación y Uso
 

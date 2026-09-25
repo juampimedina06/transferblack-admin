@@ -36,3 +36,24 @@ adminApi.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export const extractApiErrorMessage = (error: unknown, fallback = 'Ocurrió un error inesperado'): string => {
+  const err = error as {
+    response?: {
+      data?: {
+        error?: { message?: string } | string;
+        message?: string | string[];
+      };
+    };
+    message?: string;
+  };
+  const data = err?.response?.data;
+  if (!data) return err?.message || fallback;
+  if (typeof data?.error === 'object' && data.error?.message) return data.error.message;
+  if (data?.message) {
+    if (Array.isArray(data.message)) return data.message.join('. ');
+    return data.message;
+  }
+  if (typeof data?.error === 'string') return data.error;
+  return fallback;
+};

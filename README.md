@@ -25,13 +25,19 @@ src/
 │   ├── api/               # Cliente Axios e interceptores centralizados (adminApi)
 │   ├── auth/              # Interfaces y acciones de autenticación
 │   ├── dashboard/         # Interfaces y acciones para métricas y KPIs
-│   └── drivers/           # Interfaces y acciones de gestión de conductores
+│   └── drivers/           # Interfaces y acciones de gestión y expediente de conductores
+│       ├── actions/       # Acciones atómicas de API (listado, detalle, documentos, reuniones)
+│       ├── interfaces/    # Contratos y tipos de datos de conductor, vehículos y legajos
+│       └── utils/         # Helpers de formateo y resolución de URLs de medios
 │
 ├── presentation/          # Capa de interfaz de usuario y estado visual
 │   ├── auth/store/        # Store de autenticación (Zustand con persistencia)
-│   ├── components/        # Layout principal (Header, Sidebar, PrivateLayout) y comunes
+│   ├── components/        # Layout principal y componentes base (Button, Input, Badge, Card, etc.)
 │   ├── dashboard/         # Componentes y hooks de métricas (KPIs, gráficos, skeletons)
-│   ├── drivers/           # Vistas, tablas, badges y hooks del módulo de conductores
+│   ├── drivers/           # Vistas, tablas, expediente, auditoría documental y modales
+│   │   ├── components/    # Subcomponentes (DriverDetail, DocumentCard, RejectionModal, Skeletons)
+│   │   └── hooks/         # Custom hooks de TanStack Query (useDrivers, useDriverDetail)
+│   ├── hooks/             # Hooks globales de UI y monitoreo (useServerHealth)
 │   ├── providers/         # Proveedores de contexto global (QueryProvider)
 │   ├── screens/           # Páginas completas (Login, Dashboard, DriversScreen)
 │   └── store/             # Store de interfaz de usuario (tema claro/oscuro, sidebar colapsable)
@@ -49,13 +55,25 @@ src/
   - Filtro dinámico por período (Hoy, Últimos 7 días, Últimos 30 días, Este mes).
   - Gráfico interactivo de actividad de viajes y cancelaciones (`ActivityChart`).
   - Skeletons de carga integrados para transiciones suaves.
-- **🚗 Directorio de Conductores**:
-  - Listado estructurado con paginación, filtros y búsqueda.
-  - Badges de estado visual con código de colores (Activo, Pendiente, Suspendido, Inactivo).
-  - Consulta y sincronización eficiente mediante TanStack Query.
-- **🎨 Sistema de UI y Temas**:
-  - Modo oscuro y modo claro conmutables y recordados en el navegador.
-  - Barra lateral colapsable con accesos rápidos y estado del servicio en vivo.
+- **🚗 Gestión y Expediente de Conductores**:
+  - **Directorio Principal**: listado paginado, búsqueda por nombre/documento y filtrado reactivo por estado.
+  - **Expediente Integral (`DriverDetailScreen`)**:
+    - Ficha completa del postulante/conductor: datos personales, licencia, antecedentes, vehículo y fecha de postulación.
+    - Skeletons de carga optimizados (`DriverDetailSkeleton`).
+  - **Auditoría Documental Interactiva**:
+    - Inspección visual de documentos de conductor y vehículo (`DocumentCard`) con preview y visor ampliado.
+    - Aprobación inmediata y rechazo motivado mediante modal estructurado (`RejectionModal`).
+    - Detección visual automática de documentación vencida o próxima a expirar.
+    - Mutaciones optimistas con rollback automático en caso de falla de red.
+  - **Coordinación y Cierre de Entrevistas**:
+    - Agendamiento de reunión presencial con validación de requisitos previos (bloqueo si restan documentos pendientes).
+    - Gestión del ciclo de vida de la entrevista: `completed`, `no_show` o `cancelled` con notas del administrador.
+  - **Resolución de Legajo**:
+    - Aprobación o rechazo definitivo del legajo del conductor con sincronización en tiempo real vía TanStack Query.
+- **🎨 Sistema de Diseño y UI**:
+  - Soporte completo de temas Claro y Oscuro con tokens Tailwind armonizados.
+  - Biblioteca de componentes base accesibles y reutilizables (`Button`, `Input`, `Textarea`, `Badge`, `Card`, `AnimatedNumber`).
+  - Monitoreo en vivo del estado del backend (`useServerHealth`).
 
 ## 🛠 Instalación y Uso
 
@@ -66,10 +84,18 @@ src/
    ```
 
 2. **Variables de entorno:**
+<<<<<<< HEAD
+   Crear un archivo `.env` en la raíz de `admin-web` basándose en `.env.example`:
+=======
    Crear un archivo `.env` en la raíz de `admin-web` a partir de `.env.example`:
+>>>>>>> origin/main
    ```env
-   VITE_API_URL=
+   VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
+   VITE_MAP_TILES_URL=
    ```
+   `VITE_API_URL` ya debe incluir el prefijo de version (`/api/v1`); todos los clientes HTTP del
+   panel arman sus rutas relativas a esa base. `VITE_MAP_TILES_URL` es opcional y solo la usa el
+   mapa de la pagina publica de seguimiento (ver mas abajo).
 
 3. **Ejecutar en modo desarrollo:**
    ```bash
@@ -81,7 +107,37 @@ src/
    ```bash
    npm run build
    ```
+## 🔐 Autenticación
 
+El panel está restringido al equipo de operaciones. El ingreso requiere credenciales con el rol de `admin`.
+- Al iniciar sesión, se validan los campos localmente con Zod.
+- Se hace un POST a `/auth/login` y, si es exitoso, el token se guarda en el `localStorage`.
+- El componente `ProtectedRoute` bloquea el acceso si no hay sesión o si el usuario no tiene el rol de administrador. Las rutas privadas son inaccesibles manualmente o mediante el historial si el usuario no cumple los requisitos.
+
+## 📍 Página pública de seguimiento (`/track`)
+
+Cuando alguien pide un viaje para un tercero sin cuenta (invitado), el backend le manda por email o
+WhatsApp un link con la forma `https://<dominio-del-panel>/track?token=<tracking_token>`. Esa ruta:
+
+- Vive **fuera** de `ProtectedRoute`, igual que `/login`: un navegador sin sesión de admin debe poder
+  verla, y no toca `useAuthStore` ni `authStorage` en ningún momento.
+- Consume `GET /rides/track/{token}` con `publicApi` (`src/core/api/publicApi.ts`), un cliente Axios
+  separado de `adminApi` que no agrega el `Authorization` del panel ni desloguea ante un 401 (ese
+  interceptor asume una sesión de admin que un invitado nunca tiene).
+- Sondea el viaje cada 5 segundos mientras está activo, y deja de hacerlo al llegar a un estado
+  terminal (`completed`/`cancelled`) o si el token ya no existe (`404`).
+
+Para que el link funcione:
+
+1. El backend debe tener `TRIP_TRACKING_URL=https://<dominio-del-panel>/track` apuntando al origen
+   donde se despliega este panel.
+2. Ese mismo origen tiene que estar en `CORS_ALLOWED_ORIGINS` del backend, o el navegador del
+   invitado va a bloquear la llamada a `GET /rides/track/{token}`.
+3. El hosting que sirva el panel necesita una regla de *rewrite* de SPA (`/* → /index.html`), porque
+   `/track?token=...` se abre como entrada directa (desde el link, no navegando dentro de la app) y
+   sin esa regla el servidor devuelve un 404 antes de que React Router la resuelva. Este repo no trae
+   ese archivo de configuración porque depende de dónde se despliegue (Vercel, Netlify, Render
+   static, etc.); hay que agregarlo en el hosting elegido.
 5. **Linter:**
    ```bash
    npm run lint

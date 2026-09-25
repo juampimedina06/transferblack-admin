@@ -4,6 +4,7 @@ import Dashboard from './presentation/screens/Dashboard';
 import TrackTrip from './presentation/screens/TrackTrip';
 import ProtectedRoute from './presentation/components/ProtectedRoute';
 import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
+import DriversScreen from './presentation/drivers/DriversScreen';
 
 function App() {
   return (
@@ -21,7 +22,7 @@ function App() {
             {/* Rutas pendientes con placeholder */}
             <Route path="/mapa" element={<Navigate to="/dashboard" replace />} />
             <Route path="/viajes" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/conductores" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/conductores" element={<DriversScreen />} />
             <Route path="/retiros" element={<Navigate to="/dashboard" replace />} />
             <Route path="/empresas" element={<Navigate to="/dashboard" replace />} />
             <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />

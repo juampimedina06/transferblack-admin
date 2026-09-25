@@ -62,3 +62,23 @@
 - Elementos interactivos con `<button>`/`<a>` semánticos, no `<div onClick>`.
 - Focus visible en elementos interactivos (no remover el outline sin reemplazo).
 - Labels asociados a inputs (`htmlFor` + `id`), no placeholder como único indicador.
+
+## Ley de estructura — respetar la del proyecto
+- Antes de crear cualquier componente, hook, servicio o archivo nuevo, el agente revisa la estructura de carpetas ya existente en el proyecto y sigue ese mismo patrón (ubicación, nomenclatura, forma de exportar, etc.).
+- Prohibido crear componentes "sueltos" fuera de la estructura (ej. un componente en la raíz de `src/` si el proyecto organiza todo por `features/` o `screens/`).
+- Si hay dudas sobre dónde debería ir algo nuevo, buscar un archivo análogo ya existente en el proyecto y replicar su ubicación y convención, no inventar una carpeta nueva por las dudas.
+- Si el patrón existente no cubre el caso nuevo (ej. no hay convención para algo tipo modal), preguntar al usuario antes de decidir una estructura nueva.
+
+## Animación de números — "conteo" en vez de aparición instantánea
+- Cualquier número que se muestre en un panel/card/dashboard (totales, montos, contadores, KPIs) debe animarse "sumando" desde 0 (o desde el valor anterior) hasta el valor final, nunca aparecer de golpe.
+- Usar una librería ya probada para esto (ej. `react-native-count-up`/hook propio con `Animated`/Reanimated en RN, o `react-countup`/`@number-flow` en web), no reinventar el timing a mano en cada componente.
+- Duración corta y consistente en toda la app (ej. 400-800ms), no animaciones lentas que hagan sentir la UI pesada.
+- Si el número cambia mientras el usuario está en la pantalla (ej. actualización en tiempo real), animar desde el valor anterior al nuevo, no resetear a 0.
+- Crear un componente reutilizable único (ej. `<AnimatedNumber value={x} />`) y usarlo en todos los paneles, no duplicar la lógica de animación por pantalla.
+
+## Dark mode / Light mode — soporte obligatorio
+- Todo componente o pantalla nueva debe funcionar correctamente tanto en tema claro como oscuro, sin excepción.
+- Nunca hardcodear colores fijos (ej. `bg-white`, `text-black`, `#FFFFFF`) sin su contraparte para el otro tema.
+- Usar el sistema de theming ya definido en el proyecto (tokens de color, variables de Tailwind con `dark:`, o el theme provider que corresponda), no valores sueltos por componente.
+- Antes de dar por terminada una tarea, verificar visualmente (o mentalmente si no hay forma de togglear) que el componente se ve bien en ambos temas: contraste de texto, bordes, iconos, estados (hover/focus/disabled) y sombras.
+- Si el proyecto no tiene aún un token o color definido para un caso nuevo, no inventar uno suelto: agregarlo al sistema de theming centralizado (config de Tailwind, theme file, etc.) para que quede disponible para todos.

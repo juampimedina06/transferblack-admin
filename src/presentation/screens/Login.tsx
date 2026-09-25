@@ -55,9 +55,9 @@ const Login = () => {
       {/* Lado Izquierdo - Branding */}
       <div className="hidden lg:flex w-1/2 bg-obsidian relative flex-col justify-center text-white overflow-hidden p-12 lg:p-24">
         {/* Marca de agua (Watermark logo gigante) */}
-        <img 
-          src={transferLogo} 
-          alt="Transfer Black Logo" 
+        <img
+          src={transferLogo}
+          alt="Transfer Black Logo"
           className="absolute -right-[20%] top-1/2 -translate-y-1/2 w-[850px] opacity-[0.03] select-none pointer-events-none"
         />
 
@@ -77,7 +77,7 @@ const Login = () => {
           <p className="text-gray-400 text-lg mb-12">
             Consola de operaciones para la flota de Córdoba. Aprobación de conductores, monitoreo de viajes en curso y liquidaciones.
           </p>
-          
+
           <div className="border-t border-gray-800 pt-8 flex gap-8">
             <div>
               <div className="text-champagne-gold font-bold text-2xl mb-1">318</div>
@@ -154,11 +154,7 @@ const Login = () => {
               )}
             </div>
 
-            <div className="flex items-center justify-between pt-1">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="rounded border-gray-300 text-obsidian focus:ring-obsidian w-4 h-4 cursor-pointer" />
-                <span className="text-xs text-gray-600 font-medium">Mantener la sesión abierta</span>
-              </label>
+            <div className="flex items-center justify-end pt-1">
               <a href="#" className="text-xs text-gray-600 hover:text-obsidian font-medium">
                 Olvidé mi contraseña
               </a>
@@ -169,16 +165,16 @@ const Login = () => {
               disabled={isSubmitting}
               className="w-full flex justify-center items-center py-3 px-4 rounded shadow-sm text-sm font-medium text-white bg-[#111111] hover:bg-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black disabled:opacity-70 disabled:cursor-not-allowed transition-all mt-2"
             >
-              {isSubmitting ? (
+              {isSubmitting && (
                 <Loader2 className="animate-spin h-4 w-4 mr-2" />
-              ) : null}
-              {isSubmitting ? 'Ingresando...' : 'Ingresar'}
+              )}
+              <span>{isSubmitting ? 'Ingresando...' : 'Ingresar'}</span>
             </button>
           </form>
 
           <div className="mt-8 border-t border-gray-100 pt-6">
             <p className="text-xs text-gray-400 leading-relaxed">
-              ¿Problemas para entrar? Escribinos a soporte@transferblack.com.ar o al<br/>+54 351 421-8890.
+              ¿Problemas para entrar? Escribinos a soporte@transferblack.com.ar o al<br />+54 351 421-8890.
             </p>
           </div>
         </div>

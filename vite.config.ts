@@ -9,4 +9,4 @@ export default defineConfig({
     // habilita cualquier subdominio (ngrok cambia la URL en cada sesion).
     allowedHosts: ['.ngrok-free.dev', '.ngrok-free.app'],
   },
-})
+});

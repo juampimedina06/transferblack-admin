@@ -68,7 +68,7 @@ src/
 2. **Variables de entorno:**
    Crear un archivo `.env` en la raíz de `admin-web` a partir de `.env.example`:
    ```env
-   VITE_API_URL=http://localhost:3000/api
+   VITE_API_URL=
    ```
 
 3. **Ejecutar en modo desarrollo:**

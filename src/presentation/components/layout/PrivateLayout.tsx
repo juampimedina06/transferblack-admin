@@ -13,7 +13,7 @@ export const PrivateLayout: React.FC = () => {
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden font-montserrat">
+    <div className="flex h-screen bg-gray-50 dark:bg-dark-bg text-gray-900 dark:text-gray-100 overflow-hidden font-montserrat transition-colors duration-200">
       <Sidebar isOpen={isSidebarOpen} onClose={() => setIsSidebarOpen(false)} />
       
       <div className="flex-1 flex flex-col w-full min-w-0">

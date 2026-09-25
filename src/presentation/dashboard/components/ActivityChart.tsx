@@ -45,28 +45,28 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({
   const hasSeriesData = Boolean(series && series.length > 0);
 
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm col-span-1 lg:col-span-2 flex flex-col justify-between min-h-[360px]">
+    <div className="bg-white dark:bg-dark-surface rounded-xl p-5 border border-gray-100 dark:border-dark-border shadow-sm col-span-1 lg:col-span-2 flex flex-col justify-between min-h-[300px] transition-colors">
       {/* Header del Gráfico */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900 mb-0.5">{title}</h2>
-          <p className="text-xs text-gray-500">{subtitle}</p>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">{title}</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{subtitle}</p>
         </div>
         <div className="flex items-center gap-4 text-xs">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-obsidian rounded-sm" />
-            <span className="text-gray-600 font-medium">Completados</span>
+            <div className="w-3 h-3 bg-champagne-gold rounded-sm" />
+            <span className="text-gray-600 dark:text-gray-400 font-medium">Completados</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 bg-gray-200 rounded-sm" />
-            <span className="text-gray-600 font-medium">Cancelados</span>
+            <div className="w-3 h-3 bg-gray-300 dark:bg-gray-700 rounded-sm" />
+            <span className="text-gray-600 dark:text-gray-400 font-medium">Cancelados</span>
           </div>
         </div>
       </div>
       
       {/* Gráfico Recharts si el backend provee series, o Empty State limpio sin datos inventados */}
       {hasSeriesData ? (
-        <div className="w-full h-64">
+        <div className="w-full h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart 
               data={series} 
@@ -78,31 +78,31 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({
                 tickLine={false} 
                 tick={{ fill: '#9CA3AF', fontSize: 11 }} 
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(0, 0, 0, 0.02)' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
               <Bar 
                 dataKey="completados" 
                 stackId="activity" 
-                fill="#111111" 
+                fill="#D4AF37" 
                 radius={[0, 0, 0, 0]}
               />
               <Bar 
                 dataKey="cancelados" 
                 stackId="activity" 
-                fill="#E5E7EB" 
+                fill="#4B5563" 
                 radius={[2, 2, 0, 0]}
               />
             </BarChart>
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 rounded-lg bg-gray-50/50 p-8 text-center min-h-[220px]">
-          <span className="text-[10px] uppercase tracking-wider font-semibold text-champagne-gold bg-champagne-gold/10 px-2.5 py-1 rounded-full mb-2">
+        <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-gray-100 dark:border-dark-border rounded-lg bg-gray-50/50 dark:bg-white/[0.02] p-6 text-center min-h-[180px]">
+          <span className="text-[10px] uppercase tracking-wider font-semibold text-champagne-gold bg-champagne-gold/10 px-2.5 py-1 rounded-full mb-1.5">
             Próximamente
           </span>
-          <p className="text-sm font-semibold text-gray-700 mb-1">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
             Todavía no hay datos de serie temporal para graficar
           </p>
-          <p className="text-xs text-gray-400 max-w-sm">
+          <p className="text-xs text-gray-400 dark:text-gray-500 max-w-sm">
             El endpoint actual entrega métricas consolidadas del período. Cuando el backend devuelva la serie temporal se graficarán aquí.
           </p>
         </div>

@@ -6,12 +6,8 @@ import { type PeriodoDashboard } from '../../core/dashboard/interfaces/dashboard
 import { KpiCard } from '../dashboard/components/KpiCard';
 import { ActivityChart } from '../dashboard/components/ActivityChart';
 import { DashboardSkeleton } from '../dashboard/components/DashboardSkeleton';
+import { AnimatedNumber } from '../components/common/AnimatedNumber';
 
-const formatters = {
-  number: new Intl.NumberFormat('es-AR'),
-  currency: new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }),
-  percent: (val: number) => `${new Intl.NumberFormat('es-AR', { maximumFractionDigits: 1 }).format(val * 100)}%`,
-};
 
 export default function Dashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,10 +37,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6">
+    <div className="w-full flex flex-col gap-4">
       {/* Top Actions & Filters - Siempre visibles y estables */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex bg-white rounded-lg p-1 border border-gray-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="flex bg-white dark:bg-dark-surface rounded-lg p-1 border border-gray-200 dark:border-dark-border shadow-sm">
           {(['day', 'month', 'year'] as const).map((p) => (
             <button
               key={p}
@@ -53,8 +49,8 @@ export default function Dashboard() {
               className={clsx(
                 "px-4 py-1.5 text-sm font-medium rounded-md transition-colors",
                 periodo === p 
-                  ? "bg-champagne-gold text-obsidian font-semibold" 
-                  : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                  ? "bg-champagne-gold text-obsidian font-semibold shadow-sm" 
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5"
               )}
             >
               {p === 'day' ? 'Día' : p === 'month' ? 'Mes' : 'Año'}
@@ -63,10 +59,10 @@ export default function Dashboard() {
         </div>
         
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50">
+          <button className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-surface border border-gray-300 dark:border-dark-border rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
             Exportar CSV
           </button>
-          <button className="px-4 py-2 text-sm font-medium text-white bg-obsidian rounded-lg shadow-sm hover:bg-black">
+          <button className="px-4 py-2 text-sm font-semibold text-obsidian bg-champagne-gold rounded-lg shadow-sm hover:brightness-105 transition-all">
             Nuevo viaje manual
           </button>
         </div>
@@ -74,7 +70,7 @@ export default function Dashboard() {
 
       {/* Manejo de errores */}
       {error && (
-        <div className="bg-orange-50 text-orange-800 p-6 rounded-xl border border-orange-100 text-center">
+        <div className="bg-orange-50 dark:bg-orange-950/30 text-orange-800 dark:text-orange-300 p-6 rounded-xl border border-orange-100 dark:border-orange-900/40 text-center">
           <h2 className="text-lg font-bold mb-2">Ocurrió un problema</h2>
           <p className="mb-4">No pudimos cargar las métricas del dashboard para este período.</p>
           <button 
@@ -98,45 +94,81 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard 
               label="Total de viajes" 
-              value={data?.totalViajes !== undefined ? formatters.number.format(data.totalViajes) : '-'} 
+              value={
+                data?.totalViajes !== undefined ? (
+                  <AnimatedNumber value={data.totalViajes} />
+                ) : (
+                  '-'
+                )
+              } 
             />
             <KpiCard 
               label="Facturación bruta" 
-              value={data?.facturacionBruta !== undefined ? formatters.currency.format(data.facturacionBruta) : '-'} 
+              value={
+                data?.facturacionBruta !== undefined ? (
+                  <AnimatedNumber 
+                    value={data.facturacionBruta} 
+                    prefix="$ " 
+                    decimals={2}
+                  />
+                ) : (
+                  '-'
+                )
+              } 
             />
             <KpiCard 
               label="Comisión neta de plataforma" 
-              value={data?.comisionNeta !== undefined ? formatters.currency.format(data.comisionNeta) : '-'} 
+              value={
+                data?.comisionNeta !== undefined ? (
+                  <AnimatedNumber 
+                    value={data.comisionNeta} 
+                    prefix="$ " 
+                    decimals={2}
+                  />
+                ) : (
+                  '-'
+                )
+              } 
             />
             <KpiCard 
               label="Ratio de cancelaciones" 
-              value={data?.ratioCancelaciones !== undefined ? formatters.percent(data.ratioCancelaciones) : '-'} 
+              value={
+                data?.ratioCancelaciones !== undefined ? (
+                  <AnimatedNumber 
+                    value={data.ratioCancelaciones * 100} 
+                    decimals={1} 
+                    suffix="%" 
+                  />
+                ) : (
+                  '-'
+                )
+              } 
             />
           </div>
 
           {/* Charts & Bottom info */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <ActivityChart 
               periodo={periodo} 
               totalViajes={data?.totalViajes} 
               ratioCancelaciones={data?.ratioCancelaciones} 
             />
-            <div className="col-span-1 bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex items-center justify-center">
+            <div className="col-span-1 bg-white dark:bg-dark-surface rounded-xl border border-gray-100 dark:border-dark-border shadow-sm p-5 flex items-center justify-center min-h-[160px] lg:min-h-0">
               <div className="text-center">
-                <p className="text-sm font-medium text-gray-900 mb-1">Por categoría de servicio</p>
-                <span className="text-xs font-semibold tracking-wider text-gray-400 bg-gray-100 px-2 py-0.5 rounded uppercase">Próximamente</span>
+                <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">Por categoría de servicio</p>
+                <span className="text-xs font-semibold tracking-wider text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded uppercase">Próximamente</span>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center min-h-48">
-              <p className="text-sm font-medium text-gray-900 mb-2">Postulaciones esperando revisión</p>
-              <span className="text-xs font-semibold tracking-wider text-gray-400 bg-gray-100 px-2 py-0.5 rounded uppercase">Próximamente</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div className="bg-white dark:bg-dark-surface rounded-xl border border-gray-100 dark:border-dark-border shadow-sm p-5 flex flex-col items-center justify-center min-h-32">
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Postulaciones esperando revisión</p>
+              <span className="text-xs font-semibold tracking-wider text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded uppercase">Próximamente</span>
             </div>
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 flex flex-col items-center justify-center min-h-48">
-              <p className="text-sm font-medium text-gray-900 mb-2">Solicitudes de retiro pendientes</p>
-              <span className="text-xs font-semibold tracking-wider text-gray-400 bg-gray-100 px-2 py-0.5 rounded uppercase">Próximamente</span>
+            <div className="bg-white dark:bg-dark-surface rounded-xl border border-gray-100 dark:border-dark-border shadow-sm p-5 flex flex-col items-center justify-center min-h-32">
+              <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">Solicitudes de retiro pendientes</p>
+              <span className="text-xs font-semibold tracking-wider text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded uppercase">Próximamente</span>
             </div>
           </div>
         </>

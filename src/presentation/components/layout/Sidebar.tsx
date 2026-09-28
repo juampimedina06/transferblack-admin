@@ -172,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             )}
             <nav className="space-y-1">
               <NavItem to="/retiros" icon={Wallet} label="Retiros y billeteras" disabled isCollapsed={isSidebarCollapsed} />
-              <NavItem to="/empresas" icon={Building} label="Empresas" disabled isCollapsed={isSidebarCollapsed} />
+              <NavItem to="/empresas" icon={Building} label="Empresas" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/pasajeros" icon={UserCircle} label="Pasajeros" disabled isCollapsed={isSidebarCollapsed} />
               <NavItem to="/configuracion" icon={Settings} label="Configuración" disabled isCollapsed={isSidebarCollapsed} />
             </nav>

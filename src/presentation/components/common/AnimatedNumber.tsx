@@ -2,7 +2,7 @@ import React from 'react';
 import CountUp from 'react-countup';
 
 // Interop para Vite / CJS donde CountUp puede importarse como un objeto con propiedad default
-const CountUpComponent = ((CountUp as unknown as { default?: React.ComponentType<any> })?.default || CountUp) as React.ComponentType<any>;
+const CountUpComponent = ((CountUp as unknown as { default?: React.ComponentType<Record<string, unknown>> })?.default || CountUp) as React.ComponentType<Record<string, unknown>>;
 
 export interface AnimatedNumberProps {
   value: number;

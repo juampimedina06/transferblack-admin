@@ -14,6 +14,7 @@ import {
 } from '../../core/companies/company.api';
 import { Badge, Button, Input } from '../components/common';
 import { BillingStatusBadge } from './components/BillingStatusBadge';
+import { CloseStatementsCard } from './components/CloseStatementsCard';
 import { Modal } from './components/Modal';
 
 const defaults: CompanyFormValues = {
@@ -140,6 +141,7 @@ export default function CompaniesScreen() {
           Nueva empresa
         </Button>
       </header>
+      <CloseStatementsCard />
       <section aria-label="Filtros de empresas" className="flex flex-col gap-3 sm:flex-row">
         <label className="relative flex-1">
           <span className="sr-only">Buscar empresas</span>

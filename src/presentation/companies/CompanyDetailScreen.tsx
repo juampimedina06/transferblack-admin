@@ -9,6 +9,7 @@ import { BillingStatusBadge } from './components/BillingStatusBadge';
 import { CostCentersTable } from './components/CostCentersTable';
 import { EditMonthlyLimitModal } from './components/EditMonthlyLimitModal';
 import { MembersTable } from './components/MembersTable';
+import { StatementsSection } from './components/StatementsSection';
 
 function BalanceCard({ label, amount, currency }: { label: string; amount: string; currency: string }) {
   return (
@@ -59,7 +60,7 @@ export default function CompanyDetailScreen() {
           <button onClick={() => navigate('/empresas')} className="underline">
             Empresas
           </button>
-          . Los miembros y centros de costo de abajo siguen disponibles.
+          . Los miembros, centros de costo y resúmenes de abajo siguen disponibles.
         </div>
       )}
 
@@ -133,6 +134,7 @@ export default function CompanyDetailScreen() {
 
       <MembersTable companyId={companyId} />
       <CostCentersTable companyId={companyId} />
+      <StatementsSection companyId={companyId} />
 
       {editingLimit && company && (
         <EditMonthlyLimitModal

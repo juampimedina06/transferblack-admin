@@ -3,8 +3,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Check, Copy, Inbox, Link as LinkIcon, Wallet } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { extractApiErrorMessage } from '../../../core/api/adminApi';
 import {
   createStatementPaymentLink,
@@ -15,7 +13,9 @@ import {
   type RegisterManualPaymentFormValues,
 } from '../../../core/companies/companyStatements.api';
 import { Badge, Button, Input } from '../../components/common';
+import { formatArgentineDate, formatArgentineDateTime } from '../utils/formatArgentineDate';
 import { Modal } from './Modal';
+import { QueryErrorState } from './QueryErrorState';
 
 const lineTypeLabel: Record<string, string> = { trip: 'Viaje', cancellation_penalty: 'Penalidad de cancelación' };
 
@@ -67,6 +67,10 @@ export function StatementDetailModal({
     onSuccess: () => {
       reset();
       setShowTransferForm(false);
+      // La transferencia anula cualquier link pendiente de este resumen
+      // (ver company-statement-payment.service.ts, `supersedePending`): el
+      // link que se estaba mostrando ya no sirve.
+      setPaymentLink(null);
       invalidateAfterPayment();
     },
   });
@@ -89,9 +93,11 @@ export function StatementDetailModal({
       <div className="flex flex-col gap-5 p-5">
         {detail.isLoading && <p className="text-sm text-gray-500">Cargando…</p>}
         {detail.isError && (
-          <p role="alert" className="text-sm text-red-600">
-            {extractApiErrorMessage(detail.error, 'No se pudo cargar el resumen.')}
-          </p>
+          <QueryErrorState
+            error={detail.error}
+            fallback="No se pudo cargar el resumen."
+            onRetry={() => detail.refetch()}
+          />
         )}
 
         {statement && (
@@ -107,9 +113,7 @@ export function StatementDetailModal({
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Vence</p>
-                <p className="text-gray-700 dark:text-gray-300">
-                  {format(new Date(statement.due_at), 'dd/MM/yyyy', { locale: es })}
-                </p>
+                <p className="text-gray-700 dark:text-gray-300">{formatArgentineDate(statement.due_at)}</p>
               </div>
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Estado</p>
@@ -146,7 +150,7 @@ export function StatementDetailModal({
                   ) : (
                     detail.data?.lines.map((line, index) => (
                       <tr key={`${line.trip_id ?? 'sin-viaje'}-${index}`}>
-                        <td className="px-3 py-2">{format(new Date(line.date), 'dd/MM/yyyy', { locale: es })}</td>
+                        <td className="px-3 py-2">{formatArgentineDate(line.date)}</td>
                         <td className="px-3 py-2 font-mono text-xs">{line.trip_public_code ?? '-'}</td>
                         <td className="px-3 py-2">{line.employee_name ?? '-'}</td>
                         <td className="px-3 py-2">{line.cost_center_name ?? '-'}</td>
@@ -188,8 +192,8 @@ export function StatementDetailModal({
                 {paymentLink && (
                   <div className="rounded-lg border border-champagne-gold/40 bg-champagne-gold/10 p-4">
                     <p className="text-xs text-gray-600 dark:text-white/70">
-                      Vence el {format(new Date(paymentLink.expires_at), "dd/MM/yyyy HH:mm'hs'", { locale: es })}.
-                      Generar un link nuevo o registrar una transferencia anula este link.
+                      Vence el {formatArgentineDateTime(paymentLink.expires_at)}. Generar un link nuevo o registrar
+                      una transferencia anula este link.
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-3 overflow-x-auto rounded-md bg-white p-2 dark:bg-obsidian">
                       <code className="whitespace-nowrap text-xs text-gray-800 dark:text-white/90">

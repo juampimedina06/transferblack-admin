@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { Inbox } from 'lucide-react';
 import { getCompanyStatements } from '../../../core/companies/companyStatements.api';
 import { Badge, Card, CardHeader, CardTitle } from '../../components/common';
+import { formatArgentineDate, formatPeriodLabel } from '../utils/formatArgentineDate';
+import { QueryErrorState } from './QueryErrorState';
 import { StatementDetailModal } from './StatementDetailModal';
 
 export function StatementsSection({ companyId }: { companyId: string }) {
@@ -43,6 +43,16 @@ export function StatementsSection({ companyId }: { companyId: string }) {
                   ))}
                 </tr>
               ))
+            ) : statements.isError ? (
+              <tr>
+                <td colSpan={5}>
+                  <QueryErrorState
+                    error={statements.error}
+                    fallback="No se pudieron cargar los resúmenes."
+                    onRetry={() => statements.refetch()}
+                  />
+                </td>
+              </tr>
             ) : statements.data?.length === 0 ? (
               <tr>
                 <td colSpan={5} className="py-10 text-center text-gray-500">
@@ -58,7 +68,7 @@ export function StatementsSection({ companyId }: { companyId: string }) {
                   className="cursor-pointer text-[13px] text-gray-700 hover:bg-gray-50/50 dark:text-gray-300 dark:hover:bg-white/5"
                 >
                   <td className="px-5 py-3 font-medium text-gray-900 capitalize dark:text-white">
-                    {format(new Date(statement.period_start), 'MMMM yyyy', { locale: es })}
+                    {formatPeriodLabel(statement.period_start)}
                   </td>
                   <td className="px-5 py-3">
                     <Badge
@@ -75,7 +85,7 @@ export function StatementsSection({ companyId }: { companyId: string }) {
                   </td>
                   <td className="px-5 py-3">$ {statement.total_amount}</td>
                   <td className="px-5 py-3">$ {statement.paid_amount}</td>
-                  <td className="px-5 py-3">{format(new Date(statement.due_at), 'dd/MM/yyyy', { locale: es })}</td>
+                  <td className="px-5 py-3">{formatArgentineDate(statement.due_at)}</td>
                 </tr>
               ))
             )}

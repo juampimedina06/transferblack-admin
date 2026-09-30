@@ -3,6 +3,7 @@ import { Inbox } from 'lucide-react';
 import { getCompanyMembers, type CorporateMember } from '../../../core/companies/companyMembers.api';
 import { getCompanyCostCenters } from '../../../core/companies/costCenters.api';
 import { Badge, Card, CardHeader, CardTitle } from '../../components/common';
+import { QueryErrorState } from './QueryErrorState';
 
 const roleLabel: Record<string, string> = { manager: 'Gerente', employee: 'Empleado' };
 
@@ -53,6 +54,16 @@ export function MembersTable({ companyId }: { companyId: string }) {
                   ))}
                 </tr>
               ))
+            ) : members.isError ? (
+              <tr>
+                <td colSpan={4}>
+                  <QueryErrorState
+                    error={members.error}
+                    fallback="No se pudieron cargar los miembros."
+                    onRetry={() => members.refetch()}
+                  />
+                </td>
+              </tr>
             ) : members.data?.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-10 text-center text-gray-500">

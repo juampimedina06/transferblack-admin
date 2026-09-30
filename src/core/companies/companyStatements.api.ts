@@ -50,6 +50,19 @@ const closeStatementsSchema = z.object({
   failed: z.number(),
 });
 
+// El input nativo `type="date"` siempre entrega "YYYY-MM-DD", pero valida
+// igual: si algo lo deja vacio o mal formado, `new Date(...).toISOString()`
+// tira un RangeError en vez de mostrarse como error de campo.
+function isValidCalendarDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}
+
 export const registerManualPaymentFormSchema = z.object({
   amount: z
     .string()
@@ -57,7 +70,11 @@ export const registerManualPaymentFormSchema = z.object({
     .regex(/^\d{1,10}(\.\d{1,2})?$/, 'Ingresá un importe positivo con hasta 2 decimales')
     .refine((value) => Number(value) > 0, 'Ingresá un importe positivo con hasta 2 decimales'),
   reference: z.string().trim().min(1, 'Ingresá la referencia de la transferencia').max(100),
-  paid_at: z.string().trim().min(1, 'Ingresá la fecha de la transferencia'),
+  paid_at: z
+    .string()
+    .trim()
+    .min(1, 'Ingresá la fecha de la transferencia')
+    .refine(isValidCalendarDate, 'Ingresá una fecha válida'),
 });
 
 export type Statement = z.infer<typeof statementSchema>;
@@ -93,7 +110,13 @@ export async function registerManualPayment(statementId: string, values: Registe
     amount: values.amount,
     method: 'bank_transfer',
     reference: values.reference,
-    paid_at: new Date(values.paid_at).toISOString(),
+    // `new Date(value).toISOString()` interpreta "YYYY-MM-DD" como medianoche
+    // UTC: en Cordoba (UTC-3) eso es el dia anterior. El backend exige un
+    // datetime ISO con offset (`z.iso.datetime({ offset: true })`), asi que
+    // se manda mediodia en el offset fijo de Argentina (sin horario de
+    // verano) para no depender del huso horario del navegador ni pisar el
+    // dia por redondeo.
+    paid_at: `${values.paid_at}T12:00:00-03:00`,
   });
   return statementSchema.parse(response.data.data);
 }

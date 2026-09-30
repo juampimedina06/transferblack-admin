@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Inbox } from 'lucide-react';
 import { getCompanyCostCenters } from '../../../core/companies/costCenters.api';
 import { Badge, Card, CardHeader, CardTitle } from '../../components/common';
+import { QueryErrorState } from './QueryErrorState';
 
 export function CostCentersTable({ companyId }: { companyId: string }) {
   const costCenters = useQuery({
@@ -37,6 +38,16 @@ export function CostCentersTable({ companyId }: { companyId: string }) {
                   ))}
                 </tr>
               ))
+            ) : costCenters.isError ? (
+              <tr>
+                <td colSpan={4}>
+                  <QueryErrorState
+                    error={costCenters.error}
+                    fallback="No se pudieron cargar los centros de costo."
+                    onRetry={() => costCenters.refetch()}
+                  />
+                </td>
+              </tr>
             ) : costCenters.data?.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-10 text-center text-gray-500">

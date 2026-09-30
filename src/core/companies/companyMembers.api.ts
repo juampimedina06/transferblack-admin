@@ -13,11 +13,12 @@ const corporateMemberSchema = z.object({
   monthly_spend_limit: z.string().nullable(),
   status: z.enum(corporateMemberStatuses),
   revoked_at: z.string().nullable(),
-  // `null` solo si el backend no llego a cargarlos en el lote (no deberia
-  // pasar en este listado, ver corporate-membership.service.ts).
-  first_name: z.string().nullable(),
-  last_name: z.string().nullable(),
-  email: z.string().nullable(),
+  // `null` si el backend no llego a cargarlos en el lote, o si todavia no
+  // manda estos campos (backend feature/rediseño-coorporativo, a16c8cb): con
+  // default para que la tabla siga funcionando y caiga al id de perfil.
+  first_name: z.string().nullable().default(null),
+  last_name: z.string().nullable().default(null),
+  email: z.string().nullable().default(null),
   created_at: z.string(),
   updated_at: z.string(),
 });

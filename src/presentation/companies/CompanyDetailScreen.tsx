@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Pencil } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
 import { getCompany, type Company } from '../../core/companies/company.api';
 import { getCompanyBalance } from '../../core/companies/companyBalance.api';
@@ -12,7 +10,9 @@ import { BillingStatusBadge } from './components/BillingStatusBadge';
 import { CostCentersTable } from './components/CostCentersTable';
 import { EditMonthlyLimitModal } from './components/EditMonthlyLimitModal';
 import { MembersTable } from './components/MembersTable';
+import { QueryErrorState } from './components/QueryErrorState';
 import { StatementsSection } from './components/StatementsSection';
+import { formatArgentineDateTime } from './utils/formatArgentineDate';
 
 function BalanceCard({ label, amount, currency }: { label: string; amount: string; currency: string }) {
   return (
@@ -108,8 +108,7 @@ export default function CompanyDetailScreen() {
                 <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
                   <p className="font-medium">
                     {company.data.suspended_by_type === 'system' ? 'Automática por mora' : 'Suspensión manual'}
-                    {company.data.suspended_at &&
-                      ` · ${format(new Date(company.data.suspended_at), 'dd/MM/yyyy HH:mm', { locale: es })}`}
+                    {company.data.suspended_at && ` · ${formatArgentineDateTime(company.data.suspended_at)}`}
                   </p>
                   {company.data.suspension_reason && <p className="mt-0.5">{company.data.suspension_reason}</p>}
                 </div>
@@ -143,8 +142,12 @@ export default function CompanyDetailScreen() {
             </Card>
           ))
         ) : balance.isError ? (
-          <div className="col-span-full rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-            No se pudo cargar el saldo de la empresa.
+          <div className="col-span-full rounded-lg border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+            <QueryErrorState
+              error={balance.error}
+              fallback="No se pudo cargar el saldo de la empresa."
+              onRetry={() => balance.refetch()}
+            />
           </div>
         ) : balance.data ? (
           <>

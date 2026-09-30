@@ -16,12 +16,16 @@ const companySchema = z.object({
   address_text: z.string().nullable(),
   monthly_spend_limit: z.string().nullable(),
   status: z.enum(['active', 'suspended']),
-  billing_status: z.enum(billingStatuses),
-  suspension_reason: z.string().nullable(),
-  suspended_at: z.string().nullable(),
+  // Campos nuevos (backend feature/rediseño-coorporativo, a16c8cb): con
+  // default para que el listado y el detalle sigan funcionando contra un
+  // backend que todavia no los manda. El tipo de salida sigue siendo
+  // obligatorio (no `| undefined`) para el resto del codigo.
+  billing_status: z.enum(billingStatuses).default('up_to_date'),
+  suspension_reason: z.string().nullable().default(null),
+  suspended_at: z.string().nullable().default(null),
   // Quien la suspendio, sin exponer el id crudo del admin: el job de mora
   // (B6) o un admin a mano. `null` si nunca estuvo suspendida.
-  suspended_by_type: z.enum(['system', 'admin']).nullable(),
+  suspended_by_type: z.enum(['system', 'admin']).nullable().default(null),
   created_at: z.string(),
   updated_at: z.string(),
 });

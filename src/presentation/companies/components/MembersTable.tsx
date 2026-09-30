@@ -1,18 +1,19 @@
-import { useQuery } from '@tanstack/react-query';
-import { Inbox } from 'lucide-react';
-import { getCompanyMembers, type CorporateMember } from '../../../core/companies/companyMembers.api';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Inbox, Pencil, UserX } from 'lucide-react';
+import { extractApiErrorMessage } from '../../../core/api/adminApi';
+import { getCompanyMembers, revokeMember, type CorporateMember } from '../../../core/companies/companyMembers.api';
 import { getCompanyCostCenters } from '../../../core/companies/costCenters.api';
 import { Badge, Card, CardHeader, CardTitle } from '../../components/common';
+import { memberName, roleLabel } from '../utils/memberDisplay';
+import { ConfirmDialog } from './ConfirmDialog';
+import { EditMemberModal } from './EditMemberModal';
 import { QueryErrorState } from './QueryErrorState';
 
-const roleLabel: Record<string, string> = { manager: 'Gerente', employee: 'Empleado' };
-
-function memberName(member: CorporateMember): string {
-  const name = [member.first_name, member.last_name].filter(Boolean).join(' ').trim();
-  return name || `Perfil ${member.profile_id.slice(0, 8)}…`;
-}
-
 export function MembersTable({ companyId }: { companyId: string }) {
+  const queryClient = useQueryClient();
+  const [editingMember, setEditingMember] = useState<CorporateMember | null>(null);
+  const [revokingMember, setRevokingMember] = useState<CorporateMember | null>(null);
   const members = useQuery({
     queryKey: ['company-members', companyId],
     queryFn: ({ signal }) => getCompanyMembers(companyId, signal),
@@ -24,7 +25,15 @@ export function MembersTable({ companyId }: { companyId: string }) {
     queryFn: ({ signal }) => getCompanyCostCenters(companyId, signal),
   });
   const costCenterName = (costCenterId: string | null) =>
-    costCenters.data?.find((cc) => cc.id === costCenterId)?.name ?? '-';
+    costCenters.data?.find((cc) => cc.id === costCenterId)?.name ?? null;
+
+  const revokeMutation = useMutation({
+    mutationFn: (member: CorporateMember) => revokeMember(companyId, member.profile_id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['company-members', companyId] });
+      setRevokingMember(null);
+    },
+  });
 
   return (
     <Card noPadding>
@@ -41,13 +50,14 @@ export function MembersTable({ companyId }: { companyId: string }) {
               <th className="px-5 py-3">Rol</th>
               <th className="px-5 py-3">Centro de costo</th>
               <th className="px-5 py-3">Estado</th>
+              <th className="px-5 py-3" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-white/10">
             {members.isLoading ? (
               Array.from({ length: 3 }).map((_, index) => (
                 <tr key={index} className="animate-pulse">
-                  {Array.from({ length: 4 }).map((__, cell) => (
+                  {Array.from({ length: 5 }).map((__, cell) => (
                     <td key={cell} className="px-5 py-4">
                       <div className="h-4 w-24 rounded bg-gray-200 dark:bg-white/10" />
                     </td>
@@ -56,7 +66,7 @@ export function MembersTable({ companyId }: { companyId: string }) {
               ))
             ) : members.isError ? (
               <tr>
-                <td colSpan={4}>
+                <td colSpan={5}>
                   <QueryErrorState
                     error={members.error}
                     fallback="No se pudieron cargar los miembros."
@@ -66,31 +76,73 @@ export function MembersTable({ companyId }: { companyId: string }) {
               </tr>
             ) : members.data?.length === 0 ? (
               <tr>
-                <td colSpan={4} className="py-10 text-center text-gray-500">
+                <td colSpan={5} className="py-10 text-center text-gray-500">
                   <Inbox className="mx-auto mb-2 h-8 w-8 text-gray-300" />
                   Sin miembros vinculados
                 </td>
               </tr>
             ) : (
-              members.data?.map((member) => (
-                <tr key={member.id} className="text-[13px] text-gray-700 dark:text-gray-300">
-                  <td className="px-5 py-3">
-                    <p className="font-medium text-gray-900 dark:text-white">{memberName(member)}</p>
-                    <p className="text-xs text-gray-500">{member.email ?? '-'}</p>
-                  </td>
-                  <td className="px-5 py-3">{roleLabel[member.corporate_role] ?? member.corporate_role}</td>
-                  <td className="px-5 py-3">{costCenterName(member.default_cost_center_id)}</td>
-                  <td className="px-5 py-3">
-                    <Badge variant={member.status === 'active' ? 'success' : 'default'}>
-                      {member.status === 'active' ? 'Activo' : 'Revocado'}
-                    </Badge>
-                  </td>
-                </tr>
-              ))
+              members.data?.map((member) => {
+                const costCenterLabel = costCenterName(member.default_cost_center_id);
+                return (
+                  <tr key={member.id} className="text-[13px] text-gray-700 dark:text-gray-300">
+                    <td className="px-5 py-3">
+                      <p className="font-medium text-gray-900 dark:text-white">{memberName(member)}</p>
+                      <p className="text-xs text-gray-500">{member.email ?? '-'}</p>
+                    </td>
+                    <td className="px-5 py-3">{roleLabel[member.corporate_role] ?? member.corporate_role}</td>
+                    <td className="px-5 py-3">
+                      {costCenterLabel ?? <Badge variant="warning">Sin centro de costo</Badge>}
+                    </td>
+                    <td className="px-5 py-3">
+                      <Badge variant={member.status === 'active' ? 'success' : 'default'}>
+                        {member.status === 'active' ? 'Activo' : 'Revocado'}
+                      </Badge>
+                    </td>
+                    <td className="px-5 py-3">
+                      {member.status === 'active' && (
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => setEditingMember(member)}
+                            aria-label={`Editar ${memberName(member)}`}
+                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setRevokingMember(member)}
+                            aria-label={`Revocar ${memberName(member)}`}
+                            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                          >
+                            <UserX size={14} />
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
+
+      {editingMember && (
+        <EditMemberModal companyId={companyId} member={editingMember} onClose={() => setEditingMember(null)} />
+      )}
+      {revokingMember && (
+        <ConfirmDialog
+          title="Revocar miembro"
+          description={`${memberName(revokingMember)} deja de poder viajar a cuenta de la empresa. Puede volver a vincularse más adelante con el código de acceso.`}
+          confirmLabel="Revocar"
+          isLoading={revokeMutation.isPending}
+          error={
+            revokeMutation.isError ? extractApiErrorMessage(revokeMutation.error, 'No se pudo revocar al miembro.') : null
+          }
+          onConfirm={() => revokeMutation.mutate(revokingMember)}
+          onClose={() => setRevokingMember(null)}
+        />
+      )}
     </Card>
   );
 }

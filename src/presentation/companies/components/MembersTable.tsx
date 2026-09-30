@@ -1,10 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { Inbox } from 'lucide-react';
-import { getCompanyMembers } from '../../../core/companies/companyMembers.api';
+import { getCompanyMembers, type CorporateMember } from '../../../core/companies/companyMembers.api';
 import { getCompanyCostCenters } from '../../../core/companies/costCenters.api';
 import { Badge, Card, CardHeader, CardTitle } from '../../components/common';
 
 const roleLabel: Record<string, string> = { manager: 'Gerente', employee: 'Empleado' };
+
+function memberName(member: CorporateMember): string {
+  const name = [member.first_name, member.last_name].filter(Boolean).join(' ').trim();
+  return name || `Perfil ${member.profile_id.slice(0, 8)}…`;
+}
 
 export function MembersTable({ companyId }: { companyId: string }) {
   const members = useQuery({
@@ -31,7 +36,7 @@ export function MembersTable({ companyId }: { companyId: string }) {
         <table className="w-full text-left">
           <thead className="border-b border-gray-100 bg-gray-50/50 text-[10px] uppercase tracking-wider text-gray-500 dark:border-white/10 dark:bg-white/5">
             <tr>
-              <th className="px-5 py-3">Perfil</th>
+              <th className="px-5 py-3">Empleado</th>
               <th className="px-5 py-3">Rol</th>
               <th className="px-5 py-3">Centro de costo</th>
               <th className="px-5 py-3">Estado</th>
@@ -58,9 +63,9 @@ export function MembersTable({ companyId }: { companyId: string }) {
             ) : (
               members.data?.map((member) => (
                 <tr key={member.id} className="text-[13px] text-gray-700 dark:text-gray-300">
-                  {/* La API no expone nombre ni email del empleado en este listado, solo el id de perfil. */}
-                  <td className="px-5 py-3 font-mono text-xs text-gray-500" title={member.profile_id}>
-                    {member.profile_id.slice(0, 8)}…
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-gray-900 dark:text-white">{memberName(member)}</p>
+                    <p className="text-xs text-gray-500">{member.email ?? '-'}</p>
                   </td>
                   <td className="px-5 py-3">{roleLabel[member.corporate_role] ?? member.corporate_role}</td>
                   <td className="px-5 py-3">{costCenterName(member.default_cost_center_id)}</td>

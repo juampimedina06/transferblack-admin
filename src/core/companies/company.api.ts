@@ -17,6 +17,11 @@ const companySchema = z.object({
   monthly_spend_limit: z.string().nullable(),
   status: z.enum(['active', 'suspended']),
   billing_status: z.enum(billingStatuses),
+  suspension_reason: z.string().nullable(),
+  suspended_at: z.string().nullable(),
+  // Quien la suspendio, sin exponer el id crudo del admin: el job de mora
+  // (B6) o un admin a mano. `null` si nunca estuvo suspendida.
+  suspended_by_type: z.enum(['system', 'admin']).nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -99,9 +104,11 @@ export async function createCompany(values: CompanyFormValues) {
   return companyCreatedSchema.parse(response.data).data;
 }
 
-// No existe un GET por id: el detalle se arma en el cliente a partir de lo que
-// ya se cargo en el listado (ver CompanyDetailScreen). Esta accion solo cubre
-// la edicion del tope mensual, que si tiene su propio endpoint.
+export async function getCompany(companyId: string, signal?: AbortSignal) {
+  const response = await adminApi.get(`/corporate/companies/${companyId}`, { signal });
+  return companySchema.parse(response.data.data);
+}
+
 export async function updateCompanyMonthlySpendLimit(companyId: string, values: EditMonthlySpendLimitFormValues) {
   const response = await adminApi.patch(`/corporate/companies/${companyId}`, values);
   return companySchema.parse(response.data.data);

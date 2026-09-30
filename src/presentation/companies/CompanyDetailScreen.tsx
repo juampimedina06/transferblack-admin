@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Pencil } from 'lucide-react';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { extractApiErrorMessage } from '../../core/api/adminApi';
+import { getCompany, type Company } from '../../core/companies/company.api';
 import { getCompanyBalance } from '../../core/companies/companyBalance.api';
-import type { Company } from '../../core/companies/company.api';
-import { Badge, Card } from '../components/common';
+import { Badge, Button, Card } from '../components/common';
 import { BillingStatusBadge } from './components/BillingStatusBadge';
 import { CostCentersTable } from './components/CostCentersTable';
 import { EditMonthlyLimitModal } from './components/EditMonthlyLimitModal';
@@ -22,18 +25,29 @@ function BalanceCard({ label, amount, currency }: { label: string; amount: strin
   );
 }
 
+function isNotFound(error: unknown): boolean {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  return status === 404;
+}
+
 export default function CompanyDetailScreen() {
   const { companyId } = useParams<{ companyId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  // No hay GET por id: el detalle general de la empresa viaja como estado de
-  // navegación desde el listado (ver company.api.ts). Si se entra directo por
-  // URL (recarga, link compartido) no hay forma de recuperarlo hoy.
-  const [company, setCompany] = useState<Company | null>(
-    (location.state as { company?: Company } | null)?.company ?? null,
-  );
-
+  const queryClient = useQueryClient();
   const [editingLimit, setEditingLimit] = useState(false);
+
+  // El estado de navegación del listado solo se usa como dato inicial para que
+  // el encabezado se vea al toque: la fuente de verdad es siempre el fetch, así
+  // que una recarga o un link directo igual cargan el detalle.
+  const navigationCompany = (location.state as { company?: Company } | null)?.company;
+
+  const company = useQuery({
+    queryKey: ['company', companyId],
+    queryFn: ({ signal }) => getCompany(companyId!, signal),
+    enabled: Boolean(companyId),
+    ...(navigationCompany && navigationCompany.id === companyId ? { initialData: navigationCompany } : {}),
+  });
 
   const balance = useQuery({
     queryKey: ['company-balance', companyId],
@@ -54,36 +68,58 @@ export default function CompanyDetailScreen() {
         <ArrowLeft size={16} /> Volver a empresas
       </button>
 
-      {!company && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300">
-          Los datos generales de la empresa solo están disponibles al entrar desde el listado de{' '}
-          <button onClick={() => navigate('/empresas')} className="underline">
-            Empresas
-          </button>
-          . Los miembros, centros de costo y resúmenes de abajo siguen disponibles.
+      {company.isLoading && (
+        <Card>
+          <div className="h-6 w-52 animate-pulse rounded bg-gray-200 dark:bg-white/10" />
+          <div className="mt-3 h-4 w-72 animate-pulse rounded bg-gray-200 dark:bg-white/10" />
+        </Card>
+      )}
+
+      {company.isError && isNotFound(company.error) && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+          Esta empresa no existe o fue eliminada.
+        </div>
+      )}
+      {company.isError && !isNotFound(company.error) && (
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+          <p>{extractApiErrorMessage(company.error, 'No se pudo cargar la empresa.')}</p>
+          <Button className="mt-3" size="sm" variant="dangerOutline" onClick={() => company.refetch()}>
+            Reintentar
+          </Button>
         </div>
       )}
 
-      {company && (
+      {company.data && (
         <Card>
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{company.legal_name}</h1>
-                <Badge variant={company.status === 'active' ? 'success' : 'danger'}>
-                  {company.status === 'active' ? 'Activa' : 'Suspendida'}
+                <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{company.data.legal_name}</h1>
+                <Badge variant={company.data.status === 'active' ? 'success' : 'danger'}>
+                  {company.data.status === 'active' ? 'Activa' : 'Suspendida'}
                 </Badge>
-                <BillingStatusBadge status={company.billing_status} />
+                <BillingStatusBadge status={company.data.billing_status} />
               </div>
               <p className="mt-1 text-sm text-gray-500">
-                {company.trade_name || 'Sin nombre de fantasía'} · {company.tax_id_type} {company.tax_id}
+                {company.data.trade_name || 'Sin nombre de fantasía'} · {company.data.tax_id_type}{' '}
+                {company.data.tax_id}
               </p>
+              {company.data.status === 'suspended' && (
+                <div className="mt-2 rounded-md border border-red-200 bg-red-50 p-2.5 text-xs text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+                  <p className="font-medium">
+                    {company.data.suspended_by_type === 'system' ? 'Automática por mora' : 'Suspensión manual'}
+                    {company.data.suspended_at &&
+                      ` · ${format(new Date(company.data.suspended_at), 'dd/MM/yyyy HH:mm', { locale: es })}`}
+                  </p>
+                  {company.data.suspension_reason && <p className="mt-0.5">{company.data.suspension_reason}</p>}
+                </div>
+              )}
             </div>
             <div className="text-right">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Tope mensual</p>
               <div className="flex items-center gap-2">
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {company.monthly_spend_limit ? `$ ${company.monthly_spend_limit}` : 'Sin tope'}
+                  {company.data.monthly_spend_limit ? `$ ${company.data.monthly_spend_limit}` : 'Sin tope'}
                 </p>
                 <button
                   onClick={() => setEditingLimit(true)}
@@ -136,11 +172,11 @@ export default function CompanyDetailScreen() {
       <CostCentersTable companyId={companyId} />
       <StatementsSection companyId={companyId} />
 
-      {editingLimit && company && (
+      {editingLimit && company.data && (
         <EditMonthlyLimitModal
-          company={company}
+          company={company.data}
           onClose={() => setEditingLimit(false)}
-          onUpdated={(updated) => setCompany(updated)}
+          onUpdated={(updated) => queryClient.setQueryData(['company', companyId], updated)}
         />
       )}
     </div>

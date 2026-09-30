@@ -4,9 +4,6 @@ import { adminApi } from '../api/adminApi';
 export const corporateRoles = ['manager', 'employee'] as const;
 export const corporateMemberStatuses = ['active', 'revoked'] as const;
 
-// La API no devuelve nombre ni email del empleado en este listado: solo
-// `profile_id`. Mostrarlo requeriria un endpoint de perfiles que hoy no
-// existe (ver README/reporte de la tarea).
 const corporateMemberSchema = z.object({
   id: z.string().uuid(),
   company_id: z.string().uuid(),
@@ -16,6 +13,11 @@ const corporateMemberSchema = z.object({
   monthly_spend_limit: z.string().nullable(),
   status: z.enum(corporateMemberStatuses),
   revoked_at: z.string().nullable(),
+  // `null` solo si el backend no llego a cargarlos en el lote (no deberia
+  // pasar en este listado, ver corporate-membership.service.ts).
+  first_name: z.string().nullable(),
+  last_name: z.string().nullable(),
+  email: z.string().nullable(),
   created_at: z.string(),
   updated_at: z.string(),
 });

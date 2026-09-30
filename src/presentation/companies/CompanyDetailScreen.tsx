@@ -7,6 +7,7 @@ import { getCompany, type Company } from '../../core/companies/company.api';
 import { getCompanyBalance } from '../../core/companies/companyBalance.api';
 import { Badge, Button, Card } from '../components/common';
 import { BillingStatusBadge } from './components/BillingStatusBadge';
+import { ConsumptionSection } from './components/ConsumptionSection';
 import { CostCentersTable } from './components/CostCentersTable';
 import { EditMonthlyLimitModal } from './components/EditMonthlyLimitModal';
 import { MembersTable } from './components/MembersTable';
@@ -173,6 +174,7 @@ export default function CompanyDetailScreen() {
 
       <MembersTable companyId={companyId} />
       <CostCentersTable companyId={companyId} />
+      <ConsumptionSection companyId={companyId} />
       <StatementsSection companyId={companyId} />
 
       {editingLimit && company.data && (

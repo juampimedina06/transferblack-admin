@@ -32,7 +32,18 @@ export function EditMemberModal({
     queryKey: ['company-cost-centers', companyId],
     queryFn: ({ signal }) => getCompanyCostCenters(companyId, signal),
   });
-  const activeCostCenters = (costCenters.data ?? []).filter((costCenter) => costCenter.status === 'active');
+  const allCostCenters = costCenters.data ?? [];
+  const activeCostCenters = allCostCenters.filter((costCenter) => costCenter.status === 'active');
+  // Si el centro de costo actual del miembro esta archivado, no aparece entre
+  // los activos: sin agregarlo aparte, el <select> caia al primer option
+  // ("Sin centro de costo") y guardar sin tocar este campo le sacaba el
+  // centro de costo al empleado sin que el admin lo pidiera.
+  const currentCostCenterId = member.default_cost_center_id;
+  const currentCostCenter = currentCostCenterId
+    ? allCostCenters.find((costCenter) => costCenter.id === currentCostCenterId)
+    : null;
+  const showCurrentAsArchivedOption =
+    currentCostCenterId !== null && !activeCostCenters.some((costCenter) => costCenter.id === currentCostCenterId);
 
   const {
     register,
@@ -76,7 +87,8 @@ export function EditMemberModal({
           Centro de costo
           <select
             {...register('default_cost_center_id')}
-            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-[13px] text-gray-800 focus:border-champagne-gold focus:outline-none focus:ring-1 focus:ring-champagne-gold/20 dark:border-white/10 dark:bg-white/5 dark:text-white"
+            disabled={costCenters.isLoading}
+            className="rounded-md border border-gray-200 bg-white px-3 py-2 text-[13px] text-gray-800 focus:border-champagne-gold focus:outline-none focus:ring-1 focus:ring-champagne-gold/20 disabled:opacity-50 dark:border-white/10 dark:bg-white/5 dark:text-white"
           >
             <option value="">Sin centro de costo</option>
             {activeCostCenters.map((costCenter) => (
@@ -84,7 +96,19 @@ export function EditMemberModal({
                 {costCenter.code} · {costCenter.name}
               </option>
             ))}
+            {showCurrentAsArchivedOption && currentCostCenterId && (
+              <option value={currentCostCenterId}>
+                {currentCostCenter
+                  ? `${currentCostCenter.code} · ${currentCostCenter.name} (archivado)`
+                  : 'Centro de costo actual (archivado)'}
+              </option>
+            )}
           </select>
+          {costCenters.isLoading && (
+            <span className="text-xs font-normal normal-case tracking-normal text-gray-400">
+              Cargando centros de costo…
+            </span>
+          )}
         </label>
         <Input
           label="Tope mensual individual (opcional)"

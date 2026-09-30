@@ -31,9 +31,22 @@ export function MembersTable({ companyId }: { companyId: string }) {
     mutationFn: (member: CorporateMember) => revokeMember(companyId, member.profile_id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['company-members', companyId] });
-      setRevokingMember(null);
+      closeRevokeDialog();
     },
   });
+
+  // Sin este reset, el error de "no se pudo revocar" de un miembro quedaba en
+  // `revokeMutation.error` y se mostraba de nuevo al abrir el dialogo para
+  // otro miembro, aunque esta vez no hubo ningun intento fallido.
+  function openRevokeDialog(member: CorporateMember) {
+    revokeMutation.reset();
+    setRevokingMember(member);
+  }
+
+  function closeRevokeDialog() {
+    revokeMutation.reset();
+    setRevokingMember(null);
+  }
 
   return (
     <Card noPadding>
@@ -82,46 +95,58 @@ export function MembersTable({ companyId }: { companyId: string }) {
                 </td>
               </tr>
             ) : (
-              members.data?.map((member) => {
-                const costCenterLabel = costCenterName(member.default_cost_center_id);
-                return (
-                  <tr key={member.id} className="text-[13px] text-gray-700 dark:text-gray-300">
-                    <td className="px-5 py-3">
-                      <p className="font-medium text-gray-900 dark:text-white">{memberName(member)}</p>
-                      <p className="text-xs text-gray-500">{member.email ?? '-'}</p>
-                    </td>
-                    <td className="px-5 py-3">{roleLabel[member.corporate_role] ?? member.corporate_role}</td>
-                    <td className="px-5 py-3">
-                      {costCenterLabel ?? <Badge variant="warning">Sin centro de costo</Badge>}
-                    </td>
-                    <td className="px-5 py-3">
-                      <Badge variant={member.status === 'active' ? 'success' : 'default'}>
-                        {member.status === 'active' ? 'Activo' : 'Revocado'}
-                      </Badge>
-                    </td>
-                    <td className="px-5 py-3">
-                      {member.status === 'active' && (
-                        <div className="flex justify-end gap-1">
-                          <button
-                            onClick={() => setEditingMember(member)}
-                            aria-label={`Editar ${memberName(member)}`}
-                            className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setRevokingMember(member)}
-                            aria-label={`Revocar ${memberName(member)}`}
-                            className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
-                          >
-                            <UserX size={14} />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })
+              members.data?.map((member) => (
+                <tr key={member.id} className="text-[13px] text-gray-700 dark:text-gray-300">
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-gray-900 dark:text-white">{memberName(member)}</p>
+                    <p className="text-xs text-gray-500">{member.email ?? '-'}</p>
+                  </td>
+                  <td className="px-5 py-3">{roleLabel[member.corporate_role] ?? member.corporate_role}</td>
+                  <td className="px-5 py-3">
+                    {member.default_cost_center_id === null ? (
+                      // Solo "sin centro de costo" cuando el miembro realmente
+                      // no tiene uno asignado: si tiene id pero todavia no se
+                      // resolvio el nombre, mostrar esta insignia era enganoso
+                      // (parecia que no tenia ninguno mientras la consulta de
+                      // centros de costo seguia cargando o habia fallado).
+                      <Badge variant="warning">Sin centro de costo</Badge>
+                    ) : costCenters.isLoading ? (
+                      <span className="text-gray-400">Cargando…</span>
+                    ) : costCenters.isError ? (
+                      <span className="text-gray-400">Centro de costo no disponible</span>
+                    ) : (
+                      (costCenterName(member.default_cost_center_id) ?? (
+                        <span className="text-gray-400">Centro de costo no disponible</span>
+                      ))
+                    )}
+                  </td>
+                  <td className="px-5 py-3">
+                    <Badge variant={member.status === 'active' ? 'success' : 'default'}>
+                      {member.status === 'active' ? 'Activo' : 'Revocado'}
+                    </Badge>
+                  </td>
+                  <td className="px-5 py-3">
+                    {member.status === 'active' && (
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => setEditingMember(member)}
+                          aria-label={`Editar ${memberName(member)}`}
+                          className="rounded p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-white/10 dark:hover:text-white"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => openRevokeDialog(member)}
+                          aria-label={`Revocar ${memberName(member)}`}
+                          className="rounded p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10 dark:hover:text-red-400"
+                        >
+                          <UserX size={14} />
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -140,7 +165,7 @@ export function MembersTable({ companyId }: { companyId: string }) {
             revokeMutation.isError ? extractApiErrorMessage(revokeMutation.error, 'No se pudo revocar al miembro.') : null
           }
           onConfirm={() => revokeMutation.mutate(revokingMember)}
-          onClose={() => setRevokingMember(null)}
+          onClose={closeRevokeDialog}
         />
       )}
     </Card>

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { ZodError } from 'zod';
 import type { FieldValues, Path, UseFormSetError } from 'react-hook-form';
 import { authStorage } from '../../presentation/auth/store/authStorage';
 import { useAuthStore } from '../../presentation/auth/store/useAuthStore';
@@ -39,6 +40,14 @@ adminApi.interceptors.response.use(
 );
 
 export const extractApiErrorMessage = (error: unknown, fallback = 'Ocurrió un error inesperado'): string => {
+  // Si la respuesta no matchea el schema esperado, `.parse()` tira un
+  // ZodError cuyo `.message` es el volcado crudo de los issues (formato
+  // JSON en ingles): nunca se le muestra eso al usuario, se loguea para
+  // debug y se usa el mensaje amigable.
+  if (error instanceof ZodError) {
+    console.error('Error de validacion de respuesta:', error.issues);
+    return fallback;
+  }
   const err = error as {
     response?: {
       data?: {

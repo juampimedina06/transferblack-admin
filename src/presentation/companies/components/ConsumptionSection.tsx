@@ -135,7 +135,9 @@ export function ConsumptionSection({ companyId }: { companyId: string }) {
                       <td className="px-5 py-3 font-mono text-xs">{item.public_code}</td>
                       <td className="px-5 py-3">{item.employee_name}</td>
                       <td className="px-5 py-3">
-                        {item.cost_center_code} · {item.cost_center_name}
+                        {item.cost_center_id
+                          ? `${item.cost_center_code} · ${item.cost_center_name}`
+                          : 'Sin centro de costo'}
                       </td>
                       <td className="px-5 py-3">$ {item.total}</td>
                     </tr>
@@ -161,10 +163,15 @@ export function ConsumptionSection({ companyId }: { companyId: string }) {
                 </p>
                 <ul className="flex flex-col gap-1.5 text-[13px]">
                   {consumption.data.summary.map((summary) => (
-                    <li key={summary.cost_center_id} className="flex items-center justify-between">
+                    <li
+                      key={summary.cost_center_id ?? 'sin-centro-de-costo'}
+                      className="flex items-center justify-between"
+                    >
                       <span className="text-gray-600 dark:text-white/70">
-                        {summary.cost_center_code} · {summary.cost_center_name} ({summary.trip_count}{' '}
-                        {summary.trip_count === 1 ? 'viaje' : 'viajes'})
+                        {summary.cost_center_id
+                          ? `${summary.cost_center_code} · ${summary.cost_center_name}`
+                          : 'Sin centro de costo'}{' '}
+                        ({summary.trip_count} {summary.trip_count === 1 ? 'viaje' : 'viajes'})
                       </span>
                       <span className="font-medium text-gray-900 dark:text-white">$ {summary.subtotal_total}</span>
                     </li>

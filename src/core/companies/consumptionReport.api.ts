@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import { adminApi } from '../api/adminApi';
 
+// El backend manda '' (no null) para viajes sin centro de costo en algunos
+// despliegues; se normaliza a null aca para no depender de cual de las dos
+// formas este devolviendo en un momento dado.
+const nullableCostCenterId = z
+  .union([z.string().uuid(), z.literal('')])
+  .nullable()
+  .transform((value) => (value ? value : null));
+
 const consumptionItemSchema = z.object({
   trip_id: z.string().uuid(),
   public_code: z.string(),
@@ -8,18 +16,18 @@ const consumptionItemSchema = z.object({
   employee_id: z.string().uuid(),
   employee_name: z.string(),
   employee_email: z.string(),
-  cost_center_id: z.string().uuid(),
-  cost_center_code: z.string(),
-  cost_center_name: z.string(),
+  cost_center_id: nullableCostCenterId,
+  cost_center_code: z.string().nullable(),
+  cost_center_name: z.string().nullable(),
   fare: z.string(),
   fees: z.string(),
   total: z.string(),
 });
 
 const consumptionSummarySchema = z.object({
-  cost_center_id: z.string().uuid(),
-  cost_center_code: z.string(),
-  cost_center_name: z.string(),
+  cost_center_id: nullableCostCenterId,
+  cost_center_code: z.string().nullable(),
+  cost_center_name: z.string().nullable(),
   subtotal_fare: z.string(),
   subtotal_fees: z.string(),
   subtotal_total: z.string(),

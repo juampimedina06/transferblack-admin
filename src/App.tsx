@@ -7,6 +7,8 @@ import ProtectedRoute from './presentation/components/ProtectedRoute';
 import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
 import DriversScreen from './presentation/drivers/DriversScreen';
 import DriverDetailScreen from './presentation/drivers/DriverDetailScreen';
+import CompaniesScreen from './presentation/companies/CompaniesScreen';
+import CompanyDetailScreen from './presentation/companies/CompanyDetailScreen';
 
 function App() {
   useServerHealth();
@@ -29,7 +31,8 @@ function App() {
             <Route path="/conductores" element={<DriversScreen />} />
             <Route path="/conductores/:id" element={<DriverDetailScreen />} />
             <Route path="/retiros" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/empresas" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/empresas" element={<CompaniesScreen />} />
+            <Route path="/empresas/:companyId" element={<CompanyDetailScreen />} />
             <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />
             <Route path="/configuracion" element={<Navigate to="/dashboard" replace />} />
             

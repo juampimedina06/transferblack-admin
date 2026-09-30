@@ -1,6 +1,10 @@
 import { z } from 'zod';
 import { adminApi } from '../api/adminApi';
 
+// El estado de facturacion lo calcula el backend (no es una columna): "al dia",
+// "con algun resumen vencido pero la empresa sigue activa" o "suspendida por mora".
+export const billingStatuses = ['up_to_date', 'overdue', 'suspended_for_debt'] as const;
+
 const companySchema = z.object({
   id: z.string().uuid(),
   legal_name: z.string(),
@@ -12,6 +16,7 @@ const companySchema = z.object({
   address_text: z.string().nullable(),
   monthly_spend_limit: z.string().nullable(),
   status: z.enum(['active', 'suspended']),
+  billing_status: z.enum(billingStatuses),
   created_at: z.string(),
   updated_at: z.string(),
 });
@@ -60,8 +65,20 @@ export const createCompanyFormSchema = z.object({
     ),
 });
 
+// El limite se edita solo, aparte del alta: a diferencia de `createCompanyFormSchema`
+// (donde es opcional), aca siempre viaja un valor porque es el unico campo del modal.
+export const editMonthlySpendLimitFormSchema = z.object({
+  monthly_spend_limit: z
+    .string()
+    .trim()
+    .regex(/^\d{1,10}(\.\d{1,2})?$/, 'Ingresá un importe positivo con hasta 2 decimales')
+    .refine((value) => Number(value) > 0, 'Ingresá un importe positivo con hasta 2 decimales'),
+});
+
 export type Company = z.infer<typeof companySchema>;
 export type CompanyFormValues = z.infer<typeof createCompanyFormSchema>;
+export type BillingStatus = (typeof billingStatuses)[number];
+export type EditMonthlySpendLimitFormValues = z.infer<typeof editMonthlySpendLimitFormSchema>;
 
 export async function getCompanies(filters: { page: number; search: string; status: string }, signal?: AbortSignal) {
   const response = await adminApi.get('/corporate/companies', {
@@ -80,4 +97,12 @@ export async function createCompany(values: CompanyFormValues) {
   const payload = Object.fromEntries(Object.entries(values).filter(([, value]) => value !== ''));
   const response = await adminApi.post('/corporate/companies', payload);
   return companyCreatedSchema.parse(response.data).data;
+}
+
+// No existe un GET por id: el detalle se arma en el cliente a partir de lo que
+// ya se cargo en el listado (ver CompanyDetailScreen). Esta accion solo cubre
+// la edicion del tope mensual, que si tiene su propio endpoint.
+export async function updateCompanyMonthlySpendLimit(companyId: string, values: EditMonthlySpendLimitFormValues) {
+  const response = await adminApi.patch(`/corporate/companies/${companyId}`, values);
+  return companySchema.parse(response.data.data);
 }

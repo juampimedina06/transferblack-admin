@@ -1,16 +1,20 @@
-import { useDeferredValue, useEffect, useRef, useState } from 'react';
+import { useDeferredValue, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Building2, Check, Copy, Inbox, Plus, Search, X } from 'lucide-react';
+import { Building2, Check, Copy, Inbox, Plus, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
 import {
   createCompany,
   createCompanyFormSchema,
   getCompanies,
+  type Company,
   type CompanyFormValues,
 } from '../../core/companies/company.api';
 import { Badge, Button, Input } from '../components/common';
+import { BillingStatusBadge } from './components/BillingStatusBadge';
+import { Modal } from './components/Modal';
 
 const defaults: CompanyFormValues = {
   legal_name: '',
@@ -22,84 +26,6 @@ const defaults: CompanyFormValues = {
   address_text: '',
   monthly_spend_limit: '',
 };
-
-function Modal({
-  title,
-  children,
-  onClose,
-  dismissible = true,
-}: {
-  title: string;
-  children: React.ReactNode;
-  onClose: () => void;
-  dismissible?: boolean;
-}) {
-  const dialogRef = useRef<HTMLDivElement>(null);
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
-    dialogRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && dismissible) onCloseRef.current();
-      if (event.key !== 'Tab') return;
-      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
-        'button, input, select, [tabindex]:not([tabindex="-1"])',
-      );
-      if (!focusable?.length) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      }
-      if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.removeEventListener('keydown', onKeyDown);
-      previous?.focus();
-    };
-  }, [dismissible]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      onMouseDown={(event) => dismissible && event.target === event.currentTarget && onClose()}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="company-modal-title"
-        tabIndex={-1}
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-2xl outline-none dark:border-white/10 dark:bg-obsidian"
-      >
-        <header className="sticky top-0 flex items-center justify-between border-b border-gray-100 bg-white p-5 dark:border-white/10 dark:bg-obsidian">
-          <h2 id="company-modal-title" className="font-semibold text-gray-900 dark:text-white">
-            {title}
-          </h2>
-          {dismissible && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Cerrar modal"
-              className="rounded p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10"
-            >
-              <X size={19} />
-            </button>
-          )}
-        </header>
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function CompanyForm({ onClose, onCreated }: { onClose: () => void; onCreated: (code: string) => void }) {
   const queryClient = useQueryClient();
@@ -177,6 +103,7 @@ function CompanyForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
 }
 
 export default function CompaniesScreen() {
+  const navigate = useNavigate();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
@@ -262,13 +189,14 @@ export default function CompaniesScreen() {
                   <th className="px-5 py-3">Contacto</th>
                   <th className="px-5 py-3">Tope mensual</th>
                   <th className="px-5 py-3">Estado</th>
+                  <th className="px-5 py-3">Facturación</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
                 {companies.isLoading ? (
                   Array.from({ length: 5 }).map((_, index) => (
                     <tr key={index} className="animate-pulse">
-                      {Array.from({ length: 5 }).map((__, cell) => (
+                      {Array.from({ length: 6 }).map((__, cell) => (
                         <td key={cell} className="px-5 py-4">
                           <div className="h-4 w-28 rounded bg-gray-200 dark:bg-white/10" />
                         </td>
@@ -277,17 +205,18 @@ export default function CompaniesScreen() {
                   ))
                 ) : companies.data?.companies.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-14 text-center text-gray-500">
+                    <td colSpan={6} className="py-14 text-center text-gray-500">
                       <Inbox className="mx-auto mb-3 h-10 w-10 text-gray-300" />
                       <p className="font-medium text-gray-900 dark:text-white">No se encontraron empresas</p>
                       <p className="text-sm">Ajustá los filtros o creá una nueva empresa.</p>
                     </td>
                   </tr>
                 ) : (
-                  companies.data?.companies.map((company) => (
+                  companies.data?.companies.map((company: Company) => (
                     <tr
                       key={company.id}
-                      className="text-[13px] text-gray-700 hover:bg-gray-50/50 dark:text-gray-300 dark:hover:bg-white/5"
+                      onClick={() => navigate(`/empresas/${company.id}`, { state: { company } })}
+                      className="cursor-pointer text-[13px] text-gray-700 hover:bg-gray-50/50 dark:text-gray-300 dark:hover:bg-white/5"
                     >
                       <td className="px-5 py-3">
                         <p className="font-medium text-gray-900 dark:text-white">{company.legal_name}</p>
@@ -307,6 +236,9 @@ export default function CompaniesScreen() {
                         <Badge variant={company.status === 'active' ? 'success' : 'warning'}>
                           {company.status === 'active' ? 'Activa' : 'Suspendida'}
                         </Badge>
+                      </td>
+                      <td className="px-5 py-3">
+                        <BillingStatusBadge status={company.billing_status} />
                       </td>
                     </tr>
                   ))

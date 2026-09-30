@@ -3,11 +3,12 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { Check, Copy, Inbox, Link as LinkIcon, Wallet } from 'lucide-react';
-import { extractApiErrorMessage } from '../../../core/api/adminApi';
+import { applyServerErrors, extractApiErrorMessage } from '../../../core/api/adminApi';
 import {
   createStatementPaymentLink,
   getStatementDetail,
   registerManualPayment,
+  registerManualPaymentFormFields,
   registerManualPaymentFormSchema,
   type PaymentLink,
   type RegisterManualPaymentFormValues,
@@ -32,6 +33,7 @@ export function StatementDetailModal({
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [paymentLink, setPaymentLink] = useState<PaymentLink | null>(null);
   const [copied, setCopied] = useState(false);
+  const [transferFormError, setTransferFormError] = useState<string | null>(null);
 
   const detail = useQuery({
     queryKey: ['statement-detail', statementId],
@@ -58,12 +60,14 @@ export function StatementDetailModal({
     register,
     handleSubmit,
     reset,
+    setError,
     formState: { errors },
   } = useForm<RegisterManualPaymentFormValues>({
     resolver: zodResolver(registerManualPaymentFormSchema),
   });
   const transferMutation = useMutation({
     mutationFn: (values: RegisterManualPaymentFormValues) => registerManualPayment(statementId, values),
+    onMutate: () => setTransferFormError(null),
     onSuccess: () => {
       reset();
       setShowTransferForm(false);
@@ -72,6 +76,11 @@ export function StatementDetailModal({
       // link que se estaba mostrando ya no sirve.
       setPaymentLink(null);
       invalidateAfterPayment();
+    },
+    onError: (error) => {
+      setTransferFormError(
+        applyServerErrors(error, setError, registerManualPaymentFormFields, 'No se pudo registrar la transferencia.'),
+      );
     },
   });
 
@@ -239,9 +248,9 @@ export function StatementDetailModal({
                     <p className="text-xs text-gray-500 dark:text-white/50 sm:col-span-3">
                       Si el importe supera lo pendiente, el excedente queda como saldo a favor de la empresa.
                     </p>
-                    {transferMutation.isError && (
+                    {transferFormError && (
                       <p role="alert" className="text-sm text-red-600 sm:col-span-3">
-                        {extractApiErrorMessage(transferMutation.error, 'No se pudo registrar la transferencia.')}
+                        {transferFormError}
                       </p>
                     )}
                     <div className="sm:col-span-3">

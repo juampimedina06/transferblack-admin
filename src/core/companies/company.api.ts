@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { adminApi } from '../api/adminApi';
+import { isValidTaxId } from './taxId';
 
 // El estado de facturacion lo calcula el backend (no es una columna): "al dia",
 // "con algun resumen vencido pero la empresa sigue activa" o "suspendida por mora".
@@ -43,7 +44,7 @@ const companyCreatedSchema = z.object({
   data: companySchema.extend({ join_code: z.string().min(1) }),
 });
 
-export const createCompanyFormSchema = z.object({
+const createCompanyFormObjectSchema = z.object({
   legal_name: z.string().trim().min(2, 'Ingresá al menos 2 caracteres').max(200),
   trade_name: z
     .string()
@@ -74,6 +75,28 @@ export const createCompanyFormSchema = z.object({
     ),
 });
 
+// Nombres de campo del formulario de alta, para mapear los `details` de un
+// VALIDATION_ERROR del backend a errores de campo con `setError`.
+export const companyFormFields = Object.keys(createCompanyFormObjectSchema.shape) as Array<
+  keyof z.infer<typeof createCompanyFormObjectSchema>
+>;
+
+// Valida el digito verificador antes de mandar el formulario: sin esto, el
+// unico aviso de un CUIT/RUT mal tipeado era el VALIDATION_ERROR generico del
+// backend ("Los datos ingresados no son validos"). Replica
+// `assertTaxIdChecksum` del backend (backend `src/modules/corporate/dtos/
+// corporate.dto.ts`); si el largo/formato todavia no es valido, el `min(7)`
+// de arriba ya lo marco y Zod no llega a correr este refine.
+export const createCompanyFormSchema = createCompanyFormObjectSchema.superRefine((values, ctx) => {
+  if (!isValidTaxId(values.tax_id_type, values.tax_id)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['tax_id'],
+      message: `El ${values.tax_id_type} no es válido: revisá el dígito verificador`,
+    });
+  }
+});
+
 // El limite se edita solo, aparte del alta: a diferencia de `createCompanyFormSchema`
 // (donde es opcional), aca siempre viaja un valor porque es el unico campo del modal.
 export const editMonthlySpendLimitFormSchema = z.object({
@@ -83,6 +106,10 @@ export const editMonthlySpendLimitFormSchema = z.object({
     .regex(/^\d{1,10}(\.\d{1,2})?$/, 'Ingresá un importe positivo con hasta 2 decimales')
     .refine((value) => Number(value) > 0, 'Ingresá un importe positivo con hasta 2 decimales'),
 });
+
+export const editMonthlySpendLimitFormFields = Object.keys(editMonthlySpendLimitFormSchema.shape) as Array<
+  keyof z.infer<typeof editMonthlySpendLimitFormSchema>
+>;
 
 export type Company = z.infer<typeof companySchema>;
 export type CompanyFormValues = z.infer<typeof createCompanyFormSchema>;

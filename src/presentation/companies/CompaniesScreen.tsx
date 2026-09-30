@@ -4,8 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Building2, Check, Copy, Inbox, Plus, Search } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
-import { extractApiErrorMessage } from '../../core/api/adminApi';
+import { applyServerErrors } from '../../core/api/adminApi';
 import {
+  companyFormFields,
   createCompany,
   createCompanyFormSchema,
   getCompanies,
@@ -30,9 +31,11 @@ const defaults: CompanyFormValues = {
 
 function CompanyForm({ onClose, onCreated }: { onClose: () => void; onCreated: (code: string) => void }) {
   const queryClient = useQueryClient();
+  const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<CompanyFormValues>({
     resolver: zodResolver(createCompanyFormSchema),
@@ -40,9 +43,13 @@ function CompanyForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
   });
   const mutation = useMutation({
     mutationFn: createCompany,
+    onMutate: () => setFormError(null),
     onSuccess: (company) => {
       onCreated(company.join_code);
       void queryClient.invalidateQueries({ queryKey: ['companies'] });
+    },
+    onError: (error) => {
+      setFormError(applyServerErrors(error, setError, companyFormFields, 'No se pudo crear la empresa.'));
     },
   });
   const input = (
@@ -86,9 +93,9 @@ function CompanyForm({ onClose, onCreated }: { onClose: () => void; onCreated: (
         inputMode: 'decimal',
         placeholder: 'Ej. 250000.00',
       })}
-      {mutation.isError && (
+      {formError && (
         <p role="alert" className="self-end text-sm text-red-600">
-          {extractApiErrorMessage(mutation.error, 'No se pudo crear la empresa.')}
+          {formError}
         </p>
       )}
       <div className="flex justify-end gap-3 border-t border-gray-100 pt-4 sm:col-span-2 dark:border-white/10">

@@ -77,6 +77,10 @@ export const registerManualPaymentFormSchema = z.object({
     .refine(isValidCalendarDate, 'Ingresá una fecha válida'),
 });
 
+export const registerManualPaymentFormFields = Object.keys(registerManualPaymentFormSchema.shape) as Array<
+  keyof z.infer<typeof registerManualPaymentFormSchema>
+>;
+
 export type Statement = z.infer<typeof statementSchema>;
 export type StatementLine = z.infer<typeof statementLineSchema>;
 export type StatementDetail = z.infer<typeof statementDetailSchema>;
@@ -124,6 +128,8 @@ export async function registerManualPayment(statementId: string, values: Registe
 // Cierre global: emite el resumen del periodo para todas las empresas, no solo
 // una. No se llama nunca desde el detalle de una empresa puntual.
 export async function closeStatementsPeriod(period: string) {
-  const response = await adminApi.post('/corporate/statements/close', null, { params: { period } });
+  // Sin body: axios serializa `null` como JSON (`null`), y el parser estricto
+  // del backend lo rechaza con un 500 en vez de tratarlo como "sin body".
+  const response = await adminApi.post('/corporate/statements/close', undefined, { params: { period } });
   return closeStatementsSchema.parse(response.data.data);
 }

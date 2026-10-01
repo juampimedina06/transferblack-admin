@@ -1,104 +1,32 @@
-import { useState } from 'react';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useForm } from 'react-hook-form';
-import { Check, Copy, Inbox, Link as LinkIcon, Wallet } from 'lucide-react';
-import { applyServerErrors, extractApiErrorMessage } from '../../../core/api/adminApi';
-import {
-  createStatementPaymentLink,
-  getStatementDetail,
-  registerManualPayment,
-  registerManualPaymentFormFields,
-  registerManualPaymentFormSchema,
-  type PaymentLink,
-  type RegisterManualPaymentFormValues,
-} from '../../../core/companies/companyStatements.api';
-import { Badge, Button, Input } from '../../components/common';
-import { formatArgentineDate, formatArgentineDateTime } from '../utils/formatArgentineDate';
+import { useQuery } from '@tanstack/react-query';
+import { Inbox } from 'lucide-react';
+import { getStatementDetail } from '../../../core/companies/companyStatements.api';
+import { Badge } from '../../components/common';
+import { formatArgentineDate } from '../utils/formatArgentineDate';
 import { Modal } from './Modal';
 import { QueryErrorState } from './QueryErrorState';
 
 const lineTypeLabel: Record<string, string> = { trip: 'Viaje', cancellation_penalty: 'Penalidad de cancelación' };
 
+// Los resumenes son informativos (saldo prepago, feature/empresas-prepago):
+// ya no admiten un pago nuevo, asi que este modal solo muestra el detalle del
+// consumo del periodo. La carga de saldo vive en `TopUpModal`.
 export function StatementDetailModal({
   statementId,
-  companyId,
   onClose,
 }: {
   statementId: string;
-  companyId: string;
   onClose: () => void;
 }) {
-  const queryClient = useQueryClient();
-  const [showTransferForm, setShowTransferForm] = useState(false);
-  const [paymentLink, setPaymentLink] = useState<PaymentLink | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [transferFormError, setTransferFormError] = useState<string | null>(null);
-
   const detail = useQuery({
     queryKey: ['statement-detail', statementId],
     queryFn: ({ signal }) => getStatementDetail(statementId, signal),
   });
 
-  const invalidateAfterPayment = () => {
-    void queryClient.invalidateQueries({ queryKey: ['statement-detail', statementId] });
-    void queryClient.invalidateQueries({ queryKey: ['company-statements', companyId] });
-    void queryClient.invalidateQueries({ queryKey: ['company-balance', companyId] });
-    void queryClient.invalidateQueries({ queryKey: ['companies'] });
-  };
-
-  const linkMutation = useMutation({
-    mutationFn: () => createStatementPaymentLink(statementId),
-    onSuccess: (link) => {
-      setPaymentLink(link);
-      setCopied(false);
-      invalidateAfterPayment();
-    },
-  });
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    formState: { errors },
-  } = useForm<RegisterManualPaymentFormValues>({
-    resolver: zodResolver(registerManualPaymentFormSchema),
-  });
-  const transferMutation = useMutation({
-    mutationFn: (values: RegisterManualPaymentFormValues) => registerManualPayment(statementId, values),
-    onMutate: () => setTransferFormError(null),
-    onSuccess: () => {
-      reset();
-      setShowTransferForm(false);
-      // La transferencia anula cualquier link pendiente de este resumen
-      // (ver company-statement-payment.service.ts, `supersedePending`): el
-      // link que se estaba mostrando ya no sirve.
-      setPaymentLink(null);
-      invalidateAfterPayment();
-    },
-    onError: (error) => {
-      setTransferFormError(
-        applyServerErrors(error, setError, registerManualPaymentFormFields, 'No se pudo registrar la transferencia.'),
-      );
-    },
-  });
-
-  const copyLink = async () => {
-    if (!paymentLink) return;
-    try {
-      await navigator.clipboard.writeText(paymentLink.checkout_url);
-      setCopied(true);
-    } catch {
-      // El botón de copiar es una comodidad: si falla, el link sigue visible para copiarlo a mano.
-    }
-  };
-
   const statement = detail.data?.statement;
-  const isOpenForPayment = statement && statement.status !== 'paid';
 
   return (
-    <Modal title="Detalle del resumen" onClose={onClose}>
+    <Modal title="Detalle del reporte de consumo" onClose={onClose}>
       <div className="flex flex-col gap-5 p-5">
         {detail.isLoading && <p className="text-sm text-gray-500">Cargando…</p>}
         {detail.isError && (
@@ -171,97 +99,6 @@ export function StatementDetailModal({
                 </tbody>
               </table>
             </div>
-
-            {isOpenForPayment && (
-              <div className="flex flex-col gap-4 border-t border-gray-100 pt-4 dark:border-white/10">
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="secondary"
-                    leftIcon={<LinkIcon size={15} />}
-                    isLoading={linkMutation.isPending}
-                    onClick={() => linkMutation.mutate()}
-                  >
-                    Generar link de pago
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    leftIcon={<Wallet size={15} />}
-                    onClick={() => setShowTransferForm((value) => !value)}
-                  >
-                    Registrar transferencia
-                  </Button>
-                </div>
-
-                {linkMutation.isError && (
-                  <p role="alert" className="text-sm text-red-600">
-                    {extractApiErrorMessage(linkMutation.error, 'No se pudo generar el link de pago.')}
-                  </p>
-                )}
-
-                {paymentLink && (
-                  <div className="rounded-lg border border-champagne-gold/40 bg-champagne-gold/10 p-4">
-                    <p className="text-xs text-gray-600 dark:text-white/70">
-                      Vence el {formatArgentineDateTime(paymentLink.expires_at)}. Generar un link nuevo o registrar
-                      una transferencia anula este link.
-                    </p>
-                    <div className="mt-2 flex items-center justify-between gap-3 overflow-x-auto rounded-md bg-white p-2 dark:bg-obsidian">
-                      <code className="whitespace-nowrap text-xs text-gray-800 dark:text-white/90">
-                        {paymentLink.checkout_url}
-                      </code>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={copyLink}
-                        leftIcon={copied ? <Check size={14} /> : <Copy size={14} />}
-                      >
-                        {copied ? 'Copiado' : 'Copiar'}
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {showTransferForm && (
-                  <form
-                    onSubmit={handleSubmit((values) => transferMutation.mutate(values))}
-                    className="grid gap-3 rounded-lg border border-gray-100 p-4 dark:border-white/10 sm:grid-cols-3"
-                  >
-                    <Input
-                      label="Importe"
-                      inputMode="decimal"
-                      placeholder="Ej. 15000.00"
-                      error={errors.amount?.message}
-                      {...register('amount')}
-                    />
-                    <Input
-                      label="Referencia"
-                      placeholder="Nº de comprobante"
-                      error={errors.reference?.message}
-                      {...register('reference')}
-                    />
-                    <Input
-                      label="Fecha"
-                      type="date"
-                      error={errors.paid_at?.message}
-                      {...register('paid_at')}
-                    />
-                    <p className="text-xs text-gray-500 dark:text-white/50 sm:col-span-3">
-                      Si el importe supera lo pendiente, el excedente queda como saldo a favor de la empresa.
-                    </p>
-                    {transferFormError && (
-                      <p role="alert" className="text-sm text-red-600 sm:col-span-3">
-                        {transferFormError}
-                      </p>
-                    )}
-                    <div className="sm:col-span-3">
-                      <Button type="submit" variant="gold" isLoading={transferMutation.isPending}>
-                        Confirmar transferencia
-                      </Button>
-                    </div>
-                  </form>
-                )}
-              </div>
-            )}
           </>
         )}
       </div>

@@ -6,6 +6,10 @@ import { isValidTaxId } from './taxId';
 // "con algun resumen vencido pero la empresa sigue activa" o "suspendida por mora".
 export const billingStatuses = ['up_to_date', 'overdue', 'suspended_for_debt'] as const;
 
+// Saldo prepago (feature/empresas-prepago): reemplaza a `billing_status` como
+// fuente de verdad de si la empresa puede operar.
+export const balanceStatuses = ['ok', 'low_balance', 'no_balance'] as const;
+
 const companySchema = z.object({
   id: z.string().uuid(),
   legal_name: z.string(),
@@ -22,6 +26,9 @@ const companySchema = z.object({
   // backend que todavia no los manda. El tipo de salida sigue siendo
   // obligatorio (no `| undefined`) para el resto del codigo.
   billing_status: z.enum(billingStatuses).default('up_to_date'),
+  // Sin default: si no llega (backend viejo todavia desplegado), el panel
+  // cae a mostrar `billing_status` en su lugar en vez de inventar un estado.
+  balance_status: z.enum(balanceStatuses).optional(),
   suspension_reason: z.string().nullable().default(null),
   suspended_at: z.string().nullable().default(null),
   // Quien la suspendio, sin exponer el id crudo del admin: el job de mora
@@ -114,6 +121,7 @@ export const editMonthlySpendLimitFormFields = Object.keys(editMonthlySpendLimit
 export type Company = z.infer<typeof companySchema>;
 export type CompanyFormValues = z.infer<typeof createCompanyFormSchema>;
 export type BillingStatus = (typeof billingStatuses)[number];
+export type BalanceStatus = (typeof balanceStatuses)[number];
 export type EditMonthlySpendLimitFormValues = z.infer<typeof editMonthlySpendLimitFormSchema>;
 
 export async function getCompanies(filters: { page: number; search: string; status: string }, signal?: AbortSignal) {

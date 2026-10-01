@@ -4,27 +4,16 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Pencil } from 'lucide-react';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
 import { getCompany, type Company } from '../../core/companies/company.api';
-import { getCompanyBalance } from '../../core/companies/companyBalance.api';
 import { Badge, Button, Card } from '../components/common';
+import { BalanceStatusBadge } from './components/BalanceStatusBadge';
 import { BillingStatusBadge } from './components/BillingStatusBadge';
+import { CompanyBalanceSection } from './components/CompanyBalanceSection';
 import { ConsumptionSection } from './components/ConsumptionSection';
 import { CostCentersTable } from './components/CostCentersTable';
 import { EditMonthlyLimitModal } from './components/EditMonthlyLimitModal';
 import { MembersTable } from './components/MembersTable';
-import { QueryErrorState } from './components/QueryErrorState';
 import { StatementsSection } from './components/StatementsSection';
 import { formatArgentineDateTime } from './utils/formatArgentineDate';
-
-function BalanceCard({ label, amount, currency }: { label: string; amount: string; currency: string }) {
-  return (
-    <Card className="p-4">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-gray-900 dark:text-white">
-        {currency} {amount}
-      </p>
-    </Card>
-  );
-}
 
 function isNotFound(error: unknown): boolean {
   const status = (error as { response?: { status?: number } })?.response?.status;
@@ -48,12 +37,6 @@ export default function CompanyDetailScreen() {
     queryFn: ({ signal }) => getCompany(companyId!, signal),
     enabled: Boolean(companyId),
     ...(navigationCompany && navigationCompany.id === companyId ? { initialData: navigationCompany } : {}),
-  });
-
-  const balance = useQuery({
-    queryKey: ['company-balance', companyId],
-    queryFn: ({ signal }) => getCompanyBalance(companyId!, signal),
-    enabled: Boolean(companyId),
   });
 
   if (!companyId) {
@@ -99,7 +82,11 @@ export default function CompanyDetailScreen() {
                 <Badge variant={company.data.status === 'active' ? 'success' : 'danger'}>
                   {company.data.status === 'active' ? 'Activa' : 'Suspendida'}
                 </Badge>
-                <BillingStatusBadge status={company.data.billing_status} />
+                {company.data.balance_status ? (
+                  <BalanceStatusBadge status={company.data.balance_status} />
+                ) : (
+                  <BillingStatusBadge status={company.data.billing_status} />
+                )}
               </div>
               <p className="mt-1 text-sm text-gray-500">
                 {company.data.trade_name || 'Sin nombre de fantasía'} · {company.data.tax_id_type}{' '}
@@ -134,43 +121,7 @@ export default function CompanyDetailScreen() {
         </Card>
       )}
 
-      <section aria-label="Balance de la cuenta corriente" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {balance.isLoading ? (
-          Array.from({ length: 4 }).map((_, index) => (
-            <Card key={index} className="p-4">
-              <div className="h-3 w-24 animate-pulse rounded bg-gray-200 dark:bg-white/10" />
-              <div className="mt-2 h-6 w-32 animate-pulse rounded bg-gray-200 dark:bg-white/10" />
-            </Card>
-          ))
-        ) : balance.isError ? (
-          <div className="col-span-full rounded-lg border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
-            <QueryErrorState
-              error={balance.error}
-              fallback="No se pudo cargar el saldo de la empresa."
-              onRetry={() => balance.refetch()}
-            />
-          </div>
-        ) : balance.data ? (
-          <>
-            <BalanceCard
-              label="Pendiente de pago"
-              amount={balance.data.unpaid_statements_amount}
-              currency={balance.data.currency}
-            />
-            <BalanceCard
-              label="Consumo del mes sin facturar"
-              amount={balance.data.unbilled_current_month_amount}
-              currency={balance.data.currency}
-            />
-            <BalanceCard label="Saldo a favor" amount={balance.data.credit_amount} currency={balance.data.currency} />
-            <BalanceCard
-              label="Total adeudado"
-              amount={balance.data.outstanding_amount}
-              currency={balance.data.currency}
-            />
-          </>
-        ) : null}
-      </section>
+      <CompanyBalanceSection companyId={companyId} />
 
       <MembersTable companyId={companyId} />
       <CostCentersTable companyId={companyId} />

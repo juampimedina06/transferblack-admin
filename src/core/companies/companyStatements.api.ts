@@ -38,11 +38,6 @@ const statementDetailSchema = z.object({
   lines: z.array(statementLineSchema),
 });
 
-const paymentLinkSchema = z.object({
-  checkout_url: z.string(),
-  expires_at: z.string(),
-});
-
 const closeStatementsSchema = z.object({
   period: z.string(),
   issued: z.number(),
@@ -52,8 +47,9 @@ const closeStatementsSchema = z.object({
 
 // El input nativo `type="date"` siempre entrega "YYYY-MM-DD", pero valida
 // igual: si algo lo deja vacio o mal formado, `new Date(...).toISOString()`
-// tira un RangeError en vez de mostrarse como error de campo.
-function isValidCalendarDate(value: string): boolean {
+// tira un RangeError en vez de mostrarse como error de campo. Se exporta
+// porque tambien la usa `companyTopUps.api.ts` para la fecha de la carga.
+export function isValidCalendarDate(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
   if (!match) return false;
   const year = Number(match[1]);
@@ -63,30 +59,10 @@ function isValidCalendarDate(value: string): boolean {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
-export const registerManualPaymentFormSchema = z.object({
-  amount: z
-    .string()
-    .trim()
-    .regex(/^\d{1,10}(\.\d{1,2})?$/, 'Ingresá un importe positivo con hasta 2 decimales')
-    .refine((value) => Number(value) > 0, 'Ingresá un importe positivo con hasta 2 decimales'),
-  reference: z.string().trim().min(1, 'Ingresá la referencia de la transferencia').max(100),
-  paid_at: z
-    .string()
-    .trim()
-    .min(1, 'Ingresá la fecha de la transferencia')
-    .refine(isValidCalendarDate, 'Ingresá una fecha válida'),
-});
-
-export const registerManualPaymentFormFields = Object.keys(registerManualPaymentFormSchema.shape) as Array<
-  keyof z.infer<typeof registerManualPaymentFormSchema>
->;
-
 export type Statement = z.infer<typeof statementSchema>;
 export type StatementLine = z.infer<typeof statementLineSchema>;
 export type StatementDetail = z.infer<typeof statementDetailSchema>;
-export type PaymentLink = z.infer<typeof paymentLinkSchema>;
 export type CloseStatementsResult = z.infer<typeof closeStatementsSchema>;
-export type RegisterManualPaymentFormValues = z.infer<typeof registerManualPaymentFormSchema>;
 
 export async function getCompanyStatements(companyId: string, signal?: AbortSignal) {
   const response = await adminApi.get(`/corporate/companies/${companyId}/statements`, { signal });
@@ -96,33 +72,6 @@ export async function getCompanyStatements(companyId: string, signal?: AbortSign
 export async function getStatementDetail(statementId: string, signal?: AbortSignal) {
   const response = await adminApi.get(`/corporate/statements/${statementId}`, { signal });
   return statementDetailSchema.parse(response.data.data);
-}
-
-// Cada click pide una Idempotency-Key nueva: repetir la solicitud con la misma
-// clave devolveria el mismo link ya vencido en vez de generar uno nuevo.
-export async function createStatementPaymentLink(statementId: string) {
-  const response = await adminApi.post(
-    `/corporate/statements/${statementId}/payment-link`,
-    {},
-    { headers: { 'Idempotency-Key': crypto.randomUUID() } },
-  );
-  return paymentLinkSchema.parse(response.data.data);
-}
-
-export async function registerManualPayment(statementId: string, values: RegisterManualPaymentFormValues) {
-  const response = await adminApi.post(`/corporate/statements/${statementId}/payments`, {
-    amount: values.amount,
-    method: 'bank_transfer',
-    reference: values.reference,
-    // `new Date(value).toISOString()` interpreta "YYYY-MM-DD" como medianoche
-    // UTC: en Cordoba (UTC-3) eso es el dia anterior. El backend exige un
-    // datetime ISO con offset (`z.iso.datetime({ offset: true })`), asi que
-    // se manda mediodia en el offset fijo de Argentina (sin horario de
-    // verano) para no depender del huso horario del navegador ni pisar el
-    // dia por redondeo.
-    paid_at: `${values.paid_at}T12:00:00-03:00`,
-  });
-  return statementSchema.parse(response.data.data);
 }
 
 // Cierre global: emite el resumen del periodo para todas las empresas, no solo

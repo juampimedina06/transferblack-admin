@@ -48,10 +48,15 @@ export function CompanyBalanceSection({ companyId }: { companyId: string }) {
     queryFn: ({ signal }) => getCompanyBalance(companyId, signal),
   });
 
-  const prepaid = balance.data && isPrepaidBalance(balance.data) ? balance.data : null;
-  const legacy = !prepaid && balance.data && isPostpaidBalance(balance.data) ? balance.data : null;
+  // `canTopUp` (y por lo tanto el historial de cargas) solo se habilita con
+  // la forma prepaga confirmada por un fetch exitoso: mientras carga, si
+  // falla, o si la forma es la vieja o una desconocida, cargar saldo
+  // apuntaria a una ruta que puede no existir todavia en ese backend.
+  const prepaid = balance.isSuccess && balance.data && isPrepaidBalance(balance.data) ? balance.data : null;
+  const legacy =
+    balance.isSuccess && !prepaid && balance.data && isPostpaidBalance(balance.data) ? balance.data : null;
   const available = prepaid ? Number(prepaid.available) : null;
-  const canTopUp = !legacy;
+  const canTopUp = Boolean(prepaid);
 
   return (
     <Card noPadding>

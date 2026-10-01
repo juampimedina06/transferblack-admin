@@ -46,12 +46,27 @@ export type CompanyBalance = z.infer<typeof companyBalanceSchema>;
 export type PrepaidCompanyBalance = CompanyBalance & z.infer<typeof prepaidBalanceSchema>;
 export type PostpaidCompanyBalance = CompanyBalance & z.infer<typeof postpaidBalanceSchema>;
 
+// Las dos formas comparten `company_id`/`currency`, asi que no alcanza con
+// mirar un solo campo propio de cada una: un payload parcial o mezclado
+// (por ejemplo, un backend intermedio que solo manda `available` sin
+// `low_balance`) tiene que caer al fallback neutral, no narrowear a medias.
 export function isPrepaidBalance(balance: CompanyBalance): balance is PrepaidCompanyBalance {
-  return balance.available !== undefined;
+  return (
+    balance.balance !== undefined &&
+    balance.available !== undefined &&
+    balance.in_flight !== undefined &&
+    balance.currency !== undefined &&
+    balance.low_balance !== undefined
+  );
 }
 
 export function isPostpaidBalance(balance: CompanyBalance): balance is PostpaidCompanyBalance {
-  return balance.unpaid_statements_amount !== undefined;
+  return (
+    balance.unpaid_statements_amount !== undefined &&
+    balance.unbilled_current_month_amount !== undefined &&
+    balance.credit_amount !== undefined &&
+    balance.outstanding_amount !== undefined
+  );
 }
 
 export async function getCompanyBalance(companyId: string, signal?: AbortSignal) {

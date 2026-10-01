@@ -76,7 +76,9 @@ export function TopUpsTable({ companyId }: { companyId: string }) {
                 <tr key={topUp.id} className="text-[13px] text-gray-700 dark:text-gray-300">
                   <td className="px-5 py-3">{formatArgentineDate(topUp.paid_at ?? topUp.created_at)}</td>
                   <td className="px-5 py-3">{methodLabel[topUp.method]}</td>
-                  <td className="px-5 py-3">$ {topUp.amount}</td>
+                  <td className="px-5 py-3">
+                    {topUp.currency} {topUp.amount}
+                  </td>
                   <td className="px-5 py-3">
                     <Badge variant={statusConfig[topUp.status].variant}>{statusConfig[topUp.status].label}</Badge>
                   </td>

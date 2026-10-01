@@ -18,7 +18,7 @@ export function StatementsSection({ companyId }: { companyId: string }) {
     <Card noPadding>
       <div className="border-b border-gray-100 p-5 dark:border-white/10">
         <CardHeader className="mb-0">
-          <CardTitle>Resúmenes</CardTitle>
+          <CardTitle>Reporte de consumo</CardTitle>
         </CardHeader>
       </div>
       <div className="overflow-x-auto">
@@ -94,11 +94,7 @@ export function StatementsSection({ companyId }: { companyId: string }) {
       </div>
 
       {selectedStatementId && (
-        <StatementDetailModal
-          statementId={selectedStatementId}
-          companyId={companyId}
-          onClose={() => setSelectedStatementId(null)}
-        />
+        <StatementDetailModal statementId={selectedStatementId} onClose={() => setSelectedStatementId(null)} />
       )}
     </Card>
   );

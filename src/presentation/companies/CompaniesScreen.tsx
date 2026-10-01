@@ -14,6 +14,7 @@ import {
   type CompanyFormValues,
 } from '../../core/companies/company.api';
 import { Badge, Button, Input } from '../components/common';
+import { BalanceStatusBadge } from './components/BalanceStatusBadge';
 import { BillingStatusBadge } from './components/BillingStatusBadge';
 import { CloseStatementsCard } from './components/CloseStatementsCard';
 import { Modal } from './components/Modal';
@@ -198,7 +199,7 @@ export default function CompaniesScreen() {
                   <th className="px-5 py-3">Contacto</th>
                   <th className="px-5 py-3">Tope mensual</th>
                   <th className="px-5 py-3">Estado</th>
-                  <th className="px-5 py-3">Facturación</th>
+                  <th className="px-5 py-3">Saldo</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
@@ -247,7 +248,11 @@ export default function CompaniesScreen() {
                         </Badge>
                       </td>
                       <td className="px-5 py-3">
-                        <BillingStatusBadge status={company.billing_status} />
+                        {company.balance_status ? (
+                          <BalanceStatusBadge status={company.balance_status} />
+                        ) : (
+                          <BillingStatusBadge status={company.billing_status} />
+                        )}
                       </td>
                     </tr>
                   ))

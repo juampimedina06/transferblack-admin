@@ -4,6 +4,7 @@ import { updateDocumentStatus } from '../../../core/drivers/actions/updateDocume
 import { updateApplicationStatus } from '../../../core/drivers/actions/updateApplicationStatus.action';
 import { scheduleMeeting } from '../../../core/drivers/actions/scheduleMeeting.action';
 import { finalizeMeeting } from '../../../core/drivers/actions/finalizeMeeting.action';
+import { rescheduleMeeting } from '../../../core/drivers/actions/rescheduleMeeting.action';
 
 import type { DriverDetailResponse } from '../../../core/drivers/interfaces/driver-detail.interface';
 
@@ -104,11 +105,24 @@ export const useDriverDetail = (id: string) => {
     }
   });
 
+  const rescheduleMutation = useMutation({
+    mutationFn: ({ meetingId, scheduledAt, location }: { meetingId: string, scheduledAt: string, location: string }) =>
+      rescheduleMeeting(meetingId, { scheduledAt, location }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driver-detail', id] });
+      alert('La reunión se reprogramó con éxito. El conductor será notificado.');
+    },
+    onError: (error: unknown) => {
+      alert(extractApiErrorMessage(error, 'Error al reprogramar la reunión'));
+    }
+  });
+
   return {
     detailQuery,
     documentMutation,
     statusMutation,
     scheduleMutation,
     finalizeMeetingMutation,
+    rescheduleMutation,
   };
 };

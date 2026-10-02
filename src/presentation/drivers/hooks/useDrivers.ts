@@ -7,5 +7,6 @@ export const useDrivers = (filters: GetDriversFilters) => {
     queryKey: ['drivers', filters],
     queryFn: () => getDrivers(filters),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchInterval: 10000, // 10 seconds polling para no tener que recargar
   });
 };

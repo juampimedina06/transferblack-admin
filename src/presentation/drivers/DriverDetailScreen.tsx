@@ -4,16 +4,95 @@ import { useDriverDetail } from './hooks/useDriverDetail';
 import { DriverDetailSkeleton } from './components/DriverDetail/DriverDetailSkeleton';
 import { DocumentCard } from './components/DriverDetail/DocumentCard';
 import { RejectionModal } from './components/DriverDetail/RejectionModal';
-import { ArrowLeft, Calendar, MapPin, AlertTriangle, Check, X, Lock, CheckCircle2, Sparkles } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, AlertTriangle, Check, X, Lock, CheckCircle2, Sparkles, Clock } from 'lucide-react';
 import { format, differenceInYears, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
 import { Button, Input, Badge, Card, CardHeader, CardTitle } from '../components/common';
+import type { DriverMeeting } from '../../core/drivers/interfaces/driver-detail.interface';
+
+const getApprovalStatusConfig = (status: string) => {
+  switch (status) {
+    case 'approved':
+      return {
+        label: 'Aprobado y habilitado',
+        badge: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/25',
+        dot: 'bg-emerald-500',
+      };
+    case 'rejected':
+      return {
+        label: 'Rechazado',
+        badge: 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/25',
+        dot: 'bg-red-500',
+      };
+    case 'suspended':
+      return {
+        label: 'Suspendido',
+        badge: 'bg-gray-500/10 text-gray-700 dark:text-gray-300 border border-gray-500/25',
+        dot: 'bg-gray-400',
+      };
+    case 'pending':
+    default:
+      return {
+        label: 'Pendiente de aprobación',
+        badge: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/25',
+        dot: 'bg-amber-500',
+      };
+  }
+};
+
+const getMeetingStatusConfig = (status?: DriverMeeting['status']) => {
+  switch (status) {
+    case 'completed':
+      return {
+        label: 'Realizada',
+        cardTitle: 'Reunión presencial realizada',
+        badgeVariant: 'success' as const,
+        description: 'La reunión presencial fue completada con éxito.',
+      };
+    case 'confirmed':
+      return {
+        label: 'Confirmada',
+        cardTitle: 'Reunión confirmada',
+        badgeVariant: 'purple' as const,
+        description: 'El conductor confirmó su asistencia para esta fecha y lugar.',
+      };
+    case 'reschedule_requested':
+      return {
+        label: 'Reprogramación solicitada',
+        cardTitle: 'Reprogramación solicitada',
+        badgeVariant: 'warning' as const,
+        description: 'El conductor solicitó reprogramar la reunión a otra fecha.',
+      };
+    case 'no_show':
+      return {
+        label: 'No asistió',
+        cardTitle: 'No asistió a la reunión',
+        badgeVariant: 'danger' as const,
+        description: 'El conductor no asistió a la reunión presencial acordada.',
+      };
+    case 'cancelled':
+      return {
+        label: 'Cancelada',
+        cardTitle: 'Reunión cancelada',
+        badgeVariant: 'default' as const,
+        description: 'La reunión presencial fue cancelada.',
+      };
+    case 'proposed':
+    default:
+      return {
+        label: 'Propuesta enviada',
+        cardTitle: 'Reunión propuesta al conductor',
+        badgeVariant: 'gold' as const,
+        description: 'Propuesta enviada al conductor. Esperando confirmación en su app.',
+      };
+  }
+};
 
 export const DriverDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { detailQuery, documentMutation, statusMutation, scheduleMutation, finalizeMeetingMutation } = useDriverDetail(id!);
+  const { detailQuery, documentMutation, statusMutation, scheduleMutation, finalizeMeetingMutation, rescheduleMutation } = useDriverDetail(id!);
 
   const [rejectingDocId, setRejectingDocId] = useState<string | null>(null);
   const [rejectingApp, setRejectingApp] = useState(false);
@@ -42,7 +121,10 @@ export const DriverDetailScreen: React.FC = () => {
     );
   }
 
-  const { driverProfile, personalData, vehicles, driverDocuments, vehicleDocuments, latestMeeting } = detailQuery.data;
+  const { driverProfile, personalData, vehicles, driverDocuments = [], vehicleDocuments = [], latestMeeting } = detailQuery.data;
+
+  const approvalConfig = getApprovalStatusConfig(driverProfile.approvalStatus);
+  const meetingConfig = getMeetingStatusConfig(latestMeeting?.status);
 
   const allDocuments = [...driverDocuments, ...vehicleDocuments];
   const allDocsApproved = allDocuments.length > 0 && allDocuments.every(d => d.status === 'approved');
@@ -67,6 +149,15 @@ export const DriverDetailScreen: React.FC = () => {
     }
     const scheduledAt = new Date(`${meetingDate}T${meetingTime}`).toISOString();
     scheduleMutation.mutate({ scheduledAt, location: meetingLocation });
+  };
+
+  const handleRescheduleMeeting = () => {
+    if (!meetingDate || !meetingTime || !meetingLocation) {
+      alert('Completá fecha, hora y lugar para la nueva reunión');
+      return;
+    }
+    const scheduledAt = new Date(`${meetingDate}T${meetingTime}`).toISOString();
+    rescheduleMutation.mutate({ meetingId: latestMeeting!.id, scheduledAt, location: meetingLocation });
   };
 
   const hasExpiredDocs = allDocuments.some(
@@ -123,21 +214,26 @@ export const DriverDetailScreen: React.FC = () => {
           {/* Header Profile */}
           <div className="bg-white dark:bg-obsidian border border-gray-200 dark:border-white/10 rounded-md p-6 flex flex-col md:flex-row items-start md:items-center gap-6 shadow-sm dark:shadow-none transition-colors">
             <div className="w-20 h-20 bg-[#F3E8C1] dark:bg-[#D4AF37] rounded-md flex items-center justify-center text-[#9A7D3A] dark:text-obsidian text-2xl font-bold uppercase shrink-0">
-              {personalData?.fullName?.substring(0, 2) || ''}
+              {personalData?.fullName ? personalData.fullName.substring(0, 2) : ''}
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h1 className="text-xl font-medium text-gray-900 dark:text-white">{personalData?.fullName || ''}</h1>
-                <span className={`px-2 py-0.5 rounded-sm border text-[11px] font-medium ${driverProfile.approvalStatus === 'approved' ? 'bg-transparent border-green-200 text-green-700 dark:border-green-500/50 dark:text-green-400' :
-                    driverProfile.approvalStatus === 'rejected' ? 'bg-transparent border-red-200 text-red-700 dark:border-red-500/50 dark:text-red-400' :
-                      'bg-orange-50 border-orange-200 text-orange-600 dark:bg-orange-500/10 dark:border-orange-500/30 dark:text-orange-400'
-                  }`}>
-                  {driverProfile.approvalStatus === 'approved' ? 'Aprobado' : driverProfile.approvalStatus === 'rejected' ? 'Rechazado' : 'Pendiente de aprobación'}
-                </span>
+                <div
+                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium tracking-wide uppercase select-none cursor-default ${approvalConfig.badge}`}
+                  title="Estado del legajo del conductor"
+                >
+                  <span className={`w-2 h-2 rounded-full ${approvalConfig.dot}`} />
+                  <span>Estado: {approvalConfig.label}</span>
+                </div>
                 {latestMeeting && (
-                  <span className="px-2 py-0.5 rounded-sm border border-purple-200 bg-purple-50 text-purple-700 dark:bg-purple-500/10 dark:border-purple-500/30 dark:text-purple-400 text-[11px] font-medium flex items-center gap-1">
-                    Reunión {format(new Date(latestMeeting.scheduledAt), "dd/MM HH:mm")}
-                  </span>
+                  <div
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-medium select-none cursor-default bg-purple-500/10 text-purple-700 dark:text-purple-300 border border-purple-500/20"
+                    title={`Reunión: ${meetingConfig.label}`}
+                  >
+                    <Calendar className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                    <span>Reunión {format(new Date(latestMeeting.scheduledAt), "dd/MM HH:mm")} • {meetingConfig.label}</span>
+                  </div>
                 )}
               </div>
 
@@ -333,7 +429,7 @@ export const DriverDetailScreen: React.FC = () => {
                         {latestMeeting?.status === 'completed'
                           ? "Reunión presencial realizada"
                           : latestMeeting
-                            ? `Reunión agendada (${latestMeeting.status}) - marcar como "Realizada"`
+                            ? `Reunión coordinada (${meetingConfig.label}) - requiere marcarse como "Realizada"`
                             : "Agendar reunión presencial abajo y marcar como 'Realizada'"}
                       </span>
                     </div>
@@ -343,13 +439,15 @@ export const DriverDetailScreen: React.FC = () => {
             ) : (
               <div className="flex flex-col gap-2">
                 <div className="bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/10 p-3 rounded-md">
-                  <p className="text-gray-800 dark:text-white/90 text-[12px]">
-                    Estado actual: <strong className={`capitalize ${driverProfile.approvalStatus === 'approved' ? 'text-green-700' :
-                        driverProfile.approvalStatus === 'rejected' ? 'text-red-600' : 'text-orange-600'
-                      }`}>{driverProfile.approvalStatus}</strong>
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-white/60 text-[12px]">Estado del legajo:</span>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium ${approvalConfig.badge}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${approvalConfig.dot}`} />
+                      {approvalConfig.label}
+                    </span>
+                  </div>
                   {driverProfile.rejectionReason && (
-                    <p className="text-red-600 dark:text-red-400 text-[12px] mt-1 font-medium">Motivo: {driverProfile.rejectionReason}</p>
+                    <p className="text-red-600 dark:text-red-400 text-[12px] mt-1.5 font-medium">Motivo: {driverProfile.rejectionReason}</p>
                   )}
                 </div>
 
@@ -384,26 +482,10 @@ export const DriverDetailScreen: React.FC = () => {
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
-                <CardTitle>Reunión propuesta</CardTitle>
+                <CardTitle>{latestMeeting ? meetingConfig.cardTitle : 'Reunión presencial'}</CardTitle>
                 {latestMeeting ? (
-                  <Badge
-                    variant={
-                      latestMeeting.status === 'completed'
-                        ? 'success'
-                        : latestMeeting.status === 'cancelled'
-                        ? 'danger'
-                        : latestMeeting.status === 'no_show'
-                        ? 'warning'
-                        : 'purple'
-                    }
-                  >
-                    {latestMeeting.status === 'completed'
-                      ? 'Realizada'
-                      : latestMeeting.status === 'cancelled'
-                      ? 'Cancelada'
-                      : latestMeeting.status === 'no_show'
-                      ? 'No se presentó'
-                      : 'Agendada'}
+                  <Badge variant={meetingConfig.badgeVariant}>
+                    {meetingConfig.label}
                   </Badge>
                 ) : allDocsApproved ? (
                   <Badge variant="success" dot>
@@ -419,57 +501,243 @@ export const DriverDetailScreen: React.FC = () => {
 
             {latestMeeting ? (
               <div className="flex flex-col gap-4">
-                <div className="grid grid-cols-1 gap-3 pb-4 border-b border-gray-100 dark:border-white/5">
-                  <div>
-                    <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Fecha y hora</p>
-                    <p className="text-gray-800 dark:text-white/90 text-[13px] font-medium flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-champagne-gold" />
-                      {format(new Date(latestMeeting.scheduledAt), "dd/MM/yyyy • HH:mm'hs'", { locale: es })}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Lugar</p>
-                    <p className="text-gray-800 dark:text-white/90 text-[13px] leading-tight flex items-start gap-1.5">
-                      <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
-                      <span>{latestMeeting.location}</span>
-                    </p>
-                  </div>
-                </div>
+                {/* 1. ESTADO: REALIZADA */}
+                {latestMeeting.status === 'completed' ? (
+                  <div className="flex flex-col gap-3">
+                    <div className="bg-emerald-50 dark:bg-emerald-950/25 border border-emerald-200 dark:border-emerald-800/40 rounded-lg p-3.5 flex items-start gap-3">
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="text-[13px] font-semibold text-emerald-900 dark:text-emerald-200">
+                          Reunión presencial completada
+                        </h4>
+                        <p className="text-[11.5px] text-emerald-700 dark:text-emerald-300/90 mt-0.5 leading-relaxed">
+                          La entrevista presencial fue realizada satisfactoriamente y el requisito quedó cumplido.
+                        </p>
+                      </div>
+                    </div>
 
-                <div>
-                  <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-2">
-                    Cerrar la reunión como
-                  </p>
-                  <div className="grid grid-cols-3 gap-2">
-                    <Button
-                      variant={latestMeeting.status === 'completed' ? 'success' : 'secondary'}
-                      size="sm"
-                      disabled={finalizeMeetingMutation.isPending}
-                      onClick={() => finalizeMeetingMutation.mutate({ meetingId: latestMeeting.id, status: 'completed' })}
-                      leftIcon={<Check className="w-3 h-3 stroke-[2.5]" />}
-                    >
-                      Realizada
-                    </Button>
-                    <Button
-                      variant={latestMeeting.status === 'no_show' ? 'warning' : 'secondary'}
-                      size="sm"
-                      disabled={finalizeMeetingMutation.isPending}
-                      onClick={() => finalizeMeetingMutation.mutate({ meetingId: latestMeeting.id, status: 'no_show' })}
-                      leftIcon={<AlertTriangle className="w-3 h-3" />}
-                    >
-                      No asistió
-                    </Button>
-                    <Button
-                      variant={latestMeeting.status === 'cancelled' ? 'danger' : 'secondary'}
-                      size="sm"
-                      disabled={finalizeMeetingMutation.isPending}
-                      onClick={() => finalizeMeetingMutation.mutate({ meetingId: latestMeeting.id, status: 'cancelled' })}
-                      leftIcon={<X className="w-3 h-3 stroke-[2.5]" />}
-                    >
-                      Cancelada
-                    </Button>
+                    <div className="grid grid-cols-1 gap-2.5 p-3 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-lg text-[12.5px]">
+                      <div className="flex items-center gap-2 text-gray-700 dark:text-white/80">
+                        <Calendar className="w-4 h-4 text-champagne-gold shrink-0" />
+                        <span>Fecha realizada: <strong>{format(new Date(latestMeeting.scheduledAt), "dd/MM/yyyy • HH:mm'hs'", { locale: es })}</strong></span>
+                      </div>
+                      <div className="flex items-start gap-2 text-gray-700 dark:text-white/80">
+                        <MapPin className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+                        <span>Lugar: <strong>{latestMeeting.location}</strong></span>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  /* 2. ESTADOS ACTIVOS O PENDIENTES */
+                  <div className="flex flex-col gap-4">
+                    {/* Banners contextuales según estado */}
+                    {latestMeeting.status === 'reschedule_requested' && (
+                      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 rounded-lg p-3.5 flex items-start gap-3 animate-in fade-in">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[13px] font-semibold text-amber-900 dark:text-amber-200">
+                            El conductor solicitó reprogramar
+                          </h4>
+                          <p className="text-[11.5px] text-amber-800 dark:text-amber-300/90 mt-0.5 leading-relaxed">
+                            No puede asistir en la fecha pautada. Elegí una nueva fecha y lugar a continuación para enviarle la nueva propuesta.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {latestMeeting.status === 'confirmed' && (
+                      <div className="bg-purple-50 dark:bg-purple-950/25 border border-purple-200 dark:border-purple-800/40 rounded-lg p-3.5 flex items-start gap-3 animate-in fade-in">
+                        <Check className="w-5 h-5 text-purple-600 dark:text-purple-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[13px] font-semibold text-purple-900 dark:text-purple-200">
+                            Cita confirmada por el conductor
+                          </h4>
+                          <p className="text-[11.5px] text-purple-800 dark:text-purple-300/90 mt-0.5 leading-relaxed">
+                            El conductor aceptó la reunión en su aplicación móvil. Una vez que se concrete, registrá el resultado abajo.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {latestMeeting.status === 'proposed' && (
+                      <div className="bg-gray-50 dark:bg-white/[0.03] border border-gray-200 dark:border-white/10 rounded-lg p-3.5 flex items-start gap-3 animate-in fade-in">
+                        <Clock className="w-5 h-5 text-champagne-gold shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[13px] font-semibold text-gray-900 dark:text-white">
+                            Propuesta enviada al conductor
+                          </h4>
+                          <p className="text-[11.5px] text-gray-500 dark:text-white/60 mt-0.5 leading-relaxed">
+                            Esperando confirmación o solicitud de reprogramación por parte del conductor desde su app.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {latestMeeting.status === 'no_show' && (
+                      <div className="bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/40 rounded-lg p-3.5 flex items-start gap-3 animate-in fade-in">
+                        <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[13px] font-semibold text-rose-900 dark:text-rose-200">
+                            El conductor no asistió
+                          </h4>
+                          <p className="text-[11.5px] text-rose-800 dark:text-rose-300/90 mt-0.5 leading-relaxed">
+                            El conductor no se presentó a la cita previa. Podés coordinar una nueva reunión presencial a continuación.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {latestMeeting.status === 'cancelled' && (
+                      <div className="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg p-3.5 flex items-start gap-3 animate-in fade-in">
+                        <X className="w-5 h-5 text-gray-500 dark:text-gray-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="text-[13px] font-semibold text-gray-800 dark:text-white">
+                            Reunión cancelada
+                          </h4>
+                          <p className="text-[11.5px] text-gray-500 dark:text-white/60 mt-0.5 leading-relaxed">
+                            La reunión anterior fue cancelada. Podés agendar una nueva fecha si la documentación continúa aprobada.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Fila de datos: Fecha y Lugar */}
+                    <div className="grid grid-cols-1 gap-3 pb-3 border-b border-gray-100 dark:border-white/5">
+                      <div>
+                        <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Fecha y hora pautada</p>
+                        <p className="text-gray-800 dark:text-white/90 text-[13px] font-medium flex items-center gap-1.5">
+                          <Calendar className="w-3.5 h-3.5 text-champagne-gold" />
+                          {format(new Date(latestMeeting.scheduledAt), "dd/MM/yyyy • HH:mm'hs'", { locale: es })}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Lugar</p>
+                        <p className="text-gray-800 dark:text-white/90 text-[13px] leading-tight flex items-start gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-gray-400 shrink-0 mt-0.5" />
+                          <span>{latestMeeting.location}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Botones de acción para cerrar la reunión (cuando está confirmada o propuesta) */}
+                    {['proposed', 'confirmed'].includes(latestMeeting.status) && (
+                      <div>
+                        <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-2">
+                          Cerrar resultado de la reunión
+                        </p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            disabled={finalizeMeetingMutation.isPending}
+                            onClick={() => finalizeMeetingMutation.mutate({ meetingId: latestMeeting.id, status: 'completed' })}
+                            leftIcon={<Check className="w-3 h-3 stroke-[2.5]" />}
+                          >
+                            Realizada
+                          </Button>
+                          <Button
+                            variant="warning"
+                            size="sm"
+                            disabled={finalizeMeetingMutation.isPending}
+                            onClick={() => finalizeMeetingMutation.mutate({ meetingId: latestMeeting.id, status: 'no_show' })}
+                            leftIcon={<AlertTriangle className="w-3 h-3" />}
+                          >
+                            No asistió
+                          </Button>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            disabled={finalizeMeetingMutation.isPending}
+                            onClick={() => finalizeMeetingMutation.mutate({ meetingId: latestMeeting.id, status: 'cancelled' })}
+                            leftIcon={<X className="w-3 h-3 stroke-[2.5]" />}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Formulario de Reprogramación (si está propuesta o el conductor pidió reprogramar) */}
+                    {['proposed', 'reschedule_requested'].includes(latestMeeting.status) && (
+                      <div className="pt-4 border-t border-gray-100 dark:border-white/5 animate-in fade-in">
+                        <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-2">
+                          {latestMeeting.status === 'reschedule_requested' ? 'Coordinar nueva fecha solicitada' : 'Modificar fecha o reprogramar'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <Input
+                            label="Nueva Fecha"
+                            type="date"
+                            value={meetingDate}
+                            onChange={(e) => setMeetingDate(e.target.value)}
+                          />
+                          <Input
+                            label="Nueva Hora"
+                            type="time"
+                            value={meetingTime}
+                            onChange={(e) => setMeetingTime(e.target.value)}
+                          />
+                        </div>
+                        <Input
+                          label="Nuevo Lugar"
+                          type="text"
+                          value={meetingLocation}
+                          onChange={(e) => setMeetingLocation(e.target.value)}
+                          rightIcon={<MapPin className="w-3.5 h-3.5" />}
+                        />
+                        <Button
+                          className="mt-3"
+                          variant="primary"
+                          fullWidth
+                          leftIcon={<Calendar className="w-3.5 h-3.5" />}
+                          isLoading={rescheduleMutation.isPending}
+                          onClick={handleRescheduleMeeting}
+                        >
+                          Confirmar nueva fecha
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* Si fue no_show o cancelled: posibilidad de agendar una nueva reunión */}
+                    {['no_show', 'cancelled'].includes(latestMeeting.status) && (
+                      <div className="pt-4 border-t border-gray-100 dark:border-white/5 animate-in fade-in">
+                        <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-2">
+                          Agendar nueva reunión presencial
+                        </p>
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <Input
+                            label="Fecha"
+                            type="date"
+                            value={meetingDate}
+                            onChange={(e) => setMeetingDate(e.target.value)}
+                          />
+                          <Input
+                            label="Hora"
+                            type="time"
+                            value={meetingTime}
+                            onChange={(e) => setMeetingTime(e.target.value)}
+                          />
+                        </div>
+                        <Input
+                          label="Lugar"
+                          type="text"
+                          value={meetingLocation}
+                          onChange={(e) => setMeetingLocation(e.target.value)}
+                          rightIcon={<MapPin className="w-3.5 h-3.5" />}
+                        />
+                        <Button
+                          className="mt-3"
+                          variant="primary"
+                          fullWidth
+                          leftIcon={<Calendar className="w-3.5 h-3.5" />}
+                          isLoading={scheduleMutation.isPending}
+                          onClick={handleScheduleMeeting}
+                        >
+                          Coordinar nueva reunión
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : !allDocsApproved ? (
               /* Estado Bloqueado cuando faltan documentos por aprobar */

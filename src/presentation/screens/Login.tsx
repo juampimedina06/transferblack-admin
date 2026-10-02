@@ -152,7 +152,7 @@ const Login = () => {
               fullWidth
               size="lg"
               isLoading={isSubmitting}
-              className="mt-2 bg-[#111111]"
+              className="mt-2 bg-[#111111] hover:bg-black text-white dark:bg-[#111111] dark:hover:bg-black dark:text-white"
             >
               Ingresar
             </Button>

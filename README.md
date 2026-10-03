@@ -1,144 +1,189 @@
 # Transfer Black - Web Admin Panel
 
-Consola de operaciones web para la flota de Transfer Black en Córdoba. Este panel permite la supervisión operativa, aprobación y gestión de conductores, monitoreo de métricas en tiempo real, liquidaciones y administración general de la plataforma.
+Consola de operaciones web centralizada para la flota de **Transfer Black** en Córdoba, Argentina. Esta plataforma permite la supervisión operativa en tiempo real, auditoría y aprobación de conductores, gestión de cuentas corporativas, resolución de retiros bancarios de billeteras, métricas de negocio y seguimiento público de viajes.
 
-## 🚀 Tecnologías
+---
 
-El frontend está construido con las siguientes herramientas modernas:
+## 🚀 Tecnologías y Stack
 
-- **Framework**: [React 19](https://react.dev/) montado sobre [Vite](https://vitejs.dev/)
-- **Lenguaje**: [TypeScript](https://www.typescriptlang.org/)
-- **Estilos**: [Tailwind CSS v3](https://tailwindcss.com/) con soporte nativo de modo oscuro (`class`) y paleta personalizada (obsidian, champagne-gold)
-- **Estado de Servidor**: [TanStack Query v5](https://tanstack.com/query/latest) para fetching asíncrono, cache y revalidación
-- **Estado Global de Cliente**: [Zustand](https://github.com/pmndrs/zustand) (autenticación y configuración de UI)
+El frontend está desarrollado bajo estándares modernos de rendimiento, tipado estricto y diseño responsive:
+
+- **Framework**: [React 19](https://react.dev/) sobre [Vite 8](https://vitejs.dev/)
+- **Lenguaje**: [TypeScript](https://www.typescriptlang.org/) (configuración estricta)
+- **Estilos**: [Tailwind CSS v3](https://tailwindcss.com/) con soporte nativo de modo oscuro (`class`) y paleta de diseño Transfer Black (`obsidian`, `champagne-gold`, `charcoal`, `platinum`)
+- **Mapeo en Vivo**: [Leaflet](https://leafletjs.com/) + [React Leaflet v5](https://react-leaflet.js.org/)
+- **Tablas de Datos**: [TanStack Table v8](https://tanstack.com/table/latest) con paginación, ordenamiento y renderizado optimizado
+- **Estado Asíncrono de Servidor**: [TanStack Query v5](https://tanstack.com/query/latest) con revalidación en segundo plano, cache distribuido y polling
+- **Estado Global de Cliente**: [Zustand](https://github.com/pmndrs/zustand) con persistencia en `localStorage` (sesión y preferencias de interfaz)
 - **Ruteo**: [React Router DOM v7](https://reactrouter.com/)
-- **Formularios & Validación**: [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
-- **Iconos**: [Lucide React](https://lucide.dev/)
+- **Formularios y Validaciones**: [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
+- **Visualización de Datos**: [Recharts v3](https://recharts.org/)
+- **Animaciones Numéricas**: [React CountUp](https://github.com/glennreyes/react-countup)
+- **Inspección de Medios**: [React Medium Image Zoom](https://github.com/rpearce/react-medium-image-zoom)
+- **Iconografía**: [Lucide React](https://lucide.dev/)
+- **Fechas**: [date-fns v4](https://date-fns.org/)
 
-## 📂 Arquitectura
+---
 
-El proyecto sigue los principios de **Clean Architecture**, desacoplando la lógica de negocio de la capa de presentación y manteniendo simetría conceptual con los demás clientes de la plataforma:
+## 📂 Arquitectura del Proyecto
+
+El código está estructurado bajo **Clean Architecture**, desacoplando completamente la lógica de negocio y consumo de servicios (capa `core`) de los componentes visuales y estado de interfaz (capa `presentation`):
 
 ```text
-src/
-├── core/                  # Lógica de negocio y acceso a datos (agnóstico de UI)
-│   ├── api/               # Cliente Axios e interceptores centralizados (adminApi)
-│   ├── auth/              # Interfaces y acciones de autenticación
-│   ├── dashboard/         # Interfaces y acciones para métricas y KPIs
-│   └── drivers/           # Interfaces y acciones de gestión y expediente de conductores
-│       ├── actions/       # Acciones atómicas de API (listado, detalle, documentos, reuniones)
-│       ├── interfaces/    # Contratos y tipos de datos de conductor, vehículos y legajos
-│       └── utils/         # Helpers de formateo y resolución de URLs de medios
-│
-├── presentation/          # Capa de interfaz de usuario y estado visual
-│   ├── auth/store/        # Store de autenticación (Zustand con persistencia)
-│   ├── components/        # Layout principal y componentes base (Button, Input, Badge, Card, etc.)
-│   ├── dashboard/         # Componentes y hooks de métricas (KPIs, gráficos, skeletons)
-│   ├── drivers/           # Vistas, tablas, expediente, auditoría documental y modales
-│   │   ├── components/    # Subcomponentes (DriverDetail, DocumentCard, RejectionModal, Skeletons)
-│   │   └── hooks/         # Custom hooks de TanStack Query (useDrivers, useDriverDetail)
-│   ├── hooks/             # Hooks globales de UI y monitoreo (useServerHealth)
-│   ├── providers/         # Proveedores de contexto global (QueryProvider)
-│   ├── screens/           # Páginas completas (Login, Dashboard, DriversScreen)
-│   └── store/             # Store de interfaz de usuario (tema claro/oscuro, sidebar colapsable)
+admin-web/
+├── public/                       # Assets estáticos y logos
+├── src/
+│   ├── core/                     # Capa de Dominio y Datos (Agnóstica de UI)
+│   │   ├── api/                  # Clientes Axios e interceptores
+│   │   │   ├── adminApi.ts       # Cliente autenticado (Bearer JWT, timeout, logout ante 401)
+│   │   │   └── publicApi.ts      # Cliente público no autenticado para tracking
+│   │   ├── auth/                 # Contratos de autenticación y servicios de login
+│   │   ├── companies/            # Entidades, schemas Zod y API de empresas corporativas
+│   │   ├── dashboard/            # Métricas, KPIs y estadísticas de actividad
+│   │   ├── drivers/              # Expedientes, auditoría documental y coordinación de entrevistas
+│   │   │   ├── actions/          # getDrivers, getDriverDetail, updateDocument, finalizeMeeting, etc.
+│   │   │   ├── interfaces/       # Modelos tipados de conductores, vehículos y legajos
+│   │   │   └── utils/            # Resolutores de URLs de medios y formateadores
+│   │   ├── payouts/              # Gestión de retiros bancarios de conductores
+│   │   │   ├── actions/          # getPayouts, getPayoutById, resolvePayout
+│   │   │   └── interfaces/       # Contratos de solicitudes, filtros y resolución
+│   │   └── tracking/             # Seguimiento público de viajes en vivo
+│   │       ├── actions/          # getTripTracking
+│   │       └── interfaces/       # Modelos de telemetría, estados de viaje y ruta
+│   │
+│   ├── presentation/             # Capa de Interfaz de Usuario y Presentación
+│   │   ├── auth/                 # Formulario de inicio de sesión y storage de tokens
+│   │   ├── companies/            # Gestión integral de empresas corporativas
+│   │   │   ├── components/       # Balance, centros de costo, empleados, cierres y recargas
+│   │   │   ├── CompaniesScreen.tsx
+│   │   │   └── CompanyDetailScreen.tsx
+│   │   ├── components/           # Componentes reutilizables y estructura
+│   │   │   ├── common/           # Button, Input, Textarea, Badge, Card, AnimatedNumber
+│   │   │   ├── layout/           # PrivateLayout, Sidebar colapsable con badges, Header
+│   │   │   └── ProtectedRoute.tsx
+│   │   ├── dashboard/            # Gráficos y métricas del panel de control
+│   │   │   └── components/       # ActivityChart (Recharts), KpiCard, DashboardSkeleton
+│   │   ├── drivers/              # Expediente y auditoría de conductores
+│   │   │   ├── components/       # DriversTable, DocumentCard con visor, RejectionModal
+│   │   │   ├── DriversScreen.tsx
+│   │   │   └── DriverDetailScreen.tsx
+│   │   ├── payouts/              # Finanzas y resolución de retiros bancarios
+│   │   │   ├── components/       # PayoutsTable, PayoutDetailModal, PayoutResolveModal, PayoutsKPIs
+│   │   │   ├── hooks/            # usePayouts, usePayoutDetail, useResolvePayout
+│   │   │   └── PayoutsScreen.tsx
+│   │   ├── tracking/             # Pantalla pública de seguimiento (/track)
+│   │   │   └── components/       # TripTrackingMap (Leaflet), DriverCard, TripStatusTimeline
+│   │   ├── screens/              # Páginas principales (Login, Dashboard, TrackTrip)
+│   │   ├── providers/            # TanStack QueryClientProvider
+│   │   └── store/                # Stores de UI (useUIStore para Sidebar y tema)
+│   ├── App.tsx                   # Declaración de rutas y ruteo protegido
+│   └── main.tsx                  # Bootstrap de la aplicación React
 ```
 
-## ✨ Módulos y Funcionalidades
+---
 
-- **🔐 Autenticación & Autorización**:
-  - Validación de credenciales en cliente con Zod.
-  - Manejo de sesiones y tokens JWT persistidos en `localStorage`.
-  - Enrutamiento protegido (`ProtectedRoute`) restringido al rol `admin`.
-- **📊 Dashboard Operativo**:
-  - Métricas clave en tiempo real: total de viajes, facturación bruta, comisión de plataforma y ratio de cancelaciones.
-  - Indicadores con conteo animado fluido (`AnimatedNumber`).
-  - Filtro dinámico por período (Hoy, Últimos 7 días, Últimos 30 días, Este mes).
-  - Gráfico interactivo de actividad de viajes y cancelaciones (`ActivityChart`).
-  - Skeletons de carga integrados para transiciones suaves.
-- **🚗 Gestión y Expediente de Conductores**:
-  - **Directorio Principal**: listado paginado, búsqueda por nombre/documento y filtrado reactivo por estado.
-  - **Expediente Integral (`DriverDetailScreen`)**:
-    - Ficha completa del postulante/conductor: datos personales, licencia, antecedentes, vehículo y fecha de postulación.
-    - Skeletons de carga optimizados (`DriverDetailSkeleton`).
-  - **Auditoría Documental Interactiva**:
-    - Inspección visual de documentos de conductor y vehículo (`DocumentCard`) con preview y visor ampliado.
-    - Aprobación inmediata y rechazo motivado mediante modal estructurado (`RejectionModal`).
-    - Detección visual automática de documentación vencida o próxima a expirar.
-    - Mutaciones optimistas con rollback automático en caso de falla de red.
-  - **Coordinación y Cierre de Entrevistas**:
-    - Agendamiento de reunión presencial con validación de requisitos previos (bloqueo si restan documentos pendientes).
-    - Gestión del ciclo de vida de la entrevista: `completed`, `no_show` o `cancelled` con notas del administrador.
-  - **Resolución de Legajo**:
-    - Aprobación o rechazo definitivo del legajo del conductor con sincronización en tiempo real vía TanStack Query.
-- **🎨 Sistema de Diseño y UI**:
-  - Soporte completo de temas Claro y Oscuro con tokens Tailwind armonizados.
-  - Biblioteca de componentes base accesibles y reutilizables (`Button`, `Input`, `Textarea`, `Badge`, `Card`, `AnimatedNumber`).
-  - Monitoreo en vivo del estado del backend (`useServerHealth`).
+## ✨ Módulos del Sistema
 
-## 🛠 Instalación y Uso
+### 1. 🔐 Autenticación y Control de Acceso
+- Formulario de ingreso con validaciones en tiempo real con Zod y React Hook Form.
+- Gestión segura de tokens JWT persistidos en almacenamiento local.
+- Interceptor centralizado en `adminApi` que detecta expiración de sesión (401) y ejecuta cierre de sesión automático sin bucles.
+- Barrera de seguridad con `ProtectedRoute` que restringe el acceso exclusivamente a usuarios con rol `admin`.
 
-1. **Clonar e instalar dependencias:**
-   ```bash
-   cd admin-web
-   npm install
-   ```
+### 2. 📊 Dashboard Operativo (`/dashboard`)
+- Indicadores de rendimiento del negocio: Viajes Totales, Facturación Bruta, Comisión de Plataforma y Tasa de Cancelaciones.
+- Conteo fluido y animado mediante `<AnimatedNumber />`.
+- Selector dinámico de período: **Día**, **Mes** y **Año**.
+- Gráfico interactivo de actividad horaria y cancelaciones (`ActivityChart`) implementado con Recharts.
+- Transiciones visuales suaves con esqueletos de carga (`DashboardSkeleton`).
 
-2. **Variables de entorno:**
-<<<<<<< HEAD
-   Crear un archivo `.env` en la raíz de `admin-web` basándose en `.env.example`:
-=======
-   Crear un archivo `.env` en la raíz de `admin-web` a partir de `.env.example`:
->>>>>>> origin/main
-   ```env
-   VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
-   VITE_MAP_TILES_URL=
-   ```
-   `VITE_API_URL` ya debe incluir el prefijo de version (`/api/v1`); todos los clientes HTTP del
-   panel arman sus rutas relativas a esa base. `VITE_MAP_TILES_URL` es opcional y solo la usa el
-   mapa de la pagina publica de seguimiento (ver mas abajo).
+### 3. 🚗 Gestión y Expediente de Conductores (`/conductores`)
+- **Directorio Principal**: Tabla paginada con buscador por nombre, email o documento, orden cronológico y filtros reactivos por estado (`pending`, `approved`, `rejected`, `suspended`).
+- **Expediente Integral (`/conductores/:id`)**:
+  - Datos personales, de contacto, licencia y antecedentes penales.
+  - Ficha técnica del vehículo asignado: marca, modelo, año, patente y categoría.
+- **Auditoría Documental Interactiva**:
+  - Inspección de fotos de documentación (DNI, licencia, cédula verde/azul, seguro, RTO) con zoom interactivo (`react-medium-image-zoom`).
+  - Detección automática de fechas de vencimiento con alertas visuales de documentos próximos a caducar.
+  - Aprobación individual o rechazo con modal explicativo obligatorio (`RejectionModal`).
+  - Mutaciones optimistas con rollback automático ante errores de red.
+- **Coordinación y Cierre de Entrevistas**:
+  - Agendamiento de entrevista presencial con bloqueo automático si existen documentos pendientes de validar.
+  - Registro del resultado: `completed`, `no_show` o `cancelled` con notas del operador.
+  - Resolución final del legajo: activación operativa o rechazo formal.
 
-3. **Ejecutar en modo desarrollo:**
-   ```bash
-   npm run dev
-   ```
-   El servidor iniciará habitualmente en `http://localhost:5173`.
+### 4. 💵 Finanzas: Retiros y Billeteras (`/retiros`)
+- **Cola de Transferencias**: Visualización organizada por pestañas: `Pendientes` (con badge contador en Sidebar), `En gestión`, `Pagadas`, `Rechazadas` y `Todas`.
+- **Métricas Financieras en Tiempo Real**: Tarjetas KPI que calculan el monto acumulado en cola de pago y el volumen de solicitudes pendientes.
+- **Datos Bancarios Congelados**: Exhibición de los datos de destino congelados al momento de solicitar el retiro (Titular, CUIT/DNI, Alias y CBU/CVU de 22 dígitos).
+- **Copiado en 1 Clic**: Acciones directas para copiar CBU/CVU o Alias al portapapeles con confirmación visual (`"Copiado"`), eliminando errores manuales en Home Banking.
+- **Ciclo de Resolución Bancaria**:
+  - *En gestión (`approved`)*: Coloca la solicitud en proceso para coordinar la transferencia bancaria y evitar duplicación entre administradores.
+  - *Marcar como Pagado (`paid`)*: Modal de confirmación que exige el ingreso del código de referencia bancaria (`transfer_reference`) y permite adjuntar la URL del comprobante (`receipt_url`).
+  - *Rechazar Retiro (`rejected`)*: Modal con campo de motivo obligatorio (`rejection_reason`), contador de caracteres y sugerencias rápidas autocompletables con un solo clic.
 
-4. **Verificación de tipos y Build para Producción:**
-   ```bash
-   npm run build
-   ```
-## 🔐 Autenticación
+### 5. 🏢 Gestión de Empresas Corporativas (`/empresas`)
+- **Listado y Alta de Empresas**: Creación con razón social, CUIT, email de facturación, dirección y código de vinculación (`join_code`).
+- **Ficha Integral de Cuenta Corporativa (`/empresas/:companyId`)**:
+  - **Balance y Recargas**: Control de saldo prepago/postpago, modal de recarga (`TopUpModal`) con referencia y tabla de depósitos.
+  - **Límites de Consumo**: Edición interactiva del tope mensual de gastos de la empresa.
+  - **Centros de Costo**: Creación y asignación de centros de costo para segmentar los gastos de la empresa.
+  - **Nómina de Miembros**: Directorio de colaboradores vinculados, edición de límites individuales, centros de costos asignados y estados de cuenta.
+  - **Cierres de Período y Facturación**: Emisión de cierres de cuenta corriente, estados de facturación mensual y desglose de consumos.
 
-El panel está restringido al equipo de operaciones. El ingreso requiere credenciales con el rol de `admin`.
-- Al iniciar sesión, se validan los campos localmente con Zod.
-- Se hace un POST a `/auth/login` y, si es exitoso, el token se guarda en el `localStorage`.
-- El componente `ProtectedRoute` bloquea el acceso si no hay sesión o si el usuario no tiene el rol de administrador. Las rutas privadas son inaccesibles manualmente o mediante el historial si el usuario no cumple los requisitos.
+### 6. 📍 Seguimiento Público de Viajes (`/track?token=...`)
+- **Acceso para Invitados**: Pantalla pública optimizada para terceros que no requieren inicio de sesión, accesible vía enlaces distribuidos por WhatsApp o email.
+- **Cliente HTTP Autónomo (`publicApi`)**: Consume `GET /rides/track/{token}` sin adjuntar credenciales ni disparar cierres de sesión del panel.
+- **Mapa en Vivo**: Representación cartográfica interactiva con Leaflet mostrando la ubicación del móvil, punto de partida, punto de destino y trazado de ruta.
+- **Línea de Tiempo**: Estados secuenciales del viaje (`requested`, `driver_assigned`, `driver_arrived`, `in_progress`, `completed`).
+- **Ficha del Conductor**: Visualización del nombre del conductor, calificación, modelo de vehículo y patente.
+- **Sondeo Inteligente**: Polling automático cada 5 segundos mientras el viaje permanezca activo, deteniéndose ante estados terminales.
 
-## 📍 Página pública de seguimiento (`/track`)
+---
 
-Cuando alguien pide un viaje para un tercero sin cuenta (invitado), el backend le manda por email o
-WhatsApp un link con la forma `https://<dominio-del-panel>/track?token=<tracking_token>`. Esa ruta:
+## 🛠 Instalación y Puesta en Marcha
 
-- Vive **fuera** de `ProtectedRoute`, igual que `/login`: un navegador sin sesión de admin debe poder
-  verla, y no toca `useAuthStore` ni `authStorage` en ningún momento.
-- Consume `GET /rides/track/{token}` con `publicApi` (`src/core/api/publicApi.ts`), un cliente Axios
-  separado de `adminApi` que no agrega el `Authorization` del panel ni desloguea ante un 401 (ese
-  interceptor asume una sesión de admin que un invitado nunca tiene).
-- Sondea el viaje cada 5 segundos mientras está activo, y deja de hacerlo al llegar a un estado
-  terminal (`completed`/`cancelled`) o si el token ya no existe (`404`).
+### Prerrequisitos
+- [Node.js](https://nodejs.org/) v18+ (recomendado v20+)
+- Gestor de paquetes `npm`
 
-Para que el link funcione:
+### 1. Clonar el repositorio e instalar dependencias:
+```bash
+git clone https://github.com/juampimedina06/transferblack-admin.git
+cd transferblack-admin
+npm install
+```
 
-1. El backend debe tener `TRIP_TRACKING_URL=https://<dominio-del-panel>/track` apuntando al origen
-   donde se despliega este panel.
-2. Ese mismo origen tiene que estar en `CORS_ALLOWED_ORIGINS` del backend, o el navegador del
-   invitado va a bloquear la llamada a `GET /rides/track/{token}`.
-3. El hosting que sirva el panel necesita una regla de *rewrite* de SPA (`/* → /index.html`), porque
-   `/track?token=...` se abre como entrada directa (desde el link, no navegando dentro de la app) y
-   sin esa regla el servidor devuelve un 404 antes de que React Router la resuelva. Este repo no trae
-   ese archivo de configuración porque depende de dónde se despliegue (Vercel, Netlify, Render
-   static, etc.); hay que agregarlo en el hosting elegido.
-5. **Linter:**
-   ```bash
-   npm run lint
-   ```
+### 2. Configurar variables de entorno:
+Crear un archivo `.env` en la raíz del proyecto a partir de `.env.example`:
+```env
+VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
+VITE_MAP_TILES_URL=
+```
+> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet.
+
+### 3. Ejecutar en modo desarrollo:
+```bash
+npm run dev
+```
+La aplicación iniciará habitualmente en `http://localhost:5173`.
+
+### 4. Compilación para Producción:
+```bash
+npm run build
+```
+Ejecuta la validación exhaustiva de tipos de TypeScript (`tsc -b`) y empaqueta la versión optimizada en el directorio `dist/`.
+
+### 5. Análisis de Calidad de Código:
+```bash
+npm run lint
+```
+
+---
+
+## 🎨 Guía de Estilo y Filosofía UX/UI
+
+- **Diseño sin Fricción**: Cada acción crítica (copiar CBU, aprobar documentos, pasar a gestión) está optimizada para ejecutarse en la menor cantidad de pasos posibles y con confirmación inmediata.
+- **Animación y Dinamismo**: Los números contables y KPIs se incrementan suavemente mediante animación para reflejar actualización continua.
+- **Soporte Dark & Light Mode**: Toda la aplicación soporta alternancia de temas mediante clases semánticas de Tailwind, garantizando contraste accesible y legibilidad.
+- **Manejo Defensivo de Datos**: Todos los campos opcionales o provenientes de bases de datos externas admiten valores nulos (`null`) mostrando fallbacks limpios sin interrupciones de renderizado.

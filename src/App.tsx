@@ -12,6 +12,7 @@ import CompaniesScreen from './presentation/companies/CompaniesScreen';
 import CompanyDetailScreen from './presentation/companies/CompanyDetailScreen';
 import PayoutsScreen from './presentation/payouts/PayoutsScreen';
 import TripsScreen from './presentation/trips/TripsScreen';
+import ScheduledTripsScreen from './presentation/scheduledTrips/ScheduledTripsScreen';
 
 function App() {
   useServerHealth();
@@ -32,6 +33,7 @@ function App() {
             {/* Rutas pendientes con placeholder */}
             <Route path="/mapa" element={<Navigate to="/dashboard" replace />} />
             <Route path="/viajes" element={<TripsScreen />} />
+            <Route path="/viajes-reservados" element={<ScheduledTripsScreen />} />
             <Route path="/conductores" element={<DriversScreen />} />
             <Route path="/conductores/:id" element={<DriverDetailScreen />} />
             <Route path="/retiros" element={<PayoutsScreen />} />

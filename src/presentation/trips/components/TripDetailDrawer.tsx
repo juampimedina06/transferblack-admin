@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   X,
@@ -18,6 +18,55 @@ interface TripDetailDrawerProps {
   onClose: () => void;
 }
 
+const STATUS_SPANISH: Record<string, string> = {
+  draft: 'Viaje creado',
+  scheduled: 'Viaje programado',
+  searching: 'Buscando conductor',
+  assigned: 'Conductor asignado',
+  driver_arriving: 'Conductor en camino',
+  driver_arrived: 'Conductor llegó al punto de subida',
+  in_progress: 'En viaje',
+  completed: 'Viaje completado',
+  cancelled: 'Viaje cancelado',
+};
+
+const ACTOR_SPANISH: Record<string, string> = {
+  passenger: 'pasajero',
+  driver: 'conductor',
+  system: 'sistema',
+  admin: 'administrador',
+};
+
+const REASON_SPANISH: Record<string, string> = {
+  driver_cancelled: 'cancelado por conductor',
+  passenger_cancelled: 'cancelado por pasajero',
+  driver_timeout: 'tiempo de espera agotado',
+  no_drivers_available: 'sin conductores disponibles',
+  out_of_area: 'fuera de zona',
+  passenger_no_show: 'pasajero no se presentó',
+  vehicle_issue: 'problema mecánico',
+};
+
+const PAYMENT_STATUS_SPANISH: Record<string, string> = {
+  authorized: 'Autorizado',
+  approved: 'Acreditado',
+  paid: 'Acreditado',
+  completed: 'Acreditado',
+  pending: 'Pendiente',
+  refunded: 'Reintegrado',
+  failed: 'Rechazado',
+  rejected: 'Rechazado',
+  cancelled: 'Cancelado',
+};
+
+const ACTIVE_STATUSES = [
+  'searching',
+  'assigned',
+  'driver_arriving',
+  'driver_arrived',
+  'in_progress',
+];
+
 const formatCurrency = (amount: string | number | null | undefined, currency = 'ARS') => {
   if (amount === null || amount === undefined || amount === '') return '$ 0,00';
   const num = typeof amount === 'string' ? parseFloat(amount) : amount;
@@ -34,7 +83,9 @@ const formatCurrency = (amount: string | number | null | undefined, currency = '
 export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onClose }) => {
   const navigate = useNavigate();
   const { data: trip, isLoading, isError } = useTripDetail(tripId);
-  const { data: history = [] } = useTripStatusHistory(tripId);
+
+  const isTripActive = Boolean(trip?.status && ACTIVE_STATUSES.includes(trip.status));
+  const { data: history = [] } = useTripStatusHistory(tripId, isTripActive);
 
   // Close on Escape key
   useEffect(() => {
@@ -44,6 +95,164 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  // Format full timeline items with translation & fallbacks
+  const timelineEvents = useMemo(() => {
+    const driverFullName = trip?.driver
+      ? `${trip.driver.firstName} ${trip.driver.lastName}`.trim()
+      : undefined;
+
+    if (history && history.length > 0) {
+      // Sort newest first
+      return [...history]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .map((item) => {
+          let title = item.notes?.trim() || '';
+          if (!title) {
+            if (item.toStatus === 'assigned' && driverFullName) {
+              title = `Asignado a ${driverFullName}`;
+            } else {
+              title = STATUS_SPANISH[item.toStatus] || item.toStatus;
+            }
+          }
+
+          const actor = ACTOR_SPANISH[item.actorType?.toLowerCase()] || item.actorType || 'sistema';
+          const reason = item.reasonCode
+            ? REASON_SPANISH[item.reasonCode.toLowerCase()] || item.reasonCode.replace(/_/g, ' ')
+            : null;
+
+          return {
+            id: item.id,
+            title,
+            toStatus: item.toStatus,
+            time: item.createdAt ? format(new Date(item.createdAt), 'HH:mm') : '—',
+            actor,
+            reason,
+          };
+        });
+    }
+
+    // Si el backend no devolvió historial aún, sintetizar los hitos reales según timestamps del viaje
+    if (!trip) return [];
+
+    const synthetic: {
+      id: string;
+      title: string;
+      toStatus: string;
+      time: string;
+      actor: string;
+      reason: string | null;
+      rawDate: Date;
+    }[] = [];
+
+    if (trip.cancelledAt) {
+      synthetic.push({
+        id: 'ev-cancelled',
+        title: 'Viaje cancelado',
+        toStatus: 'cancelled',
+        time: format(new Date(trip.cancelledAt), 'HH:mm'),
+        actor: 'sistema',
+        reason: trip.cancellationReasonCode ? (REASON_SPANISH[trip.cancellationReasonCode] || trip.cancellationReasonCode) : null,
+        rawDate: new Date(trip.cancelledAt),
+      });
+    }
+
+    if (trip.finishedAt) {
+      synthetic.push({
+        id: 'ev-finished',
+        title: 'Viaje completado',
+        toStatus: 'completed',
+        time: format(new Date(trip.finishedAt), 'HH:mm'),
+        actor: 'conductor',
+        reason: null,
+        rawDate: new Date(trip.finishedAt),
+      });
+    }
+
+    if (trip.startedAt || trip.status === 'in_progress') {
+      synthetic.push({
+        id: 'ev-started',
+        title: 'En viaje',
+        toStatus: 'in_progress',
+        time: trip.startedAt ? format(new Date(trip.startedAt), 'HH:mm') : 'En curso',
+        actor: 'conductor',
+        reason: null,
+        rawDate: trip.startedAt ? new Date(trip.startedAt) : new Date(),
+      });
+    }
+
+    if (trip.driverArrivedAt || trip.status === 'driver_arrived') {
+      synthetic.push({
+        id: 'ev-arrived',
+        title: 'Conductor llegó al punto de subida',
+        toStatus: 'driver_arrived',
+        time: trip.driverArrivedAt ? format(new Date(trip.driverArrivedAt), 'HH:mm') : 'En espera',
+        actor: 'conductor',
+        reason: null,
+        rawDate: trip.driverArrivedAt ? new Date(trip.driverArrivedAt) : new Date(),
+      });
+    }
+
+    if (trip.status === 'driver_arriving') {
+      synthetic.push({
+        id: 'ev-arriving',
+        title: 'Conductor en camino',
+        toStatus: 'driver_arriving',
+        time: 'En camino',
+        actor: 'conductor',
+        reason: null,
+        rawDate: new Date(),
+      });
+    }
+
+    if (trip.assignedAt || trip.driver) {
+      synthetic.push({
+        id: 'ev-assigned',
+        title: driverFullName ? `Asignado a ${driverFullName}` : 'Conductor asignado',
+        toStatus: 'assigned',
+        time: trip.assignedAt ? format(new Date(trip.assignedAt), 'HH:mm') : 'Asignado',
+        actor: 'sistema',
+        reason: null,
+        rawDate: trip.assignedAt ? new Date(trip.assignedAt) : new Date(trip.createdAt),
+      });
+    }
+
+    if (trip.confirmedAt) {
+      synthetic.push({
+        id: 'ev-confirmed',
+        title: 'Tarifa confirmada por el pasajero',
+        toStatus: 'searching',
+        time: format(new Date(trip.confirmedAt), 'HH:mm'),
+        actor: 'pasajero',
+        reason: formatCurrency(trip.estimatedFare, trip.currency),
+        rawDate: new Date(trip.confirmedAt),
+      });
+    }
+
+    if (trip.thirdParty) {
+      synthetic.push({
+        id: 'ev-thirdparty',
+        title: 'Beneficiario cargado',
+        toStatus: 'draft',
+        time: trip.createdAt ? format(new Date(trip.createdAt), 'HH:mm') : '—',
+        actor: 'pasajero',
+        reason: trip.thirdParty.name,
+        rawDate: new Date(trip.createdAt),
+      });
+    }
+
+    synthetic.push({
+      id: 'ev-created',
+      title: 'Viaje creado',
+      toStatus: 'draft',
+      time: trip.createdAt ? format(new Date(trip.createdAt), 'HH:mm') : '—',
+      actor: 'pasajero',
+      reason: null,
+      rawDate: new Date(trip.createdAt),
+    });
+
+    return synthetic.sort((a, b) => b.rawDate.getTime() - a.rawDate.getTime());
+  }, [history, trip]);
 
   if (!tripId) return null;
 
@@ -64,7 +273,11 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
     : '30 min estimados';
 
   // Fee composition calculations
-  const finalFareNum = trip?.finalFare ? parseFloat(trip.finalFare) : trip?.estimatedFare ? parseFloat(trip.estimatedFare) : 16180;
+  const finalFareNum = trip?.finalFare
+    ? parseFloat(trip.finalFare)
+    : trip?.estimatedFare
+    ? parseFloat(trip.estimatedFare)
+    : 16180;
   const platformFee = Math.round(finalFareNum * 0.18 * 100) / 100;
   const driverNet = finalFareNum - platformFee;
 
@@ -86,6 +299,15 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                 {trip?.publicCode || 'TB-7238'}
               </h2>
               {trip && <TripsBadge status={trip.status} />}
+              {isTripActive && (
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                  </span>
+                  En tiempo real
+                </span>
+              )}
               {trip?.thirdParty && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                   <Users className="w-3 h-3" /> Para un tercero
@@ -164,122 +386,67 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* Col 1: Línea de tiempo (4 cols) */}
+              {/* Col 1: Línea de tiempo interactiva y dinámica (4 cols) */}
               <div className="lg:col-span-4 bg-white dark:bg-dark-surface rounded-xl border border-gray-200/80 dark:border-dark-border p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-dark-border">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white">Línea de tiempo</h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">Línea de tiempo</h3>
+                    {isTripActive && (
+                      <span className="flex h-2 w-2 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                    )}
+                  </div>
                   <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 font-semibold">
-                    {history.length > 0 ? `${history.length} eventos` : '9 eventos'}
+                    {timelineEvents.length} eventos
                   </span>
                 </div>
 
                 {/* Timeline Items */}
                 <div className="relative pl-6 space-y-5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-dark-border">
-                  {history.length > 0 ? (
-                    history.map((event, idx) => {
-                      const isLatest = idx === 0;
-                      return (
-                        <div key={event.id || idx} className="relative group">
-                          {/* Dot marker */}
+                  {timelineEvents.map((event, idx) => {
+                    const isLatest = idx === 0;
+                    return (
+                      <div key={event.id || idx} className="relative group">
+                        {/* Dot marker */}
+                        {isLatest && isTripActive ? (
+                          <span className="absolute -left-6 top-1 flex h-3 w-3 items-center justify-center">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500 border-2 border-white dark:border-dark-surface" />
+                          </span>
+                        ) : (
                           <span
                             className={`absolute -left-6 top-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-dark-surface ${
                               isLatest ? 'bg-champagne-gold ring-4 ring-champagne-gold/20' : 'bg-gray-400'
                             }`}
                           />
-                          <div className="space-y-0.5">
+                        )}
+
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <p
                               className={`text-xs font-semibold ${
-                                isLatest ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'
+                                isLatest ? 'text-gray-900 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-300'
                               }`}
                             >
-                              {event.notes || event.toStatus}
+                              {event.title}
                             </p>
-                            <p className="text-[11px] text-gray-400">
-                              {format(new Date(event.createdAt), 'HH:mm')} · {event.actorType}
-                              {event.reasonCode ? ` · ${event.reasonCode}` : ''}
-                            </p>
+                            {isLatest && isTripActive && (
+                              <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold uppercase bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300">
+                                En curso
+                              </span>
+                            )}
                           </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    // Default mockup sequence from Screenshot 2
-                    <>
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-4 ring-amber-500/20 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-bold text-gray-900 dark:text-white">En viaje</p>
-                          <p className="text-[11px] text-gray-400">19:24 · conductor</p>
-                        </div>
-                      </div>
 
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Conductor llegó al punto de subida</p>
-                          <p className="text-[11px] text-gray-400">19:22 · conductor · 2 min de espera</p>
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Conductor en camino</p>
-                          <p className="text-[11px] text-gray-400">19:18 · conductor</p>
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                            Asignado a {trip.driver ? `${trip.driver.firstName} ${trip.driver.lastName}` : 'Julieta Ferreyra Ríos'}
+                          <p className="text-[11px] text-gray-400">
+                            {event.time} · {event.actor}
+                            {event.reason ? ` · ${event.reason}` : ''}
                           </p>
-                          <p className="text-[11px] text-gray-400">19:17 · sistema · aceptó en 38 s</p>
                         </div>
                       </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Rechazado por Nicolás Brandán</p>
-                          <p className="text-[11px] text-gray-400">19:16 · conductor · fuera de zona</p>
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Buscando conductor</p>
-                          <p className="text-[11px] text-gray-400">19:16 · sistema · radio 3 km</p>
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Tarifa confirmada por el pasajero</p>
-                          <p className="text-[11px] text-gray-400">19:16 · pasajero · {formatCurrency(trip.estimatedFare, trip.currency)}</p>
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Beneficiario cargado</p>
-                          <p className="text-[11px] text-gray-400">19:15 · pasajero · {trip.thirdParty?.name || 'Elena Muñoz de Beltrán'}</p>
-                        </div>
-                      </div>
-
-                      <div className="relative">
-                        <span className="absolute -left-6 top-1 w-2 h-2 rounded-full bg-gray-400 border-2 border-white dark:border-dark-surface" />
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Viaje creado</p>
-                          <p className="text-[11px] text-gray-400">19:15 · pasajero · app iOS</p>
-                        </div>
-                      </div>
-                    </>
-                  )}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -337,7 +504,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                     <div className="flex items-start gap-2.5">
                       <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-800 dark:border-white shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[10.5px] uppercase font-bold text-gray-400">Subida · 19:24</p>
+                        <p className="text-[10.5px] uppercase font-bold text-gray-400">Subida</p>
                         <p className="text-xs font-semibold text-gray-900 dark:text-white">
                           {trip.pickup?.address || 'Av. Vélez Sarsfield 210, Centro'}
                         </p>
@@ -347,7 +514,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                     <div className="flex items-start gap-2.5">
                       <div className="w-3.5 h-3.5 rounded-sm bg-amber-600 shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-[10.5px] uppercase font-bold text-gray-400">Bajada estimada · 19:55</p>
+                        <p className="text-[10.5px] uppercase font-bold text-gray-400">Bajada estimada</p>
                         <p className="text-xs font-semibold text-gray-900 dark:text-white">
                           {trip.dropoff?.address || 'Aeropuerto Ambrosio Taravella, partidas'}
                         </p>
@@ -364,7 +531,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
 
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
-                      <span>Base Comfort {distanceKm} + espera y peaje</span>
+                      <span>Base {trip.serviceType?.name || 'Comfort'} {distanceKm} + espera</span>
                       <span className="font-mono">{formatCurrency(finalFareNum, trip.currency)}</span>
                     </div>
 
@@ -396,15 +563,15 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
 
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 flex items-center justify-center font-bold text-sm shrink-0">
-                      {trip.passenger?.firstName?.[0] || 'I'}
-                      {trip.passenger?.lastName?.[0] || 'B'}
+                      {trip.passenger?.firstName?.[0] || 'P'}
+                      {trip.passenger?.lastName?.[0] || ''}
                     </div>
                     <div className="overflow-hidden">
                       <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
-                        {trip.passenger ? `${trip.passenger.firstName} ${trip.passenger.lastName}` : 'Ignacio Beltrán'}
+                        {trip.passenger ? `${trip.passenger.firstName} ${trip.passenger.lastName}` : 'Pasajero'}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
-                        {trip.passenger?.phone || '+54 351 682-4417'} · {trip.passenger?.totalTrips || 47} viajes
+                        {trip.passenger?.phone || 'Sin teléfono'} · {trip.passenger?.totalTrips ?? 0} viajes
                       </p>
                     </div>
                   </div>
@@ -420,7 +587,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                         {trip.thirdParty.name}
                       </p>
                       <p className="text-[11px] text-gray-500">
-                        {trip.thirdParty.phone} · notificada por WhatsApp 19:15
+                        {trip.thirdParty.phone} · Notificado por WhatsApp
                       </p>
                     </div>
                   )}
@@ -436,15 +603,15 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                     <>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-sm shrink-0">
-                          {trip.driver.firstName?.[0] || 'J'}
-                          {trip.driver.lastName?.[0] || 'F'}
+                          {trip.driver.firstName?.[0] || 'C'}
+                          {trip.driver.lastName?.[0] || ''}
                         </div>
                         <div className="overflow-hidden">
                           <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                             {trip.driver.firstName} {trip.driver.lastName}
                           </p>
                           <p className="text-xs text-gray-500 truncate">
-                            {trip.driver.phone || '+54 351 594-7702'} · {trip.driver.rating ?? 4.89} ★ · {trip.driver.totalTrips ?? 1208} viajes
+                            {trip.driver.phone || 'Sin teléfono'} · {trip.driver.rating ?? 4.89} ★ · {trip.driver.totalTrips ?? 0} viajes
                           </p>
                         </div>
                       </div>
@@ -453,20 +620,20 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-dark-border text-xs">
                         <div>
                           <p className="text-[10px] uppercase text-gray-400">Patente</p>
-                          <p className="font-semibold text-gray-800 dark:text-gray-200">{trip.vehicle?.plate || 'AE 742 KJ'}</p>
+                          <p className="font-semibold text-gray-800 dark:text-gray-200">{trip.vehicle?.plate || '—'}</p>
                         </div>
                         <div>
                           <p className="text-[10px] uppercase text-gray-400">Vehículo</p>
                           <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">
-                            {trip.vehicle ? `${trip.vehicle.brand} ${trip.vehicle.model}` : 'Toyota Corolla 2022'}
+                            {trip.vehicle ? `${trip.vehicle.brand} ${trip.vehicle.model}` : '—'}
                           </p>
                         </div>
                         <div>
                           <p className="text-[10px] uppercase text-gray-400">Color</p>
-                          <p className="font-semibold text-gray-800 dark:text-gray-200">{trip.vehicle?.color || 'Negro'}</p>
+                          <p className="font-semibold text-gray-800 dark:text-gray-200">{trip.vehicle?.color || '—'}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] uppercase text-gray-400">Categoría</p>
+                          <p className="text-[10px] uppercase text-gray-400">Categoría habilitada</p>
                           <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">
                             {trip.vehicle?.category || 'Essential y Comfort'}
                           </p>
@@ -493,18 +660,24 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                       Pago
                     </h3>
                     <span className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                      {trip.paymentStatus || 'Autorizado'}
+                      {PAYMENT_STATUS_SPANISH[trip.paymentStatus?.toLowerCase() || ''] || trip.paymentStatus || 'Autorizado'}
                     </span>
                   </div>
 
                   <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                    Mercado Pago · tarjeta Visa ····4218
+                    {trip.paymentMethod === 'corporate'
+                      ? 'Cuenta corriente corporativa'
+                      : trip.paymentMethod === 'cash'
+                      ? 'Efectivo en mano'
+                      : 'Mercado Pago · tarjeta'}
                   </p>
 
                   <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-dark-border text-xs">
                     <div>
                       <p className="text-[10px] uppercase text-gray-400">Preferencia</p>
-                      <p className="font-mono text-gray-700 dark:text-gray-300">MP-9F41-2208</p>
+                      <p className="font-mono text-gray-700 dark:text-gray-300">
+                        {trip.payment?.preferenceId || 'MP-DIRECT'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase text-gray-400">Reserva de fondos</p>

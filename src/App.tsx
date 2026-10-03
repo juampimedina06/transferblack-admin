@@ -9,6 +9,7 @@ import DriversScreen from './presentation/drivers/DriversScreen';
 import DriverDetailScreen from './presentation/drivers/DriverDetailScreen';
 import CompaniesScreen from './presentation/companies/CompaniesScreen';
 import CompanyDetailScreen from './presentation/companies/CompanyDetailScreen';
+import PayoutsScreen from './presentation/payouts/PayoutsScreen';
 
 function App() {
   useServerHealth();
@@ -30,7 +31,7 @@ function App() {
             <Route path="/viajes" element={<Navigate to="/dashboard" replace />} />
             <Route path="/conductores" element={<DriversScreen />} />
             <Route path="/conductores/:id" element={<DriverDetailScreen />} />
-            <Route path="/retiros" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/retiros" element={<PayoutsScreen />} />
             <Route path="/empresas" element={<CompaniesScreen />} />
             <Route path="/empresas/:companyId" element={<CompanyDetailScreen />} />
             <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />

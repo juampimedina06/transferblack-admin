@@ -18,6 +18,7 @@ import { twMerge } from 'tailwind-merge';
 import { useAuthStore } from '../../auth/store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useDrivers } from '../../drivers/hooks/useDrivers';
+import { usePayouts } from '../../payouts/hooks/usePayouts';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -88,6 +89,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const { data: driversData } = useDrivers({ page: 1, limit: 1, status: 'pending' });
   const pendingCount = driversData?.pendingCount || 0;
+
+  const { data: payoutsData } = usePayouts({ page: 1, limit: 1, status: 'requested' });
+  const pendingPayoutsCount = payoutsData?.pagination?.total || 0;
 
   return (
     <>
@@ -171,7 +175,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               </h3>
             )}
             <nav className="space-y-1">
-              <NavItem to="/retiros" icon={Wallet} label="Retiros y billeteras" disabled isCollapsed={isSidebarCollapsed} />
+              <NavItem to="/retiros" icon={Wallet} label="Retiros y billeteras" badge={pendingPayoutsCount > 0 ? pendingPayoutsCount : undefined} isCollapsed={isSidebarCollapsed} />
               <NavItem to="/empresas" icon={Building} label="Empresas" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/pasajeros" icon={UserCircle} label="Pasajeros" disabled isCollapsed={isSidebarCollapsed} />
               <NavItem to="/configuracion" icon={Settings} label="Configuración" disabled isCollapsed={isSidebarCollapsed} />

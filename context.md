@@ -70,6 +70,10 @@ src/
 │   │   ├── components/                  # PayoutsTable, PayoutDetailModal, PayoutResolveModal, PayoutsKPIs
 │   │   ├── hooks/                       # usePayouts, usePayoutDetail, useResolvePayout
 │   │   └── PayoutsScreen.tsx            # Pantalla de retiros (/retiros)
+│   ├── trips/                           # Módulo Gestión e Historial de Viajes
+│   │   ├── components/                  # TripsToolbar, TripsTable, TripsBadge, TripDetailDrawer
+│   │   ├── hooks/                       # useTrips, useTripDetail, useTripStatusHistory
+│   │   └── TripsScreen.tsx              # Vista principal (/viajes) con DataGrid y Drawer
 │   ├── tracking/                        # Módulo Seguimiento en Vivo
 │   │   ├── components/                  # TripTrackingMap (Leaflet), DriverCard, TripStatusTimeline
 │   │   └── hooks/                       # useTripTracking
@@ -221,7 +225,35 @@ src/
 
 ---
 
-### C. Módulo de Conductores y Expedientes (`/admin/applications`)
+### C. Módulo de Gestión e Historial de Viajes (`/admin/rides` y `/rides/*`)
+
+#### 1. Listado Paginado de Viajes con Filtros Avanzados
+- **URL**: `GET /api/v1/admin/rides`
+- **Query Params**:
+  - `page`: número de página (default 1)
+  - `limit`: registros por página (default 20, max 100)
+  - `search`: búsqueda por código público, pasajero o calle
+  - `status`: filtro múltiple (`in_progress`, `driver_arrived`, `assigned`, `completed`, `cancelled`, etc.)
+  - `dateFrom`: fecha inicio ISO 8601
+  - `dateTo`: fecha fin ISO 8601
+  - `driverId`: UUID del conductor
+  - `passengerId`: UUID del pasajero
+  - `bookingType`: `immediate` | `scheduled`
+  - `isThirdParty`: boolean para viajes a terceros
+  - `isCorporate`: boolean para cuentas corporativas
+- **Response**: Metadatos de paginación (`total`, `page`, `limit`, `totalPages`) y array `data` con viajes, pasajero, conductor, vehículo, tarifas y direcciones de origen/destino.
+
+#### 2. Detalle Extendido de Viaje (Drawer / Auditoría)
+- **URL**: `GET /api/v1/rides/:tripId`
+- **Response**: Desglose completo de cotización, tarifa final, pasajero que solicitó, tercero beneficiario, conductor asignado, especificaciones del vehículo, método y preferencia de pago Mercado Pago, coordenadas de subida/bajada y métricas de ruta.
+
+#### 3. Línea de Tiempo de Estados (Status History)
+- **URL**: `GET /api/v1/rides/:tripId/status-history`
+- **Response**: Secuencia cronológica append-only de transiciones de estado, con marcas temporales, actor (`passenger`, `driver`, `system`, `admin`), notas y códigos de motivo.
+
+---
+
+### D. Módulo de Conductores y Expedientes (`/admin/applications`)
 
 #### 1. Directorio de Postulantes
 - **URL**: `GET /api/v1/admin/applications`

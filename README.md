@@ -47,6 +47,9 @@ admin-web/
 │   │   ├── payouts/              # Gestión de retiros bancarios de conductores
 │   │   │   ├── actions/          # getPayouts, getPayoutById, resolvePayout
 │   │   │   └── interfaces/       # Contratos de solicitudes, filtros y resolución
+│   │   ├── trips/                # Gestión e historial de viajes de la flota
+│   │   │   ├── actions/          # getTrips, getTripDetail, getTripStatusHistory
+│   │   │   └── interfaces/       # Contratos de viajes, filtros, auditoría y eventos
 │   │   └── tracking/             # Seguimiento público de viajes en vivo
 │   │       ├── actions/          # getTripTracking
 │   │       └── interfaces/       # Modelos de telemetría, estados de viaje y ruta
@@ -73,6 +76,10 @@ admin-web/
 │   │   │   ├── components/       # PayoutsTable, PayoutDetailModal, PayoutResolveModal, PayoutsKPIs
 │   │   │   ├── hooks/            # usePayouts, usePayoutDetail, useResolvePayout
 │   │   │   └── PayoutsScreen.tsx
+│   │   ├── trips/                # Gestión e historial de viajes de la flota (/viajes)
+│   │   │   ├── components/       # TripsToolbar, TripsTable, TripsBadge, TripDetailDrawer
+│   │   │   ├── hooks/            # useTrips, useTripDetail, useTripStatusHistory
+│   │   │   └── TripsScreen.tsx
 │   │   ├── tracking/             # Pantalla pública de seguimiento (/track)
 │   │   │   └── components/       # TripTrackingMap (Leaflet), DriverCard, TripStatusTimeline
 │   │   ├── screens/              # Páginas principales (Login, ForgotPasswordScreen, Dashboard, TrackTrip)

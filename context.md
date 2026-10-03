@@ -354,3 +354,26 @@ graph TD
 - **Soporte Light y Dark Mode**: Ningún color se hardcodea en forma estática. Se utilizan tokens de Tailwind con prefijo `dark:`, clases semánticas (`bg-white dark:bg-dark-surface`, `border-gray-200 dark:border-dark-border`, etc.).
 - **Proporciones Fluidas**: Las vistas internas del panel utilizan ancho completo (`w-full`) respetando el padding estándar del layout (`p-4 lg:p-8`), sin límites arbitrarios de `max-w` que dejen márgenes vacíos en pantallas anchas.
 - **Idioma del Proyecto**: Toda la interfaz de usuario, etiquetas, mensajes de error y documentación interna se redactan en español neutro o profesional.
+
+---
+
+## 6. 🗺 Módulo Mapa en Vivo (`/mapa`)
+
+Consola de control de operaciones de flota y viajes en tiempo real.
+
+### Componentes y Vistas
+- **LiveMapKpiBar**: Contadores superiores en tiempo real (`Conductores en línea`, `Conductores en viaje`, `Viajes en curso`, `Buscando conductor` con alerta `+3 min`, `Desconectados`) usando `<AnimatedNumber />`.
+- **LiveMapCanvas**: Mapa interactivo basado en Leaflet con basemap oscuro de CARTO (`dark_all`), marcadores vehiculares SVG diferenciados por estado (`online` verde, `in_trip` ámbar, `offline` gris), leyenda informativa de estados y filtros tipo píldora (`Todos los estados`, `Solo Comfort`, `Zona aeropuerto`).
+- **ActiveTripsPanel**: Barra lateral derecha con lista de viajes en curso y viajes en estado `searching` ("Sin conductor asignado"), con cálculo dinámico de tiempo de espera y acciones de operador:
+  - `Asignar manualmente`: Abre modal para seleccionar chofer online y asignarlo directamente (`POST /api/v1/admin/trips/:tripId/assign-driver`).
+  - `Ampliar radio`: Dispara nueva ronda de búsqueda geoespacial (`POST /api/v1/admin/trips/:tripId/expand-radius`).
+- **ManualAssignModal**: Selector de chofer disponible en línea con buscador por nombre, patente o teléfono y confirmación transaccional.
+
+### Canales WebSocket y Sincronización
+- Conexión con `socket.io-client` y autenticación vía JWT de administrador (`authStorage.getAccessToken()`).
+- Eventos escuchados:
+  - `driver.location.updated`: Actualiza en caliente la ubicación del marcador del conductor en el mapa.
+  - `dashboard.metrics.updated`: Actualiza los contadores superiores sin recargar.
+  - `trip.*` (`trip.searching`, `trip.assigned`, `trip.in_progress`, etc.): Invalida y refresca el listado de viajes activos.
+- Reconexión: En caso de desconexión y reconexión, se sincroniza automáticamente el estado inicial vía REST (`/admin/locations`, `/admin/rides`, `/admin/dashboard`).
+

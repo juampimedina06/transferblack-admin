@@ -130,6 +130,12 @@ export const TripsScreen: React.FC = () => {
     updateUrlParams(filterState, currentPage, pageSize, null);
   };
 
+  if (selectedTripId) {
+    return (
+      <TripDetailDrawer tripId={selectedTripId} onClose={handleCloseDrawer} />
+    );
+  }
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Page Title */}
@@ -160,9 +166,6 @@ export const TripsScreen: React.FC = () => {
         onPageSizeChange={handlePageSizeChange}
         onSelectTrip={handleSelectTrip}
       />
-
-      {/* Drawer Detalle de Viaje */}
-      <TripDetailDrawer tripId={selectedTripId} onClose={handleCloseDrawer} />
     </div>
   );
 };

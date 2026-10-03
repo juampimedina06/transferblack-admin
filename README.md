@@ -147,7 +147,14 @@ admin-web/
   - **Nómina de Miembros**: Directorio de colaboradores vinculados, edición de límites individuales, centros de costos asignados y estados de cuenta.
   - **Cierres de Período y Facturación**: Emisión de cierres de cuenta corriente, estados de facturación mensual y desglose de consumos.
 
-### 6. 📍 Seguimiento Público de Viajes (`/track?token=...`)
+### 6. 🗓️ Viajes Reservados (`/viajes-reservados`)
+- **Alcance**: reservas que la agencia arma por un pasajero (acordadas por WhatsApp) y cobra **por adelantado**; el backend las activa solo, cerca de la hora de retiro (`scheduled-trips` del backend, no hay `GET /admin/scheduled-trips/:id`: el detalle siempre sale del listado ya cargado).
+- **Listado**: tabla con hora de retiro, pasajero, origen → destino, precio acordado, estado del viaje y del cobro (`Pagado` / `Pendiente` / `Requiere reembolso`) y chofer reservado. Filtros por estado y rango de fechas, y resalte de filas sin cobrar cerca de la hora de retiro o con una alerta abierta.
+- **Alertas**: panel chico con las alertas operativas nuevas (`scheduled_trip_driver_unavailable`, `scheduled_trip_unpaid`, `scheduled_trip_unaccepted`, `scheduled_trip_duplicate_payment`); el panel todavía no tiene una pantalla general de alertas.
+- **Alta**: pasajero por email, origen y destino con autocompletado de direcciones (Geoapify, mismo proveedor que la app del pasajero y el backend) con vista previa en el mapa, fecha y hora de retiro (mínimo de anticipación validado en el cliente y por el servidor), precio acordado y chofer opcional buscable entre los choferes aprobados (`/admin/applications?status=approved`: no existe un endpoint que liste choferes aprobados con vehículo).
+- **Detalle**: edición de hora, chofer y notas mientras el viaje sigue `scheduled`, cancelación con motivo, y la sección de cobro (link de Checkout Pro o transferencia registrada, con clave de idempotencia nueva en cada link) con historial. Si el viaje ya se activó, un botón lleva al seguimiento normal en `/viajes`.
+
+### 7. 📍 Seguimiento Público de Viajes (`/track?token=...`)
 - **Acceso para Invitados**: Pantalla pública optimizada para terceros que no requieren inicio de sesión, accesible vía enlaces distribuidos por WhatsApp o email.
 - **Cliente HTTP Autónomo (`publicApi`)**: Consume `GET /rides/track/{token}` sin adjuntar credenciales ni disparar cierres de sesión del panel.
 - **Mapa en Vivo**: Representación cartográfica interactiva con Leaflet mostrando la ubicación del móvil, punto de partida, punto de destino y trazado de ruta.
@@ -175,8 +182,9 @@ Crear un archivo `.env` en la raíz del proyecto a partir de `.env.example`:
 ```env
 VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
 VITE_MAP_TILES_URL=
+VITE_GEOAPIFY_API_KEY=
 ```
-> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet.
+> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet. `VITE_GEOAPIFY_API_KEY` habilita el autocompletado de direcciones en el alta de un viaje reservado (mismo proveedor que usa la app del pasajero y el backend para resolver `place_id`); sin ella, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
 
 ### 3. Ejecutar en modo desarrollo:
 ```bash

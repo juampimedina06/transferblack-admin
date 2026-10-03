@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useServerHealth } from './presentation/hooks/useServerHealth';
 import Login from './presentation/screens/Login';
+import ForgotPasswordScreen from './presentation/screens/ForgotPasswordScreen';
 import Dashboard from './presentation/screens/Dashboard';
 import TrackTrip from './presentation/screens/TrackTrip';
 import ProtectedRoute from './presentation/components/ProtectedRoute';
@@ -18,6 +19,7 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/recuperar-password" element={<ForgotPasswordScreen />} />
 
         {/* Publica: la abre un invitado sin sesion desde un link de WhatsApp/email */}
         <Route path="/track" element={<TrackTrip />} />

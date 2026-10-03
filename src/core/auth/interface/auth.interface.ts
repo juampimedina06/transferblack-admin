@@ -50,3 +50,37 @@ export interface ApiErrorResponse {
     details?: unknown;
   };
 }
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  data: {
+    message: string;
+  };
+}
+
+export interface ResetPasswordVerifyRequest {
+  email: string;
+  code: string;
+}
+
+export interface ResetPasswordVerifyResponse {
+  data: {
+    reset_token: string;
+    expires_in: number;
+  };
+}
+
+export interface ResetPasswordRequest {
+  reset_token: string;
+  new_password: string;
+}
+
+export interface ResetPasswordResponse {
+  data: {
+    message: string;
+  };
+}
+

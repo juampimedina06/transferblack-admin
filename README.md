@@ -53,6 +53,8 @@ admin-web/
 │   │
 │   ├── presentation/             # Capa de Interfaz de Usuario y Presentación
 │   │   ├── auth/                 # Formulario de inicio de sesión y storage de tokens
+│   │   │   ├── components/       # OtpInput (código 6 dígitos con paste), PasswordRequirements
+│   │   │   └── store/            # authStorage, useAuthStore
 │   │   ├── companies/            # Gestión integral de empresas corporativas
 │   │   │   ├── components/       # Balance, centros de costo, empleados, cierres y recargas
 │   │   │   ├── CompaniesScreen.tsx
@@ -73,7 +75,7 @@ admin-web/
 │   │   │   └── PayoutsScreen.tsx
 │   │   ├── tracking/             # Pantalla pública de seguimiento (/track)
 │   │   │   └── components/       # TripTrackingMap (Leaflet), DriverCard, TripStatusTimeline
-│   │   ├── screens/              # Páginas principales (Login, Dashboard, TrackTrip)
+│   │   ├── screens/              # Páginas principales (Login, ForgotPasswordScreen, Dashboard, TrackTrip)
 │   │   ├── providers/            # TanStack QueryClientProvider
 │   │   └── store/                # Stores de UI (useUIStore para Sidebar y tema)
 │   ├── App.tsx                   # Declaración de rutas y ruteo protegido
@@ -84,11 +86,18 @@ admin-web/
 
 ## ✨ Módulos del Sistema
 
-### 1. 🔐 Autenticación y Control de Acceso
-- Formulario de ingreso con validaciones en tiempo real con Zod y React Hook Form.
-- Gestión segura de tokens JWT persistidos en almacenamiento local.
-- Interceptor centralizado en `adminApi` que detecta expiración de sesión (401) y ejecuta cierre de sesión automático sin bucles.
-- Barrera de seguridad con `ProtectedRoute` que restringe el acceso exclusivamente a usuarios con rol `admin`.
+### 1. 🔐 Autenticación y Recuperación de Credenciales
+- **Inicio de Sesión**:
+  - Formulario de ingreso con validaciones en tiempo real con Zod y React Hook Form.
+  - Gestión segura de tokens JWT persistidos en almacenamiento local (`authStorage`).
+  - Interceptor centralizado en `adminApi` que detecta expiración de sesión (401) y ejecuta cierre de sesión automático sin bucles.
+  - Barrera de seguridad con `ProtectedRoute` que restringe el acceso exclusivamente a usuarios con rol `admin`.
+- **Recuperación de Contraseña (`/recuperar-password`)**:
+  - Flujo guiado en 3 pasos con diseño institucional Transfer Black split-screen.
+  - **Paso 1 (Solicitud)**: Ingreso de correo corporativo para recibir PIN numérico vía `POST /auth/forgot-password` (con respuesta genérica para evitar enumeración de cuentas).
+  - **Paso 2 (Verificación de PIN)**: Entrada de código OTP de 6 dígitos numéricos mediante `<OtpInput />` con soporte nativo de pegado rápido (paste), auto-foco secuencial y botón de reenvío con temporizador de enfriamiento (*cooldown* de 60s) vía `POST /auth/reset-password/verify`.
+  - **Paso 3 (Nueva Clave)**: Ingreso y confirmación de nueva clave con alternancia de visibilidad (icono de ojo) y checklist interactivo de requisitos de seguridad en tiempo real (`<PasswordRequirements />`: 8+ caracteres, mayúscula, minúscula y número) vía `POST /auth/reset-password`.
+  - Limpieza preventiva de sesiones obsoletas en cliente al ingresar y redirección automática al Login tras el reseteo exitoso.
 
 ### 2. 📊 Dashboard Operativo (`/dashboard`)
 - Indicadores de rendimiento del negocio: Viajes Totales, Facturación Bruta, Comisión de Plataforma y Tasa de Cancelaciones.

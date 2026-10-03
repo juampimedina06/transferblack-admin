@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L, { type LatLngBoundsExpression, type LatLngExpression } from 'leaflet';
-import { Locate, Star, Phone, Car, Compass, Clock } from 'lucide-react';
+import { Locate, Star, Phone, Car, Compass, Clock, Maximize2, Minimize2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import type { DriverLocationFeature, DriverAvailabilityStatus } from '../../../core/map/interfaces/live-map.interface';
 
@@ -108,22 +108,33 @@ function FlyToPosition({ target }: { target: LatLngExpression | null }) {
   return null;
 }
 
+function MapResizeHandler({ isFullscreen }: { isFullscreen?: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
+    return () => clearTimeout(timer);
+  }, [isFullscreen, map]);
+  return null;
+}
+
 interface Props {
   features: DriverLocationFeature[];
   filterStatus: 'all' | 'online' | 'in_trip' | 'offline';
   onFilterStatusChange: (status: 'all' | 'online' | 'in_trip' | 'offline') => void;
-  filterCategory: string | null;
-  onFilterCategoryToggle: (cat: string) => void;
   onSelectTrip?: (tripId: string) => void;
+  isFullscreen?: boolean;
+  onToggleFullscreen?: () => void;
 }
 
 export const LiveMapCanvas: React.FC<Props> = ({
   features,
   filterStatus,
   onFilterStatusChange,
-  filterCategory,
-  onFilterCategoryToggle,
   onSelectTrip,
+  isFullscreen = false,
+  onToggleFullscreen,
 }) => {
   const [recenterCount, setRecenterCount] = useState(0);
   const [flyTarget, setFlyTarget] = useState<LatLngExpression | null>(null);
@@ -151,6 +162,7 @@ export const LiveMapCanvas: React.FC<Props> = ({
         <TileLayer url={TILES_URL} attribution={TILES_ATTRIBUTION} />
         <MapAutoBounds features={features} recenterTrigger={recenterCount} />
         <FlyToPosition target={flyTarget} />
+        <MapResizeHandler isFullscreen={isFullscreen} />
 
         {features.map((feat) => {
           const [lng, lat] = feat.geometry.coordinates;
@@ -277,6 +289,28 @@ export const LiveMapCanvas: React.FC<Props> = ({
         </div>
       </div>
 
+      {/* Overlay Superior Derecho: Botón Ampliar Mapa */}
+      {onToggleFullscreen && (
+        <button
+          type="button"
+          onClick={onToggleFullscreen}
+          className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 bg-neutral-900/90 hover:bg-neutral-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xl border border-white/10 backdrop-blur-md transition-all pointer-events-auto"
+          title={isFullscreen ? 'Restaurar vista normal' : 'Ampliar mapa en toda la pantalla (hasta el nav)'}
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize2 className="w-3.5 h-3.5 text-champagne-gold" />
+              <span>Restaurar</span>
+            </>
+          ) : (
+            <>
+              <Maximize2 className="w-3.5 h-3.5 text-champagne-gold" />
+              <span>Ampliar mapa</span>
+            </>
+          )}
+        </button>
+      )}
+
       {/* Overlay Inferior Izquierdo: Filtros tipo pastilla (Pills) */}
       <div className="absolute bottom-4 left-4 z-[400] flex flex-wrap items-center gap-2 pointer-events-auto">
         {/* Todos los estados */}
@@ -290,19 +324,6 @@ export const LiveMapCanvas: React.FC<Props> = ({
           }`}
         >
           Todos los estados
-        </button>
-
-        {/* Solo Comfort */}
-        <button
-          type="button"
-          onClick={() => onFilterCategoryToggle('comfort')}
-          className={`px-3 py-1.5 rounded-lg text-xs font-semibold backdrop-blur-md transition-all shadow-md ${
-            filterCategory?.toLowerCase() === 'comfort'
-              ? 'bg-champagne-gold text-neutral-950 font-bold shadow-[0_0_12px_rgba(212,175,55,0.4)]'
-              : 'bg-neutral-900/90 text-gray-300 hover:text-white border border-white/10 hover:bg-neutral-800'
-          }`}
-        >
-          Solo Comfort
         </button>
 
         {/* Zona aeropuerto */}

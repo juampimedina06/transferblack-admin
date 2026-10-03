@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getFleetLocations } from '../../../core/map/actions/getFleetLocations.action';
 import { getActiveTrips } from '../../../core/map/actions/getActiveTrips.action';
 import { getLiveMapKpi } from '../../../core/map/actions/getLiveMapKpi.action';
+import { getDrivers } from '../../../core/drivers/actions/getDrivers.action';
 import type { FleetGeoJsonResponse, LiveMapMetrics } from '../../../core/map/interfaces/live-map.interface';
 import { useLiveMapSocket } from './useLiveMapSocket';
 
@@ -56,12 +57,24 @@ export const useLiveMap = () => {
     staleTime: 5000,
   });
 
+  // 4. Carga del total de conductores aprobados de la flota para calcular desconectados
+  const {
+    data: approvedDriversData,
+    refetch: refetchApprovedDrivers,
+  } = useQuery({
+    queryKey: ['approved-drivers-count'],
+    queryFn: () => getDrivers({ page: 1, limit: 1, status: 'approved' }),
+    staleTime: 15000,
+    refetchInterval: 15000,
+  });
+
   // Manejo de reconexión de sockets: refresca REST
   const handleReconnect = useCallback(() => {
     refetchFleet();
     refetchTrips();
     refetchKpi();
-  }, [refetchFleet, refetchTrips, refetchKpi]);
+    refetchApprovedDrivers();
+  }, [refetchFleet, refetchTrips, refetchKpi, refetchApprovedDrivers]);
 
   // Manejo de actualización de ubicación en tiempo real
   const handleDriverLocationUpdated = useCallback(
@@ -109,17 +122,31 @@ export const useLiveMap = () => {
     [queryClient]
   );
 
+  // Manejo de actualización de métricas en tiempo real por socket
+  const handleMetricsUpdated = useCallback(
+    (data: Partial<LiveMapMetrics>) => {
+      queryClient.setQueryData<Partial<LiveMapMetrics> | null>(['live-map-kpis'], (old) => ({
+        ...old,
+        ...data,
+      }));
+      setLastUpdated(new Date());
+    },
+    [queryClient]
+  );
+
   // Manejo de eventos de viaje (actualizar lista y marcadores)
   const handleTripStatusUpdated = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['active-trips'] });
     queryClient.invalidateQueries({ queryKey: ['fleet-locations'] });
     queryClient.invalidateQueries({ queryKey: ['live-map-kpis'] });
+    queryClient.invalidateQueries({ queryKey: ['approved-drivers-count'] });
     setLastUpdated(new Date());
   }, [queryClient]);
 
   // Conexión WebSocket
   useLiveMapSocket({
     onDriverLocationUpdated: handleDriverLocationUpdated,
+    onMetricsUpdated: handleMetricsUpdated,
     onTripStatusUpdated: handleTripStatusUpdated,
     onReconnect: handleReconnect,
   });
@@ -150,15 +177,22 @@ export const useLiveMap = () => {
       return !isNaN(created) && now - created > 3 * 60 * 1000;
     }).length;
 
+    // Conteo de choferes desconectados:
+    // Si la telemetría solo reporta activos, desconectados = total aprobados - en línea - en viaje.
+    const totalApproved = approvedDriversData?.pagination?.totalCount ?? 0;
+    const computedOffline = totalApproved > 0
+      ? Math.max(0, totalApproved - onlineDriversCount - inTripDriversCount)
+      : offlineDriversCount;
+
     return {
       onlineDrivers: kpiData?.onlineDrivers ?? onlineDriversCount,
       inTripDrivers: kpiData?.inTripDrivers ?? inTripDriversCount,
       activeTrips: kpiData?.activeTrips ?? tripsInCourse,
       searchingTrips: kpiData?.searchingTrips ?? searchingTripsCount,
-      offlineDrivers: kpiData?.offlineDrivers ?? offlineDriversCount,
+      offlineDrivers: kpiData?.offlineDrivers ?? (offlineDriversCount > 0 ? offlineDriversCount : computedOffline),
       waitingMoreThan3Min: kpiData?.waitingMoreThan3Min ?? waitingMoreThan3MinCount,
     };
-  }, [fleetData, activeTrips, kpiData]);
+  }, [fleetData, activeTrips, kpiData, approvedDriversData]);
 
   // Filtrado de conductores para el mapa
   const filteredFeatures = useMemo(() => {

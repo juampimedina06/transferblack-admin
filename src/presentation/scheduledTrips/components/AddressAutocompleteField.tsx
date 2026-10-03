@@ -17,9 +17,14 @@ interface AddressAutocompleteFieldProps {
  * se muestra el aviso y se habilitan dos campos numericos manuales como
  * alternativa, para no bloquear el alta.
  */
+const isValidLat = (lat: number): boolean => Number.isFinite(lat) && lat >= -90 && lat <= 90;
+const isValidLng = (lng: number): boolean => Number.isFinite(lng) && lng >= -180 && lng <= 180;
+
 export const AddressAutocompleteField: React.FC<AddressAutocompleteFieldProps> = ({ label, value, onChange, error }) => {
   const [query, setQuery] = useState(value?.address ?? '');
   const [isOpen, setIsOpen] = useState(false);
+  const [manualLat, setManualLat] = useState(value?.lat !== undefined ? String(value.lat) : '');
+  const [manualLng, setManualLng] = useState(value?.lng !== undefined ? String(value.lng) : '');
   const { results, isLoading, isConfigured } = useAddressAutocomplete(query);
 
   useEffect(() => {
@@ -86,25 +91,42 @@ export const AddressAutocompleteField: React.FC<AddressAutocompleteFieldProps> =
               type="number"
               step="any"
               placeholder="Latitud"
-              value={value?.lat ?? ''}
+              value={manualLat}
               onChange={(e) => {
-                const lat = Number(e.target.value);
-                if (Number.isNaN(lat)) return;
-                onChange({ address: query, lat, lng: value?.lng ?? 0 });
+                const next = e.target.value;
+                setManualLat(next);
+                const lat = Number(next);
+                const lng = Number(manualLng);
+                onChange(
+                  next.trim() !== '' && manualLng.trim() !== '' && isValidLat(lat) && isValidLng(lng)
+                    ? { address: query, lat, lng }
+                    : null,
+                );
               }}
             />
             <Input
               type="number"
               step="any"
               placeholder="Longitud"
-              value={value?.lng ?? ''}
+              value={manualLng}
               onChange={(e) => {
-                const lng = Number(e.target.value);
-                if (Number.isNaN(lng)) return;
-                onChange({ address: query, lat: value?.lat ?? 0, lng });
+                const next = e.target.value;
+                setManualLng(next);
+                const lat = Number(manualLat);
+                const lng = Number(next);
+                onChange(
+                  manualLat.trim() !== '' && next.trim() !== '' && isValidLat(lat) && isValidLng(lng)
+                    ? { address: query, lat, lng }
+                    : null,
+                );
               }}
             />
           </div>
+          {(manualLat.trim() !== '' || manualLng.trim() !== '') && !hasCoordinates && (
+            <p className="text-[11px] text-red-600">
+              Ingresá latitud (-90 a 90) y longitud (-180 a 180) válidas para habilitar el envío.
+            </p>
+          )}
         </div>
       )}
     </div>

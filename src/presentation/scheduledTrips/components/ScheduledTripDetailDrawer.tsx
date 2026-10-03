@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Save, Users, X } from 'lucide-react';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { extractApiErrorMessage } from '../../../core/api/adminApi';
 import {
   cancelScheduledTrip,
@@ -11,7 +9,9 @@ import {
   scheduledTripCancellationReasons,
   updateScheduledTrip,
   type ScheduledTrip,
+  type UpdateScheduledTripPayload,
 } from '../../../core/scheduledTrips/scheduledTrip.api';
+import { formatArgentineDateTime, fromArgentineIso, toArgentineIso } from '../../../core/scheduledTrips/shared';
 import { TripsBadge } from '../../trips/components/TripsBadge';
 import { Button, Input, Textarea } from '../../components/common';
 import { DriverPickerSelect } from './DriverPickerSelect';
@@ -39,8 +39,9 @@ export function ScheduledTripDetailDrawer({ trip, onClose, onUpdated, onCancelle
   const isEditable = trip.status === 'scheduled';
   const isActivated = ACTIVATED_STATUSES.has(trip.status);
 
-  const [scheduledDate, setScheduledDate] = useState(format(new Date(trip.scheduled_at), 'yyyy-MM-dd'));
-  const [scheduledTime, setScheduledTime] = useState(format(new Date(trip.scheduled_at), 'HH:mm'));
+  const initialScheduled = fromArgentineIso(trip.scheduled_at);
+  const [scheduledDate, setScheduledDate] = useState(initialScheduled.date);
+  const [scheduledTime, setScheduledTime] = useState(initialScheduled.time);
   const [reservedDriverId, setReservedDriverId] = useState<string | null>(trip.reserved_driver?.id ?? null);
   const [notes, setNotes] = useState(trip.notes ?? '');
   const [editError, setEditError] = useState<string | null>(null);
@@ -50,13 +51,25 @@ export function ScheduledTripDetailDrawer({ trip, onClose, onUpdated, onCancelle
 
   const invalidateList = () => void queryClient.invalidateQueries({ queryKey: ['scheduled-trips'] });
 
+  const originalDriverId = trip.reserved_driver?.id ?? null;
+  const normalizedNotes = notes.trim() === '' ? null : notes;
+  const newScheduledAt = toArgentineIso(scheduledDate, scheduledTime);
+  const hasScheduledAtChanged = new Date(newScheduledAt).getTime() !== new Date(trip.scheduled_at).getTime();
+  const hasDriverChanged = reservedDriverId !== originalDriverId;
+  const hasNotesChanged = normalizedNotes !== trip.notes;
+  const hasChanges = hasScheduledAtChanged || hasDriverChanged || hasNotesChanged;
+
   const updateMutation = useMutation({
-    mutationFn: () =>
-      updateScheduledTrip(trip.id, {
-        scheduled_at: `${scheduledDate}T${scheduledTime}:00-03:00`,
-        reserved_driver_id: reservedDriverId,
-        notes: notes.trim() === '' ? null : notes,
-      }),
+    mutationFn: () => {
+      // Solo se manda lo que cambio: repetir `scheduled_at` sin tocarlo puede
+      // chocar con la validacion de anticipacion minima del backend si el
+      // viaje ya esta cerca de la hora de retiro.
+      const payload: UpdateScheduledTripPayload = {};
+      if (hasScheduledAtChanged) payload.scheduled_at = newScheduledAt;
+      if (hasDriverChanged) payload.reserved_driver_id = reservedDriverId;
+      if (hasNotesChanged) payload.notes = normalizedNotes;
+      return updateScheduledTrip(trip.id, payload);
+    },
     onMutate: () => setEditError(null),
     onSuccess: (updated) => {
       invalidateList();
@@ -97,7 +110,7 @@ export function ScheduledTripDetailDrawer({ trip, onClose, onUpdated, onCancelle
             <TripsBadge status={trip.status} />
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Retiro: {format(new Date(trip.scheduled_at), "dd/MM/yyyy HH:mm", { locale: es })} · Precio acordado:{' '}
+            Retiro: {formatArgentineDateTime(trip.scheduled_at)} · Precio acordado:{' '}
             {formatCurrency(trip.agreed_fare, trip.currency)}
           </p>
         </div>
@@ -179,6 +192,7 @@ export function ScheduledTripDetailDrawer({ trip, onClose, onUpdated, onCancelle
                 variant="gold"
                 leftIcon={<Save size={15} />}
                 isLoading={updateMutation.isPending}
+                disabled={!hasChanges}
                 onClick={() => updateMutation.mutate()}
               >
                 Guardar cambios

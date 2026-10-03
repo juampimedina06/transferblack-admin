@@ -30,6 +30,35 @@ export function toArgentineIso(date: string, time: string): string {
   return `${date}T${time}:00-03:00`;
 }
 
+const ARGENTINE_TIME_ZONE = 'America/Argentina/Cordoba';
+
+/**
+ * Inversa de `toArgentineIso`: parte una fecha/hora ISO en los componentes
+ * locales de Argentina (UTC-3, sin horario de verano) usando `Intl`, sin
+ * depender del huso horario del navegador.
+ */
+export function fromArgentineIso(iso: string): { date: string; time: string } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: ARGENTINE_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
+  const hour = get('hour') === '24' ? '00' : get('hour');
+  return { date: `${get('year')}-${get('month')}-${get('day')}`, time: `${hour}:${get('minute')}` };
+}
+
+/** Formatea una fecha/hora ISO como `dd/MM/yyyy HH:mm` en hora de Argentina, para mostrarla. */
+export function formatArgentineDateTime(iso: string): string {
+  const { date, time } = fromArgentineIso(iso);
+  const [year, month, day] = date.split('-');
+  return `${day}/${month}/${year} ${time}`;
+}
+
 /** Valida `YYYY-MM-DD` como fecha de calendario real (rechaza 2026-02-30, etc). */
 export function isValidCalendarDate(value: string): boolean {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);

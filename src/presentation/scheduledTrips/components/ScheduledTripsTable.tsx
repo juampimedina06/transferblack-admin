@@ -1,11 +1,10 @@
 import React, { useMemo } from 'react';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { format } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { ArrowRight, CalendarClock, Inbox } from 'lucide-react';
 import { TripsBadge } from '../../trips/components/TripsBadge';
 import { ScheduledTripPaymentBadge } from './ScheduledTripPaymentBadge';
 import type { ScheduledTrip, ScheduledTripPagination } from '../../../core/scheduledTrips/scheduledTrip.api';
+import { formatArgentineDateTime } from '../../../core/scheduledTrips/shared';
 
 interface ScheduledTripsTableProps {
   trips: ScheduledTrip[];
@@ -56,7 +55,7 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
         cell: (info) => (
           <div className="flex items-center gap-1.5 whitespace-nowrap text-xs text-gray-700 dark:text-gray-200">
             <CalendarClock className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-            {format(new Date(info.getValue()), "dd/MM/yyyy HH:mm", { locale: es })}
+            {formatArgentineDateTime(info.getValue())}
           </div>
         ),
       }),

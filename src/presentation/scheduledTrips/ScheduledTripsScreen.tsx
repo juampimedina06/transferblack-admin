@@ -13,7 +13,12 @@ const EMPTY_FILTERS: ScheduledTripsFilterState = { status: '', from: '', to: '' 
 export const ScheduledTripsScreen: React.FC = () => {
   const [filters, setFilters] = useState<ScheduledTripsFilterState>(EMPTY_FILTERS);
   const [page, setPage] = useState(1);
-  const [selectedTrip, setSelectedTrip] = useState<ScheduledTrip | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  // El backend no expone un `GET` de detalle (ver scheduledTrip.api.ts): el
+  // detalle sale del listado ya cargado. Si una mutacion invalida la lista y
+  // el viaje sale de la pagina actual (cambio de filtro, pagina, etc.), esta
+  // ultima version conocida evita que el drawer se quede con datos viejos.
+  const [selectedTripSnapshot, setSelectedTripSnapshot] = useState<ScheduledTrip | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
   const queryFilters: GetScheduledTripsFilters = useMemo(
@@ -35,18 +40,32 @@ export const ScheduledTripsScreen: React.FC = () => {
     [alerts],
   );
 
+  const selectedTrip = selectedTripId
+    ? data?.data.find((candidate) => candidate.id === selectedTripId) ?? selectedTripSnapshot
+    : null;
+
+  const selectTrip = (trip: ScheduledTrip) => {
+    setSelectedTripId(trip.id);
+    setSelectedTripSnapshot(trip);
+  };
+
   const selectTripById = (tripId: string) => {
     const trip = data?.data.find((candidate) => candidate.id === tripId);
-    if (trip) setSelectedTrip(trip);
+    if (trip) selectTrip(trip);
+  };
+
+  const closeDetail = () => {
+    setSelectedTripId(null);
+    setSelectedTripSnapshot(null);
   };
 
   if (selectedTrip) {
     return (
       <ScheduledTripDetailDrawer
         trip={selectedTrip}
-        onClose={() => setSelectedTrip(null)}
-        onUpdated={setSelectedTrip}
-        onCancelled={() => setSelectedTrip(null)}
+        onClose={closeDetail}
+        onUpdated={setSelectedTripSnapshot}
+        onCancelled={closeDetail}
       />
     );
   }
@@ -82,7 +101,7 @@ export const ScheduledTripsScreen: React.FC = () => {
         isError={isError}
         attentionTripIds={attentionTripIds}
         onPageChange={setPage}
-        onSelectTrip={setSelectedTrip}
+        onSelectTrip={selectTrip}
       />
 
       {isCreateOpen && (

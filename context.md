@@ -26,7 +26,9 @@ src/
 │   ├── api/
 │   │   ├── adminApi.ts                  # Axios con baseURL VITE_API_URL, interceptor JWT e interceptor 401
 │   │   └── publicApi.ts                 # Axios público para endpoints de invitados sin autenticación
-│   ├── auth/                            # Contratos y llamadas de autenticación (/auth/login)
+│   ├── auth/                            # Autenticación, contratos y recuperación de credenciales
+│   │   ├── action/                      # auth.actions.ts (login, forgotPassword, verifyResetCode, resetPassword)
+│   │   └── interface/                   # auth.interface.ts (UserProfile, AuthTokens, ResetPassword*)
 │   ├── companies/                       # Interfaces, schemas Zod y API de empresas corporativas
 │   │   └── company.api.ts               # CRUD de empresas, centros de costo, top-ups y miembros
 │   ├── dashboard/                       # Contratos y llamadas de métricas (/admin/dashboard/stats)
@@ -45,7 +47,9 @@ src/
 │
 ├── presentation/                        # CAPA DE PRESENTACIÓN (React, Hooks, Componentes)
 │   ├── auth/
-│   │   └── store/                       # useAuthStore (Zustand con persistencia en localStorage)
+│   │   ├── components/                  # OtpInput.tsx (código 6 dígitos con paste), PasswordRequirements.tsx
+│   │   └── store/                       # authStorage, useAuthStore (Zustand con persistencia en localStorage)
+│   ├── screens/                         # Páginas raíz (Login.tsx, ForgotPasswordScreen.tsx, Dashboard.tsx, TrackTrip.tsx)
 │   ├── companies/                       # Módulo Empresas
 │   │   ├── components/                  # Balance, consumo, miembros, centros de costo, top-ups
 │   │   ├── CompaniesScreen.tsx          # Vista principal (/empresas)
@@ -78,10 +82,72 @@ src/
 
 ## 3. 🌐 Endpoints y Contratos de Integración
 
-Todos los endpoints administrativos requieren el encabezado:
-`Authorization: Bearer <admin_jwt_token>`
+### A. Módulo de Autenticación y Recuperación de Contraseña (`/auth/*`)
 
-### A. Módulo de Retiros y Billeteras (`/admin/payouts`)
+#### 1. Inicio de Sesión
+- **URL**: `POST /api/v1/auth/login`
+- **Body**: `{ "email": string, "password": string }`
+- **Response (200 OK)**:
+  ```json
+  {
+    "data": {
+      "profile": { "id": "uuid", "email": "admin@transferblack.com.ar", "roles": ["admin"] },
+      "tokens": { "access_token": "jwt...", "refresh_token": "jwt..." }
+    }
+  }
+  ```
+
+#### 2. Solicitud de Recuperación (Forgot Password)
+- **URL**: `POST /api/v1/auth/forgot-password`
+- **Body**: `{ "email": string }`
+- **Response (202 Accepted)**:
+  ```json
+  {
+    "data": {
+      "message": "Si el correo está registrado, te enviamos un código."
+    }
+  }
+  ```
+  *Nota de seguridad:* Responde 202 con el mismo cuerpo exista o no la cuenta para prevenir ataques de enumeración de usuarios.
+
+#### 3. Verificación de Código PIN
+- **URL**: `POST /api/v1/auth/reset-password/verify`
+- **Body**: `{ "email": string, "code": string }` (6 dígitos)
+- **Response (200 OK)**:
+  ```json
+  {
+    "data": {
+      "reset_token": "token-temporal-10min",
+      "expires_in": 600
+    }
+  }
+  ```
+- **Errores**:
+  - `400 VERIFICATION_CODE_INVALID`: PIN erróneo (`details.attempts_remaining` indica intentos restantes).
+  - `400 VERIFICATION_CODE_EXPIRED`: El PIN de 15 minutos caducó.
+  - `429 VERIFICATION_CODE_LOCKED`: Límite de intentos agotados.
+
+#### 4. Definición de Nueva Contraseña
+- **URL**: `POST /api/v1/auth/reset-password`
+- **Body**:
+  ```json
+  {
+    "reset_token": "token-temporal-10min",
+    "new_password": "Password123"
+  }
+  ```
+- **Reglas de contraseña**: Mínimo 8 caracteres, al menos 1 mayúscula, 1 minúscula y 1 número.
+- **Response (200 OK)**:
+  ```json
+  {
+    "data": {
+      "message": "Contraseña actualizada."
+    }
+  }
+  ```
+  *Efecto colateral:* Revoca todas las sesiones previas del usuario automáticamente.
+
+### B. Módulo de Retiros y Billeteras (`/admin/payouts`)
 
 #### 1. Listado de Solicitudes con Filtros y Paginación
 - **URL**: `GET /api/v1/admin/payouts`
@@ -155,7 +221,7 @@ Todos los endpoints administrativos requieren el encabezado:
 
 ---
 
-### B. Módulo de Conductores y Expedientes (`/admin/applications`)
+### C. Módulo de Conductores y Expedientes (`/admin/applications`)
 
 #### 1. Directorio de Postulantes
 - **URL**: `GET /api/v1/admin/applications`
@@ -182,7 +248,7 @@ Todos los endpoints administrativos requieren el encabezado:
 
 ---
 
-### C. Módulo de Empresas Corporativas (`/admin/companies`)
+### D. Módulo de Empresas Corporativas (`/admin/companies`)
 
 - **Listado y Alta**: `GET /api/v1/admin/companies`, `POST /api/v1/admin/companies`
 - **Ficha de Empresa**: `GET /api/v1/admin/companies/:companyId`
@@ -194,14 +260,14 @@ Todos los endpoints administrativos requieren el encabezado:
 
 ---
 
-### D. Módulo de Dashboard y Métricas (`/admin/dashboard/stats`)
+### E. Módulo de Dashboard y Métricas (`/admin/dashboard/stats`)
 
 - **URL**: `GET /api/v1/admin/dashboard/stats?periodo=day|month|year&fecha=YYYY-MM-DD`
 - **Response**: Totales de facturación, comisiones de plataforma, viajes completados, cancelados y series temporales para el gráfico de barras/líneas.
 
 ---
 
-### E. Módulo Público de Seguimiento (`/rides/track/:token`)
+### F. Módulo Público de Seguimiento (`/rides/track/:token`)
 
 - **URL**: `GET /api/v1/rides/track/:token`
 - **Headers**: No requiere autenticación.
@@ -211,7 +277,20 @@ Todos los endpoints administrativos requieren el encabezado:
 
 ## 4. 💡 Flujos Operativos y Reglas de Negocio
 
-### A. Flujo de Retiro Bancario
+### A. Flujo de Recuperación de Contraseña (Forgot Password)
+```mermaid
+graph TD
+    A[Admin ingresa email corporativo en /recuperar-password] -->|POST /auth/forgot-password| B[Backend envía PIN de 6 dígitos por email]
+    B --> C[Admin ingresa PIN de 6 dígitos con OtpInput]
+    C -->|POST /auth/reset-password/verify| D{¿PIN Válido?}
+    D -->|No: intentos restantes o lock| C
+    D -->|Sí| E[Backend entrega reset_token temporal 10 min]
+    E --> F[Admin define nueva contraseña con PasswordRequirements]
+    F -->|POST /auth/reset-password| G[Contraseña actualizada y sesiones previas revocadas]
+    G --> H[Redirección automática a /login]
+```
+
+### B. Flujo de Retiro Bancario
 ```mermaid
 graph TD
     A[Conductor solicita retiro en App Móvil] --> B[Se congelan CBU, Alias, Titular y Monto]

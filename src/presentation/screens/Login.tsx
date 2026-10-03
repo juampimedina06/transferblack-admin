@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../auth/store/useAuthStore';
 import { authActions } from '../../core/auth/action/auth.actions';
 import { AuthError } from '../../core/auth/interface/auth.interface';
@@ -141,9 +141,12 @@ const Login = () => {
             />
 
             <div className="flex items-center justify-end pt-0.5">
-              <a href="#" className="text-xs text-gray-600 hover:text-obsidian font-medium">
-                Olvidé mi contraseña
-              </a>
+              <Link
+                to="/recuperar-password"
+                className="text-xs text-gray-600 hover:text-obsidian font-medium transition-colors"
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             <Button

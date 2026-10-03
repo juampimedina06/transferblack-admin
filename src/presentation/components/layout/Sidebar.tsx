@@ -162,7 +162,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             )}
             <nav className="space-y-1">
               <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" isCollapsed={isSidebarCollapsed} />
-              <NavItem to="/mapa" icon={MapPin} label="Mapa en vivo" disabled isCollapsed={isSidebarCollapsed} />
+              <NavItem to="/mapa" icon={MapPin} label="Mapa en vivo" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/viajes" icon={MapIcon} label="Viajes" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/conductores" icon={Users} label="Conductores" badge={pendingCount > 0 ? pendingCount : undefined} isCollapsed={isSidebarCollapsed} />
             </nav>

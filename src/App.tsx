@@ -12,7 +12,9 @@ import CompaniesScreen from './presentation/companies/CompaniesScreen';
 import CompanyDetailScreen from './presentation/companies/CompanyDetailScreen';
 import PayoutsScreen from './presentation/payouts/PayoutsScreen';
 import TripsScreen from './presentation/trips/TripsScreen';
+import ScheduledTripsScreen from './presentation/scheduledTrips/ScheduledTripsScreen';
 import { LiveMapScreen } from './presentation/map/LiveMapScreen';
+
 
 function App() {
   useServerHealth();
@@ -32,6 +34,7 @@ function App() {
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/mapa" element={<LiveMapScreen />} />
             <Route path="/viajes" element={<TripsScreen />} />
+            <Route path="/viajes-reservados" element={<ScheduledTripsScreen />} />
             <Route path="/conductores" element={<DriversScreen />} />
             <Route path="/conductores/:id" element={<DriverDetailScreen />} />
             <Route path="/retiros" element={<PayoutsScreen />} />

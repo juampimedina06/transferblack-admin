@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   MapPin,
   Map as MapIcon,
+  CalendarClock,
   Users,
   Wallet,
   Building,
@@ -19,6 +20,7 @@ import { useAuthStore } from '../../auth/store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
 import { useDrivers } from '../../drivers/hooks/useDrivers';
 import { usePayouts } from '../../payouts/hooks/usePayouts';
+import { useScheduledTripAlerts } from '../../scheduledTrips/hooks/useScheduledTripAlerts';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -93,6 +95,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
   const { data: payoutsData } = usePayouts({ page: 1, limit: 1, status: 'requested' });
   const pendingPayoutsCount = payoutsData?.pagination?.total || 0;
 
+  const { data: scheduledTripAlerts } = useScheduledTripAlerts();
+  const scheduledTripAlertsCount = scheduledTripAlerts?.length || 0;
+
   return (
     <>
       {/* Overlay mobile */}
@@ -164,6 +169,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/mapa" icon={MapPin} label="Mapa en vivo" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/viajes" icon={MapIcon} label="Viajes" isCollapsed={isSidebarCollapsed} />
+              <NavItem
+                to="/viajes-reservados"
+                icon={CalendarClock}
+                label="Viajes reservados"
+                badge={scheduledTripAlertsCount > 0 ? scheduledTripAlertsCount : undefined}
+                isCollapsed={isSidebarCollapsed}
+              />
               <NavItem to="/conductores" icon={Users} label="Conductores" badge={pendingCount > 0 ? pendingCount : undefined} isCollapsed={isSidebarCollapsed} />
             </nav>
           </div>

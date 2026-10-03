@@ -69,11 +69,22 @@ export const LiveMapScreen: React.FC = () => {
     expandRadiusMutation.mutate({ tripId });
   };
 
+  // Salir de pantalla completa con la tecla Escape
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
   return (
     <div
       className={
         isFullscreen
-          ? '-m-4 lg:-m-8 h-[calc(100vh-4rem)] p-3 lg:p-4 bg-gray-50 dark:bg-dark-bg z-20 flex flex-col gap-3 transition-all duration-300'
+          ? 'fixed inset-0 z-[9999] w-screen h-screen bg-gray-50 dark:bg-dark-bg p-3 lg:p-4 flex flex-col gap-3 overflow-hidden'
           : 'flex flex-col gap-4 h-[calc(100vh-5rem)] min-h-[640px] pb-2 transition-all duration-300'
       }
     >

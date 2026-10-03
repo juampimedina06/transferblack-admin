@@ -111,10 +111,13 @@ function FlyToPosition({ target }: { target: LatLngExpression | null }) {
 function MapResizeHandler({ isFullscreen }: { isFullscreen?: boolean }) {
   const map = useMap();
   useEffect(() => {
-    const timer = setTimeout(() => {
-      map.invalidateSize();
-    }, 200);
-    return () => clearTimeout(timer);
+    map.invalidateSize();
+    const timer1 = setTimeout(() => map.invalidateSize(), 100);
+    const timer2 = setTimeout(() => map.invalidateSize(), 300);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
   }, [isFullscreen, map]);
   return null;
 }

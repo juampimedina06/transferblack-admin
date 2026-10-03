@@ -19,6 +19,7 @@ El frontend está desarrollado bajo estándares modernos de rendimiento, tipado 
 - **Formularios y Validaciones**: [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
 - **Visualización de Datos**: [Recharts v3](https://recharts.org/)
 - **Animaciones Numéricas**: [React CountUp](https://github.com/glennreyes/react-countup)
+- **Tiempo Real y WebSockets**: [Socket.IO Client](https://socket.io/) v4
 - **Inspección de Medios**: [React Medium Image Zoom](https://github.com/rpearce/react-medium-image-zoom)
 - **Iconografía**: [Lucide React](https://lucide.dev/)
 - **Fechas**: [date-fns v4](https://date-fns.org/)
@@ -50,6 +51,9 @@ admin-web/
 │   │   ├── trips/                # Gestión e historial de viajes de la flota
 │   │   │   ├── actions/          # getTrips, getTripDetail, getTripStatusHistory
 │   │   │   └── interfaces/       # Contratos de viajes, filtros, auditoría y eventos
+│   │   ├── map/                  # Dominio de telemetría y despacho en vivo
+│   │   │   ├── actions/          # getFleetLocations, assignDriver, expandRadius, getActiveTrips, getLiveMapKpi
+│   │   │   └── interfaces/       # Modelos GeoJSON, propiedades de conductor y DTOs de despacho
 │   │   └── tracking/             # Seguimiento público de viajes en vivo
 │   │       ├── actions/          # getTripTracking
 │   │       └── interfaces/       # Modelos de telemetría, estados de viaje y ruta
@@ -72,6 +76,10 @@ admin-web/
 │   │   │   ├── components/       # DriversTable, DocumentCard con visor, RejectionModal
 │   │   │   ├── DriversScreen.tsx
 │   │   │   └── DriverDetailScreen.tsx
+│   │   ├── map/                  # Consola de operaciones de mapa en vivo (/mapa)
+│   │   │   ├── components/       # LiveMapKpiBar, LiveMapCanvas, ActiveTripsPanel, ManualAssignModal
+│   │   │   ├── hooks/            # useLiveMap, useLiveMapSocket, useManualAssign, useExpandRadius
+│   │   │   └── LiveMapScreen.tsx # Pantalla principal de despacho y telemetría
 │   │   ├── payouts/              # Finanzas y resolución de retiros bancarios
 │   │   │   ├── components/       # PayoutsTable, PayoutDetailModal, PayoutResolveModal, PayoutsKPIs
 │   │   │   ├── hooks/            # usePayouts, usePayoutDetail, useResolvePayout
@@ -154,6 +162,27 @@ admin-web/
 - **Línea de Tiempo**: Estados secuenciales del viaje (`requested`, `driver_assigned`, `driver_arrived`, `in_progress`, `completed`).
 - **Ficha del Conductor**: Visualización del nombre del conductor, calificación, modelo de vehículo y patente.
 - **Sondeo Inteligente**: Polling automático cada 5 segundos mientras el viaje permanezca activo, deteniéndose ante estados terminales.
+
+### 7. 🗺 Mapa en Vivo y Despacho Operativo (`/mapa`)
+- **Monitoreo de Flota en Tiempo Real**: Visualización interactiva sobre mapa cartográfico oscuro (CARTO Dark Matter) sin restricciones ni bloqueos de servidores voluntarios.
+- **Marcadores Vehiculares por Estado**:
+  - 🟢 **Verde brillante**: Conductor en línea y disponible para recibir viajes.
+  - 🟡 **Ámbar / Dorado brillante**: Conductor ocupado en viaje activo.
+  - ⚪ / ⚫ **Gris neutro**: Conductor desconectado.
+  - Al presionar cada vehículo se despliega un popup detallado con datos del conductor, calificación promedio, total de viajes, vehículo, patente, viaje en curso y hora de última señal de telemetría.
+- **Sincronización WebSocket (Socket.IO)**:
+  - Autenticación mediante token Bearer JWT de administrador.
+  - Escucha reactiva de eventos `driver.location.updated` para animación fluida de posiciones en mapa.
+  - Escucha de `dashboard.metrics.updated` y ciclo de vida de viajes (`trip.searching`, `trip.assigned`, `trip.in_progress`, etc.) para actualización instantánea sin recarga manual.
+  - Reconexión resiliente con re-sincronización automática de estado vía endpoints REST (`/admin/locations`, `/admin/rides`, `/admin/dashboard`).
+- **Barra Superior de Métricas KPI**:
+  - Contadores animados (`<AnimatedNumber />`) de conductores en línea, conductores en viaje, viajes en curso, buscando conductor y desconectados.
+  - Filtro instantáneo de la flota al tocar cada métrica.
+  - Alerta visual en viajes en búsqueda con tiempo de espera superior a 3 minutos.
+- **Panel Lateral de Operaciones y Despacho Manual**:
+  - Tarjetas de viajes activos con indicación de origen, destino, pasajero, chofer y tiempos transcurridos.
+  - **Asignación Manual**: Modal de selección de choferes en línea con buscador reactivo por nombre, teléfono o patente, disparando `POST /api/v1/admin/trips/:tripId/assign-driver` con control de concurrencia y validación pesimista.
+  - **Ampliación de Radio**: Disparo de nueva ronda de búsqueda geoespacial PostGIS incremental (`POST /api/v1/admin/trips/:tripId/expand-radius`), descartando conductores previamente consultados.
 
 ---
 

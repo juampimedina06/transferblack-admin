@@ -154,7 +154,13 @@ export const LiveMapCanvas: React.FC<Props> = ({
   };
 
   return (
-    <div className="relative w-full h-full min-h-[520px] rounded-xl overflow-hidden border border-gray-200 dark:border-white/10 shadow-inner bg-neutral-900">
+    <div
+      className={`relative w-full h-full overflow-hidden bg-neutral-900 transition-all ${
+        isFullscreen
+          ? 'rounded-none border-0 shadow-none'
+          : 'min-h-[520px] rounded-xl border border-gray-200 dark:border-white/10 shadow-inner'
+      }`}
+    >
       <MapContainer
         center={initialCenter}
         zoom={13}
@@ -298,17 +304,17 @@ export const LiveMapCanvas: React.FC<Props> = ({
           type="button"
           onClick={onToggleFullscreen}
           className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 bg-neutral-900/90 hover:bg-neutral-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xl border border-white/10 backdrop-blur-md transition-all pointer-events-auto"
-          title={isFullscreen ? 'Restaurar vista normal' : 'Ampliar mapa en toda la pantalla (hasta el nav)'}
+          title={isFullscreen ? 'Salir de pantalla completa (Esc)' : 'Modo TV / Pantalla completa'}
         >
           {isFullscreen ? (
             <>
               <Minimize2 className="w-3.5 h-3.5 text-champagne-gold" />
-              <span>Restaurar</span>
+              <span>Salir (Esc)</span>
             </>
           ) : (
             <>
               <Maximize2 className="w-3.5 h-3.5 text-champagne-gold" />
-              <span>Ampliar mapa</span>
+              <span>Modo TV / Pantalla completa</span>
             </>
           )}
         </button>

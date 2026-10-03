@@ -22,7 +22,6 @@ export const LiveMapScreen: React.FC = () => {
   } = useLiveMap();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showTripsInFullscreen, setShowTripsInFullscreen] = useState(false);
   const [selectedTripForModal, setSelectedTripForModal] = useState<TripListItem | null>(null);
   const [selectedTripDetailId, setSelectedTripDetailId] = useState<string | null>(null);
   const [expandingTripId, setExpandingTripId] = useState<string | null>(null);
@@ -69,22 +68,49 @@ export const LiveMapScreen: React.FC = () => {
     expandRadiusMutation.mutate({ tripId });
   };
 
-  // Salir de pantalla completa con la tecla Escape
+  const handleToggleFullscreen = () => {
+    if (!isFullscreen) {
+      setIsFullscreen(true);
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } else {
+      setIsFullscreen(false);
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  };
+
+  // Salir de pantalla completa con la tecla Escape o al salir de fullscreen del navegador
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) {
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
         setIsFullscreen(false);
       }
     };
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isFullscreen) {
+        setIsFullscreen(false);
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
   }, [isFullscreen]);
 
   return (
     <div
       className={
         isFullscreen
-          ? 'fixed inset-0 z-[9999] w-screen h-screen bg-gray-50 dark:bg-dark-bg p-3 lg:p-4 flex flex-col gap-3 overflow-hidden'
+          ? 'fixed inset-0 z-[9999] w-screen h-screen bg-black p-0 m-0 overflow-hidden'
           : 'flex flex-col gap-4 h-[calc(100vh-5rem)] min-h-[640px] pb-2 transition-all duration-300'
       }
     >
@@ -101,57 +127,46 @@ export const LiveMapScreen: React.FC = () => {
         </div>
       )}
 
-      {/* Barra superior de métricas KPI */}
-      <LiveMapKpiBar
-        metrics={metrics}
-        lastUpdated={lastUpdated}
-        activeFilter={filterStatus}
-        onFilterChange={setFilterStatus}
-        onRefresh={refetchAll}
-      />
+      {/* Barra superior de métricas KPI (solo visible en modo normal) */}
+      {!isFullscreen && (
+        <LiveMapKpiBar
+          metrics={metrics}
+          lastUpdated={lastUpdated}
+          activeFilter={filterStatus}
+          onFilterChange={setFilterStatus}
+          onRefresh={refetchAll}
+        />
+      )}
 
-      {/* Canvas principal: Mapa a la izquierda + Panel de viajes a la derecha */}
-      <div className="relative flex-1 flex flex-col lg:flex-row gap-4 min-h-0 overflow-hidden">
+      {/* Canvas principal: En modo TV ocupa 100% de la pantalla sin paneles ni márgenes */}
+      <div
+        className={
+          isFullscreen
+            ? 'w-full h-full'
+            : 'relative flex-1 flex flex-col lg:flex-row gap-4 min-h-0 overflow-hidden'
+        }
+      >
         {/* Mapa interactivo */}
-        <div className="flex-1 h-full min-h-[350px]">
+        <div className="flex-1 w-full h-full min-h-[350px]">
           <LiveMapCanvas
             features={features}
             filterStatus={filterStatus}
             onFilterStatusChange={setFilterStatus}
             onSelectTrip={(id) => setSelectedTripDetailId(id)}
             isFullscreen={isFullscreen}
-            onToggleFullscreen={() => setIsFullscreen((prev) => !prev)}
+            onToggleFullscreen={handleToggleFullscreen}
           />
         </div>
 
-        {/* Panel lateral de viajes activos */}
-        {(!isFullscreen || showTripsInFullscreen) && (
-          <div
-            className={
-              isFullscreen
-                ? 'absolute top-0 right-0 bottom-0 z-[450] shadow-2xl h-full'
-                : 'h-full flex-shrink-0'
-            }
-          >
-            <ActiveTripsPanel
-              trips={activeTrips}
-              onSelectTrip={(id) => setSelectedTripDetailId(id)}
-              onOpenManualAssign={handleOpenManualAssign}
-              onExpandRadius={handleExpandRadius}
-              isExpandingRadiusTripId={expandingTripId}
-            />
-          </div>
-        )}
-
-        {/* Botón flotante para ver panel de viajes si está en pantalla completa */}
-        {isFullscreen && (
-          <button
-            type="button"
-            onClick={() => setShowTripsInFullscreen((prev) => !prev)}
-            className="absolute bottom-4 right-32 z-[400] flex items-center gap-1.5 bg-neutral-900/90 hover:bg-neutral-800 text-white text-xs font-semibold px-3 py-2 rounded-lg shadow-xl border border-white/10 backdrop-blur-md transition-all"
-          >
-            <span>{showTripsInFullscreen ? 'Ocultar viajes' : `Ver viajes (${activeTrips.length})`}</span>
-          </button>
+        {/* Panel lateral de viajes activos (solo en modo normal) */}
+        {!isFullscreen && (
+          <ActiveTripsPanel
+            trips={activeTrips}
+            onSelectTrip={(id) => setSelectedTripDetailId(id)}
+            onOpenManualAssign={handleOpenManualAssign}
+            onExpandRadius={handleExpandRadius}
+            isExpandingRadiusTripId={expandingTripId}
+          />
         )}
       </div>
 

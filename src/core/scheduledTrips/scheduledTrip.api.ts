@@ -115,20 +115,24 @@ export async function getScheduledTrips(
 
 // --- Alta ---------------------------------------------------------------------
 
-const pointFormSchema = z.object({
-  address: z.string().trim().min(1, 'Ingresá una dirección'),
-  lat: z.number(),
-  lng: z.number(),
-  place_id: z.string().trim().min(1).optional(),
-});
+// Lo elige `AddressAutocompleteField` (autocompletado de Geoapify o, sin
+// API key, los campos manuales de lat/lng): no hay un zod schema para esto
+// porque nunca se tipea a mano, siempre sale ya armado del selector.
+export interface ScheduledTripPointFormValues {
+  address: string;
+  lat: number;
+  lng: number;
+  place_id?: string;
+}
 
-export type ScheduledTripPointFormValues = z.infer<typeof pointFormSchema>;
-
+// Origen y destino no entran al schema de react-hook-form: son objetos
+// (direccion + lat/lng), no inputs sueltos, y se eligen con el autocompletado
+// de `AddressAutocompleteField` como estado propio del modal. Se validan a
+// mano antes de enviar (`origin`/`destination` requeridos) en vez de forzar
+// un tipo `T | null` dentro del resolver de zod.
 export const createScheduledTripFormSchema = z
   .object({
     passenger_email: z.string().trim().toLowerCase().email('Ingresá un email válido'),
-    origin: pointFormSchema.nullable().refine((value) => value !== null, 'Elegí el origen'),
-    destination: pointFormSchema.nullable().refine((value) => value !== null, 'Elegí el destino'),
     scheduled_date: z.string().trim().min(1, 'Elegí la fecha'),
     scheduled_time: z.string().trim().min(1, 'Elegí la hora'),
     agreed_fare: moneyAmount,
@@ -152,8 +156,6 @@ export type CreateScheduledTripFormValues = z.infer<typeof createScheduledTripFo
 
 export const createScheduledTripFormFields = [
   'passenger_email',
-  'origin',
-  'destination',
   'scheduled_date',
   'scheduled_time',
   'agreed_fare',
@@ -161,10 +163,12 @@ export const createScheduledTripFormFields = [
   'notes',
 ] as const satisfies readonly (keyof CreateScheduledTripFormValues)[];
 
-export async function createScheduledTrip(values: CreateScheduledTripFormValues): Promise<ScheduledTrip> {
-  if (!values.origin || !values.destination) {
-    throw new Error('Falta origen o destino');
-  }
+export interface CreateScheduledTripInput extends CreateScheduledTripFormValues {
+  origin: ScheduledTripPointFormValues;
+  destination: ScheduledTripPointFormValues;
+}
+
+export async function createScheduledTrip(values: CreateScheduledTripInput): Promise<ScheduledTrip> {
   const { data } = await adminApi.post('/admin/scheduled-trips', {
     passenger_email: values.passenger_email,
     origin: values.origin,

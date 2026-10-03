@@ -5,6 +5,7 @@ import {
   Users,
   AlertTriangle,
   ChevronRight,
+  ArrowLeft,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -282,23 +283,24 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
   const driverNet = finalFareNum - platformFee;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-      {/* Backdrop */}
-      <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 animate-fade-in"
-        onClick={onClose}
-      />
-
-      {/* Drawer Container (85% on desktop, full on mobile) */}
-      <div className="relative w-full max-w-6xl bg-gray-50 dark:bg-dark-bg h-full shadow-2xl flex flex-col z-10 overflow-hidden border-l border-gray-200 dark:border-dark-border transform transition-transform duration-300 ease-in-out">
-        {/* Top Header */}
-        <div className="bg-white dark:bg-dark-surface px-6 py-4 border-b border-gray-200/80 dark:border-dark-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 transition-colors">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                {trip?.publicCode || 'TB-7238'}
-              </h2>
-              {trip && <TripsBadge status={trip.status} />}
+    <div className="fixed inset-0 z-50 w-screen h-screen bg-gray-50 dark:bg-dark-bg flex flex-col overflow-hidden animate-fade-in">
+      {/* Top Header */}
+      <div className="bg-white dark:bg-dark-surface px-6 py-4 border-b border-gray-200/80 dark:border-dark-border flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 transition-colors shadow-sm">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 -ml-1 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1.5 text-xs font-semibold mr-1.5"
+              title="Volver a la lista de viajes"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Volver</span>
+            </button>
+            <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              {trip?.publicCode || 'TB-7238'}
+            </h2>
+            {trip && <TripsBadge status={trip.status} />}
               {isTripActive && (
                 <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
                   <span className="relative flex h-2 w-2">
@@ -698,6 +700,5 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
           )}
         </div>
       </div>
-    </div>
   );
 };

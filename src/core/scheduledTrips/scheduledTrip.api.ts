@@ -74,6 +74,8 @@ const scheduledTripSchema = z.object({
   passenger: personSchema,
   reserved_driver: reservedDriverSchema,
   driver_id: z.string().nullable(),
+  recurring_schedule_id: z.string().uuid().nullable().optional(),
+  recurring_billing_cycle_id: z.string().uuid().nullable().optional(),
   created_at: z.string(),
   updated_at: z.string(),
 });

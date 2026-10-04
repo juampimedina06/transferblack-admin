@@ -112,15 +112,15 @@ const Login = () => {
       </div>
 
       {/* Lado Derecho - Formulario */}
-      <div className="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 lg:px-32">
+      <div className="w-full lg:w-1/2 bg-white dark:bg-dark-bg flex flex-col justify-center px-8 lg:px-32 transition-colors">
         <div className="w-full max-w-sm mx-auto">
           <div className="mb-8 text-left">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Ingresar al panel</h2>
-            <p className="text-gray-500 text-sm">Usá tu cuenta de operaciones de Transfer Black.</p>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">Ingresar al panel</h2>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Usá tu cuenta de operaciones de Transfer Black.</p>
           </div>
 
           {errorMsg && (
-            <div className="mb-6 p-3 bg-red-50 text-red-700 rounded text-sm text-center border border-red-200">
+            <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-lg text-sm text-center border border-red-200 dark:border-red-800/40">
               {errorMsg}
             </div>
           )}
@@ -154,7 +154,7 @@ const Login = () => {
             <div className="flex items-center justify-end pt-0.5">
               <Link
                 to="/recuperar-password"
-                className="text-xs text-gray-600 hover:text-obsidian font-medium transition-colors"
+                className="text-xs text-gray-600 dark:text-gray-400 hover:text-obsidian dark:hover:text-champagne-gold font-medium transition-colors"
               >
                 ¿Olvidaste tu contraseña?
               </Link>
@@ -166,14 +166,14 @@ const Login = () => {
               fullWidth
               size="lg"
               isLoading={isSubmitting}
-              className="mt-2 bg-[#111111] hover:bg-black text-white dark:bg-[#111111] dark:hover:bg-black dark:text-white"
+              className="mt-2 font-bold"
             >
               Ingresar
             </Button>
           </form>
 
-          <div className="mt-8 border-t border-gray-100 pt-6">
-            <p className="text-xs text-gray-400 leading-relaxed">
+          <div className="mt-8 border-t border-gray-100 dark:border-dark-border pt-6">
+            <p className="text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
               ¿Problemas para entrar? Escribinos a soporte@transferblack.com.ar o al<br />+54 351 421-8890.
             </p>
           </div>

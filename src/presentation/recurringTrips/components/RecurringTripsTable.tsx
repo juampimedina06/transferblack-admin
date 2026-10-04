@@ -177,19 +177,19 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
   });
 
   return (
-    <div className="bg-white dark:bg-dark-surface rounded-xl border border-gray-100 dark:border-dark-border shadow-sm overflow-hidden flex flex-col">
+    <div className="flex w-full flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-dark-border dark:bg-dark-surface">
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr
                 key={headerGroup.id}
-                className="border-b border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02]"
+                className="border-b border-gray-100 bg-gray-50/60 dark:border-dark-border dark:bg-dark-card"
               >
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wider whitespace-nowrap"
+                    className="whitespace-nowrap px-5 py-3 text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400"
                   >
                     {flexRender(header.column.columnDef.header, header.getContext())}
                   </th>
@@ -201,20 +201,20 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  <td colSpan={columns.length} className="px-4 py-4">
+                  <td colSpan={columns.length} className="px-5 py-4">
                     <div className="h-4 bg-gray-200 dark:bg-white/5 rounded w-full" />
                   </td>
                 </tr>
               ))
             ) : isError ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-8 text-center text-xs text-rose-500">
+                <td colSpan={columns.length} className="px-5 py-8 text-center text-xs text-rose-500">
                   Ocurrió un error al cargar los traslados recurrentes.
                 </td>
               </tr>
             ) : schedules.length === 0 ? (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
+                <td colSpan={columns.length} className="px-5 py-12 text-center">
                   <div className="flex flex-col items-center justify-center text-gray-400 dark:text-gray-500">
                     <Inbox className="w-10 h-10 mb-2 stroke-[1.5]" />
                     <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -234,7 +234,7 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
                   className="hover:bg-gray-50 dark:hover:bg-white/[0.02] cursor-pointer transition-colors"
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3.5 text-xs">
+                    <td key={cell.id} className="px-5 py-3.5 text-xs text-gray-700 dark:text-gray-300">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -247,7 +247,7 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
 
       {/* Pagination Footer */}
       {pagination && pagination.total_pages > 1 && (
-        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 dark:border-dark-border bg-gray-50/50 dark:bg-white/[0.02] text-xs text-gray-500">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/60 dark:border-dark-border dark:bg-dark-card text-xs text-gray-500">
           <div>
             Página <span className="font-semibold text-gray-800 dark:text-gray-200">{pagination.page}</span> de{' '}
             <span className="font-semibold text-gray-800 dark:text-gray-200">{pagination.total_pages}</span> ({pagination.total} en total)

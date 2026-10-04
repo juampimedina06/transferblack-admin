@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Repeat, Plus, Filter, CheckCircle, Clock } from 'lucide-react';
+import { Repeat, Plus, CheckCircle, Clock } from 'lucide-react';
 import { useRecurringTrips } from './hooks/useRecurringTrips';
 import { RecurringTripsTable } from './components/RecurringTripsTable';
 import { CreateRecurringTripModal } from './components/CreateRecurringTripModal';
@@ -27,46 +27,42 @@ export default function RecurringTripsScreen() {
   const schedules = data?.data || [];
   const pagination = data?.pagination;
 
-  // Calculos para KPIs superiores
+  // Cálculos para KPIs superiores
   const activeCount = schedules.filter((s) => s.status === 'active').length;
   const pausedCount = schedules.filter((s) => s.status === 'paused').length;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="animate-fade-in space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-champagne-gold/15 text-champagne-gold">
-              <Repeat className="w-5 h-5" />
-            </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              Traslados Recurrentes
-            </h1>
-          </div>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gestión de abonos semanales y mensuales de viajes periódicos con cobro anticipado.
+          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Traslados recurrentes
+          </h1>
+          <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+            Abonos semanales y mensuales de viajes periódicos con cobro anticipado.
           </p>
         </div>
 
         <Button
-          variant="primary"
+          type="button"
+          variant="gold"
+          size="sm"
+          leftIcon={<Plus size={15} />}
           onClick={() => setIsCreateModalOpen(true)}
-          className="shadow-sm"
         >
-          <Plus className="w-4 h-4 mr-1.5" />
-          Nuevo Abono
+          Nuevo abono
         </Button>
       </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-dark-surface p-4 rounded-xl border border-gray-100 dark:border-dark-border shadow-sm flex items-center gap-3">
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-surface flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
             <CheckCircle className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Abonos Activos
             </p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
@@ -75,12 +71,12 @@ export default function RecurringTripsScreen() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-dark-surface p-4 rounded-xl border border-gray-100 dark:border-dark-border shadow-sm flex items-center gap-3">
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-surface flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Abonos Pausados
             </p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
@@ -89,12 +85,12 @@ export default function RecurringTripsScreen() {
           </div>
         </div>
 
-        <div className="bg-white dark:bg-dark-surface p-4 rounded-xl border border-gray-100 dark:border-dark-border shadow-sm flex items-center gap-3">
+        <div className="rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-surface flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0">
             <Repeat className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+            <p className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
               Total Registrados
             </p>
             <p className="text-xl font-bold text-gray-900 dark:text-white">
@@ -104,11 +100,12 @@ export default function RecurringTripsScreen() {
         </div>
       </div>
 
-      {/* Filters bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-dark-surface p-3 rounded-xl border border-gray-100 dark:border-dark-border shadow-sm">
-        <div className="flex items-center gap-1.5">
-          <Filter className="w-4 h-4 text-gray-400 mr-1" />
-          <span className="text-xs font-semibold text-gray-500 mr-2">Estado:</span>
+      {/* Toolbar / Filters bar */}
+      <div className="flex flex-col gap-3 rounded-xl border border-gray-200/80 bg-white p-3.5 shadow-sm dark:border-dark-border dark:bg-dark-surface sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-1.5">
+            Estado:
+          </span>
           {(
             [
               { value: 'all', label: 'Todos' },
@@ -119,14 +116,15 @@ export default function RecurringTripsScreen() {
           ).map((tab) => (
             <button
               key={tab.value}
+              type="button"
               onClick={() => {
                 setSelectedStatus(tab.value);
                 setPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 selectedStatus === tab.value
-                  ? 'bg-champagne-gold text-obsidian font-bold shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5'
+                  ? 'bg-champagne-gold text-obsidian shadow-sm font-bold'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 dark:bg-dark-card dark:text-gray-300 dark:hover:bg-white/10 dark:hover:text-white border border-gray-200/60 dark:border-dark-border'
               }`}
             >
               {tab.label}

@@ -34,7 +34,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider block"
+            className="text-gray-700 dark:text-gray-300 text-[11px] font-semibold uppercase tracking-wider block"
           >
             {label}
           </label>
@@ -42,7 +42,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 
         <div className="relative flex items-center">
           {leftIcon && (
-            <div className="absolute left-3 text-gray-400 dark:text-white/40 pointer-events-none flex items-center justify-center">
+            <div className="absolute left-3 text-gray-400 dark:text-gray-500 pointer-events-none flex items-center justify-center">
               {leftIcon}
             </div>
           )}
@@ -52,12 +52,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             disabled={disabled}
             className={cn(
-              'w-full bg-white dark:bg-white/5 border rounded-md px-3 py-2 text-[13px] text-gray-800 dark:text-white placeholder:text-gray-400 dark:placeholder:text-white/30 transition-colors focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed',
+              'w-full bg-white dark:bg-dark-surface border rounded-lg px-3 py-2 text-[13px] text-gray-900 dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors focus:outline-none focus:ring-1 disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs',
               leftIcon && 'pl-9',
               rightIcon && 'pr-9',
               error
-                ? 'border-red-300 dark:border-red-500/50 focus:border-red-500 focus:ring-red-500/30'
-                : 'border-gray-200 dark:border-white/10 focus:border-champagne-gold dark:focus:border-champagne-gold focus:ring-champagne-gold/20',
+                ? 'border-red-400 dark:border-red-500/60 focus:border-red-500 focus:ring-red-500/30'
+                : 'border-gray-300 dark:border-dark-border focus:border-champagne-gold dark:focus:border-champagne-gold focus:ring-champagne-gold/30',
               className
             )}
             {...props}

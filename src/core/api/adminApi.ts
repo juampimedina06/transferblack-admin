@@ -70,6 +70,32 @@ export const extractApiErrorMessage = (error: unknown, fallback = 'Ocurrió un e
 
 type ApiValidationIssue = { path: Array<string | number>; message: string };
 
+/**
+ * Etiquetas en espanol para paths de issues que no son un campo propio del
+ * formulario (ej. `origin.address` en el alta de un viaje reservado, cuyo
+ * origen/destino se eligen con `AddressAutocompleteField` y no son inputs
+ * sueltos de react-hook-form). Un path que no esta aca se muestra tal cual.
+ */
+const UNMAPPED_ISSUE_PATH_LABELS: Record<string, string> = {
+  'origin.address': 'la dirección de origen',
+  'origin.lat': 'la latitud de origen',
+  'origin.lng': 'la longitud de origen',
+  'destination.address': 'la dirección de destino',
+  'destination.lat': 'la latitud de destino',
+  'destination.lng': 'la longitud de destino',
+  scheduled_at: 'la fecha y hora del viaje',
+  agreed_fare: 'el precio acordado',
+  passenger_email: 'el email del pasajero',
+  reserved_driver_id: 'el chofer reservado',
+  notes: 'las notas',
+};
+
+function describeUnmappedIssue(issue: ApiValidationIssue): string {
+  const pathKey = issue.path.join('.');
+  const label = UNMAPPED_ISSUE_PATH_LABELS[pathKey];
+  return label ? `${label} (${issue.message})` : `${pathKey || 'un dato'}: ${issue.message}`;
+}
+
 function extractValidationIssues(error: unknown): ApiValidationIssue[] | null {
   const err = error as {
     response?: { data?: { error?: { code?: string; details?: unknown } } };
@@ -92,9 +118,14 @@ function extractValidationIssues(error: unknown): ApiValidationIssue[] | null {
  * devolucion al usuario.
  *
  * Si algun issue no corresponde a un campo del formulario (path vacio o
- * desconocido) o el error no es un `VALIDATION_ERROR`, devuelve un mensaje
- * general para mostrar aparte; si todos los issues se mapearon a campos,
- * devuelve `null` porque el error ya se ve junto a cada input.
+ * desconocido, ej. `origin.address` en el alta de un viaje reservado, cuyo
+ * origen/destino no son inputs de react-hook-form), devuelve un mensaje que
+ * lista esos datos con una etiqueta en espanol para los paths conocidos
+ * (`UNMAPPED_ISSUE_PATH_LABELS`) y el path crudo mas el mensaje del backend
+ * para el resto, en vez de la frase generica. Si el error no es un
+ * `VALIDATION_ERROR`, devuelve el mensaje general de `extractApiErrorMessage`.
+ * Si todos los issues se mapearon a campos, devuelve `null` porque el error
+ * ya se ve junto a cada input.
  */
 export function applyServerErrors<T extends FieldValues>(
   error: unknown,
@@ -106,14 +137,15 @@ export function applyServerErrors<T extends FieldValues>(
   if (!issues) return extractApiErrorMessage(error, fallback);
   if (issues.length === 0) return fallback;
 
-  let hasUnmappedIssue = false;
+  const unmappedDescriptions: string[] = [];
   for (const issue of issues) {
     const field = issue.path[0];
     if (typeof field === 'string' && (fields as readonly string[]).includes(field)) {
       setError(field as Path<T>, { type: 'server', message: issue.message });
     } else {
-      hasUnmappedIssue = true;
+      unmappedDescriptions.push(describeUnmappedIssue(issue));
     }
   }
-  return hasUnmappedIssue ? 'No pudimos validar algunos datos. Revisá el formulario e intentá de nuevo.' : null;
+  if (unmappedDescriptions.length === 0) return null;
+  return `Revisá estos datos: ${unmappedDescriptions.join('; ')}.`;
 }

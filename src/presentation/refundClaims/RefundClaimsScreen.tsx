@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { RefreshCw } from 'lucide-react';
+import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import type { RefundClaim, RefundClaimListStatus } from '../../core/refundClaims/refundClaim.api';
 import { refundClaimListStatuses } from '../../core/refundClaims/refundClaim.api';
 import { useRefundClaims } from './hooks/useRefundClaims';
@@ -35,6 +35,12 @@ export const RefundClaimsScreen: React.FC = () => {
   const { detailsByTripId } = useRefundClaimTripDetails(tripIds);
 
   const [selectedClaim, setSelectedClaim] = useState<RefundClaim | null>(null);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  const showFeedback = (type: 'success' | 'error', message: string) => {
+    setFeedback({ type, message });
+    setTimeout(() => setFeedback(null), 4500);
+  };
 
   const handleTabChange = (tab: RefundClaimListStatus) => {
     setSearchParams((prev) => {
@@ -76,6 +82,28 @@ export const RefundClaimsScreen: React.FC = () => {
         </button>
       </div>
 
+      {feedback && (
+        <div
+          className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between gap-3 shadow-md ${
+            feedback.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/50'
+              : 'bg-red-50 text-red-800 border border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800/50'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {feedback.type === 'success' ? (
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-600 dark:text-red-400" />
+            )}
+            <span>{feedback.message}</span>
+          </div>
+          <button onClick={() => setFeedback(null)} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 text-sm">
+            ✕
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-1 p-1 bg-gray-100/80 dark:bg-dark-surface border border-gray-200/80 dark:border-dark-border rounded-xl w-fit">
         {STATUS_TABS.map((tab) => {
           const isActive = activeTab === tab.value;
@@ -106,7 +134,12 @@ export const RefundClaimsScreen: React.FC = () => {
         onResolve={setSelectedClaim}
       />
 
-      <ResolveRefundClaimModal claim={selectedClaim} isOpen={Boolean(selectedClaim)} onClose={() => setSelectedClaim(null)} />
+      <ResolveRefundClaimModal
+        claim={selectedClaim}
+        isOpen={Boolean(selectedClaim)}
+        onClose={() => setSelectedClaim(null)}
+        onResolved={() => showFeedback('success', 'Reclamo resuelto correctamente.')}
+      />
     </div>
   );
 };

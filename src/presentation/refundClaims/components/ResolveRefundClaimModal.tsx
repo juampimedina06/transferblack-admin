@@ -22,6 +22,7 @@ interface ResolveRefundClaimModalProps {
   claim: RefundClaim | null;
   isOpen: boolean;
   onClose: () => void;
+  onResolved?: () => void;
 }
 
 const moneyAmount = z
@@ -54,7 +55,12 @@ function formatMoney(amount: string, currency: string): string {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: currency || 'ARS' }).format(value);
 }
 
-export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = ({ claim, isOpen, onClose }) => {
+export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = ({
+  claim,
+  isOpen,
+  onClose,
+  onResolved,
+}) => {
   const resolveMutation = useResolveRefundClaim();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [canRetrySameAttempt, setCanRetrySameAttempt] = useState(false);
@@ -136,6 +142,7 @@ export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = (
 
     try {
       await resolveMutation.mutateAsync({ tripId: claim.tripId, idempotencyKey: key, payload });
+      onResolved?.();
       onClose();
     } catch (error) {
       const retryable = isRetryableWithSameKey(error);

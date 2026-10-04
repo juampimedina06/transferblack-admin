@@ -17,6 +17,11 @@ export const DashboardSkeleton: React.FC = () => {
           <span className="text-gray-400 dark:text-gray-500 font-medium">Próximamente</span>
         </div>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="h-44 bg-white dark:bg-dark-surface rounded-xl p-5 border border-gray-100 dark:border-dark-border animate-pulse" />
+        <div className="h-44 bg-white dark:bg-dark-surface rounded-xl p-5 border border-gray-100 dark:border-dark-border animate-pulse" />
+      </div>
     </div>
   );
 };

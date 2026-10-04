@@ -8,6 +8,8 @@ import { authActions } from '../../core/auth/action/auth.actions';
 import { AuthError } from '../../core/auth/interface/auth.interface';
 import transferLogo from '../../assets/img/logo_transferblack_sinfodo.png';
 import { Button, Input } from '../components/common';
+import { AnimatedNumber } from '../components/common/AnimatedNumber';
+import { useLandingStats } from '../auth/hooks/useLandingStats';
 
 const loginSchema = z.object({
   email: z.string().email('Formato de email inválido'),
@@ -22,6 +24,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
+  const { data: landingStats } = useLandingStats();
 
   const {
     register,
@@ -80,16 +83,24 @@ const Login = () => {
 
           <div className="border-t border-gray-800 pt-8 flex gap-8">
             <div>
-              <div className="text-champagne-gold font-bold text-2xl mb-1">318</div>
+              <div className="text-champagne-gold font-bold text-2xl mb-1">
+                <AnimatedNumber value={landingStats?.activeDrivers ?? 318} />
+              </div>
               <div className="text-gray-500 text-xs uppercase tracking-wider">conductores activos</div>
             </div>
             <div>
-              <div className="text-champagne-gold font-bold text-2xl mb-1">24</div>
+              <div className="text-champagne-gold font-bold text-2xl mb-1">
+                <AnimatedNumber value={landingStats?.corporateCompanies ?? 24} />
+              </div>
               <div className="text-gray-500 text-xs uppercase tracking-wider">cuentas corporativas</div>
             </div>
             <div>
-              <div className="text-champagne-gold font-bold text-2xl mb-1">2</div>
-              <div className="text-gray-500 text-xs uppercase tracking-wider">categorías: Essential y Comfort</div>
+              <div className="text-champagne-gold font-bold text-2xl mb-1">
+                <AnimatedNumber value={landingStats?.categories?.length ?? 2} />
+              </div>
+              <div className="text-gray-500 text-xs uppercase tracking-wider">
+                categorías: {landingStats?.categories ? landingStats.categories.join(' y ') : 'Essential y Comfort'}
+              </div>
             </div>
           </div>
         </div>

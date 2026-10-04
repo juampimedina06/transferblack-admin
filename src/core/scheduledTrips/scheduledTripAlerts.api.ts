@@ -9,15 +9,20 @@ import { adminApi } from '../api/adminApi';
  * de alertas general, este archivo se puede fusionar con ese modulo.
  */
 
-// Los 4 tipos nuevos de `operational-alert.model.ts` (rama
-// `feature/viajes-reservados` del backend). Los otros 3 tipos existentes
-// (`trip_search_timeout`, `active_trip_gps_stale`, `consecutive_cancellations`)
-// no son de viajes reservados y no se muestran en este panel chico.
+// Los 5 tipos nuevos de `operational-alert.model.ts` (ramas
+// `feature/viajes-reservados` y `feature/politica-reembolsos` del backend).
+// Los otros 3 tipos existentes (`trip_search_timeout`, `active_trip_gps_stale`,
+// `consecutive_cancellations`) no son de viajes reservados y no se muestran
+// en este panel chico.
 export const scheduledTripAlertTypes = [
   'scheduled_trip_driver_unavailable',
   'scheduled_trip_unpaid',
   'scheduled_trip_unaccepted',
   'scheduled_trip_duplicate_payment',
+  // Se cancelo un reservado que ya estaba prepago (link de MP o
+  // transferencia): el reembolso nunca lo intenta Mercado Pago solo, queda
+  // como reclamo en la pantalla de "Reclamos de reembolso".
+  'scheduled_trip_cancelled_refund_due',
 ] as const;
 export type ScheduledTripAlertType = (typeof scheduledTripAlertTypes)[number];
 
@@ -26,6 +31,7 @@ export const scheduledTripAlertLabels: Record<ScheduledTripAlertType, string> = 
   scheduled_trip_unpaid: 'Viaje reservado sin cobrar',
   scheduled_trip_unaccepted: 'Nadie aceptó el viaje reservado',
   scheduled_trip_duplicate_payment: 'Cobro duplicado en un viaje reservado',
+  scheduled_trip_cancelled_refund_due: 'Reservado cancelado: reembolso pendiente',
 };
 
 const alertSchema = z.object({

@@ -211,9 +211,8 @@ Crear un archivo `.env` en la raíz del proyecto a partir de `.env.example`:
 ```env
 VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
 VITE_MAP_TILES_URL=
-VITE_GEOAPIFY_API_KEY=
 ```
-> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet. `VITE_GEOAPIFY_API_KEY` habilita el autocompletado de direcciones en el alta de un viaje reservado (mismo proveedor que usa la app del pasajero y el backend para resolver `place_id`); sin ella, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
+> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet. El autocompletado de direcciones del alta de un viaje reservado no usa una variable `VITE_*`: lo resuelve el backend (`GET /admin/places/autocomplete`), que necesita `GEOAPIFY_API_KEY` configurada del lado del servidor; si el backend no la tiene o el proveedor no responde, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
 
 ### 3. Ejecutar en modo desarrollo:
 ```bash

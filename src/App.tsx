@@ -15,6 +15,7 @@ import TripsScreen from './presentation/trips/TripsScreen';
 import ScheduledTripsScreen from './presentation/scheduledTrips/ScheduledTripsScreen';
 import RecurringTripsScreen from './presentation/recurringTrips/RecurringTripsScreen';
 import { LiveMapScreen } from './presentation/map/LiveMapScreen';
+import RefundClaimsScreen from './presentation/refundClaims/RefundClaimsScreen';
 
 
 function App() {
@@ -40,6 +41,7 @@ function App() {
             <Route path="/conductores" element={<DriversScreen />} />
             <Route path="/conductores/:id" element={<DriverDetailScreen />} />
             <Route path="/retiros" element={<PayoutsScreen />} />
+            <Route path="/reclamos-reembolso" element={<RefundClaimsScreen />} />
             <Route path="/empresas" element={<CompaniesScreen />} />
             <Route path="/empresas/:companyId" element={<CompanyDetailScreen />} />
             <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />

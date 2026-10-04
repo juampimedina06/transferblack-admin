@@ -11,6 +11,7 @@ import {
   Building,
   UserCircle,
   Settings,
+  Undo2,
   X,
   ChevronLeft,
   ChevronRight
@@ -22,6 +23,7 @@ import { useUIStore } from '../../store/useUIStore';
 import { useDrivers } from '../../drivers/hooks/useDrivers';
 import { usePayouts } from '../../payouts/hooks/usePayouts';
 import { useScheduledTripAlerts } from '../../scheduledTrips/hooks/useScheduledTripAlerts';
+import { useRefundClaims } from '../../refundClaims/hooks/useRefundClaims';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -98,6 +100,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
 
   const { data: scheduledTripAlerts } = useScheduledTripAlerts();
   const scheduledTripAlertsCount = scheduledTripAlerts?.length || 0;
+
+  const { data: refundClaimsData } = useRefundClaims({ status: 'pending', page: 1, limit: 1 });
+  const pendingRefundClaimsCount = refundClaimsData?.pagination?.total || 0;
 
   return (
     <>
@@ -195,6 +200,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
             )}
             <nav className="space-y-1">
               <NavItem to="/retiros" icon={Wallet} label="Retiros y billeteras" badge={pendingPayoutsCount > 0 ? pendingPayoutsCount : undefined} isCollapsed={isSidebarCollapsed} />
+              <NavItem
+                to="/reclamos-reembolso"
+                icon={Undo2}
+                label="Reclamos de reembolso"
+                badge={pendingRefundClaimsCount > 0 ? pendingRefundClaimsCount : undefined}
+                isCollapsed={isSidebarCollapsed}
+              />
               <NavItem to="/empresas" icon={Building} label="Empresas" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/pasajeros" icon={UserCircle} label="Pasajeros" disabled isCollapsed={isSidebarCollapsed} />
               <NavItem to="/configuracion" icon={Settings} label="Configuración" disabled isCollapsed={isSidebarCollapsed} />

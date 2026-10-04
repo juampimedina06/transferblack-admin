@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { ArrowRight, CalendarClock, Inbox } from 'lucide-react';
+import { ArrowRight, CalendarClock, Inbox, Repeat } from 'lucide-react';
 import { TripsBadge } from '../../trips/components/TripsBadge';
 import { ScheduledTripPaymentBadge } from './ScheduledTripPaymentBadge';
 import type { ScheduledTrip, ScheduledTripPagination } from '../../../core/scheduledTrips/scheduledTrip.api';
@@ -102,6 +102,28 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
       columnHelper.accessor('status', {
         header: 'ESTADO DEL VIAJE',
         cell: (info) => <TripsBadge status={info.getValue()} />,
+      }),
+      columnHelper.display({
+        id: 'tripType',
+        header: 'MODALIDAD',
+        cell: ({ row }) => {
+          const isRecurring = Boolean(
+            row.original.recurring_schedule_id || (row.original as any).recurringScheduleId
+          );
+          if (isRecurring) {
+            return (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                <Repeat className="w-3 h-3" />
+                Abono
+              </span>
+            );
+          }
+          return (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400">
+              Suelto
+            </span>
+          );
+        },
       }),
       columnHelper.display({
         id: 'payment',

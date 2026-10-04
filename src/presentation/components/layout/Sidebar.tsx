@@ -5,6 +5,7 @@ import {
   MapPin,
   Map as MapIcon,
   CalendarClock,
+  Repeat,
   Users,
   Wallet,
   Building,
@@ -174,6 +175,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                 icon={CalendarClock}
                 label="Viajes reservados"
                 badge={scheduledTripAlertsCount > 0 ? scheduledTripAlertsCount : undefined}
+                isCollapsed={isSidebarCollapsed}
+              />
+              <NavItem
+                to="/traslados-recurrentes"
+                icon={Repeat}
+                label="Traslados recurrentes"
                 isCollapsed={isSidebarCollapsed}
               />
               <NavItem to="/conductores" icon={Users} label="Conductores" badge={pendingCount > 0 ? pendingCount : undefined} isCollapsed={isSidebarCollapsed} />

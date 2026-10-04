@@ -18,7 +18,7 @@ export default function RecurringTripsScreen() {
   const [selectedSchedule, setSelectedSchedule] = useState<RecurringSchedule | null>(null);
 
   const statusFilter = selectedStatus === 'all' ? undefined : selectedStatus;
-  const { data, isLoading, isError, refetch } = useRecurringTrips({
+  const { data, isLoading, isFetching, isPlaceholderData, isError, refetch } = useRecurringTrips({
     page,
     limit: 15,
     status: statusFilter,
@@ -138,6 +138,8 @@ export default function RecurringTripsScreen() {
         schedules={schedules}
         pagination={pagination}
         isLoading={isLoading}
+        isFetching={isFetching}
+        isPlaceholderData={isPlaceholderData}
         isError={isError}
         onPageChange={setPage}
         onSelectSchedule={(sched) => setSelectedSchedule(sched)}

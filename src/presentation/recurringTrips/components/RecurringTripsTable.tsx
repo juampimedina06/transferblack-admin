@@ -13,6 +13,7 @@ import {
   Car,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { RecurringTripBadge } from './RecurringTripBadge';
 import {
@@ -25,6 +26,8 @@ interface RecurringTripsTableProps {
   schedules: RecurringSchedule[];
   pagination: RecurringTripPagination | undefined;
   isLoading: boolean;
+  isFetching?: boolean;
+  isPlaceholderData?: boolean;
   isError: boolean;
   onPageChange: (page: number) => void;
   onSelectSchedule: (schedule: RecurringSchedule) => void;
@@ -46,6 +49,8 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
   schedules,
   pagination,
   isLoading,
+  isFetching,
+  isPlaceholderData,
   isError,
   onPageChange,
   onSelectSchedule,
@@ -176,8 +181,17 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
     getCoreRowModel: getCoreRowModel(),
   });
 
+  const showSkeleton = isLoading || isPlaceholderData;
+
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-dark-border dark:bg-dark-surface">
+    <div className="relative flex w-full flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-dark-border dark:bg-dark-surface transition-colors">
+      {/* Top accent loading bar for active fetching / pagination */}
+      {isFetching && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-champagne-gold/20 overflow-hidden z-20">
+          <div className="h-full bg-champagne-gold animate-pulse" />
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -198,11 +212,53 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
             ))}
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, i) => (
+            {showSkeleton ? (
+              // High-fidelity skeleton rows matching exact column structure
+              Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
-                  <td colSpan={columns.length} className="px-5 py-4">
-                    <div className="h-4 bg-gray-200 dark:bg-white/5 rounded w-full" />
+                  {/* Cliente */}
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-2 max-w-[200px]">
+                      <div className="w-7 h-7 rounded-full bg-gray-200 dark:bg-white/10 shrink-0" />
+                      <div className="space-y-1.5 flex-1">
+                        <div className="h-3 w-28 bg-gray-200 dark:bg-white/10 rounded" />
+                        <div className="h-2 w-36 bg-gray-100 dark:bg-white/5 rounded" />
+                      </div>
+                    </div>
+                  </td>
+                  {/* Horario y días */}
+                  <td className="px-5 py-3.5">
+                    <div className="space-y-1.5">
+                      <div className="h-3 w-16 bg-gray-200 dark:bg-white/10 rounded" />
+                      <div className="flex gap-1">
+                        {Array.from({ length: 7 }).map((_, d) => (
+                          <div key={d} className="h-3.5 w-4 rounded bg-gray-100 dark:bg-white/5" />
+                        ))}
+                      </div>
+                    </div>
+                  </td>
+                  {/* Origen -> Destino */}
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-1.5 max-w-[220px]">
+                      <div className="h-3 w-20 bg-gray-200 dark:bg-white/10 rounded" />
+                      <div className="h-2 w-3 bg-gray-200 dark:bg-white/10 rounded" />
+                      <div className="h-3 w-20 bg-gray-200 dark:bg-white/10 rounded" />
+                    </div>
+                  </td>
+                  {/* Tarifa unitaria */}
+                  <td className="px-5 py-3.5">
+                    <div className="h-3.5 w-16 bg-gray-200 dark:bg-white/10 rounded" />
+                  </td>
+                  {/* Chofer fijo */}
+                  <td className="px-5 py-3.5">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-3.5 h-3.5 rounded bg-gray-200 dark:bg-white/10" />
+                      <div className="h-3 w-24 bg-gray-200 dark:bg-white/10 rounded" />
+                    </div>
+                  </td>
+                  {/* Estado */}
+                  <td className="px-5 py-3.5">
+                    <div className="h-5 w-16 rounded-full bg-gray-200 dark:bg-white/10" />
                   </td>
                 </tr>
               ))
@@ -248,14 +304,22 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
       {/* Pagination Footer */}
       {pagination && pagination.total_pages > 1 && (
         <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50/60 dark:border-dark-border dark:bg-dark-card text-xs text-gray-500">
-          <div>
-            Página <span className="font-semibold text-gray-800 dark:text-gray-200">{pagination.page}</span> de{' '}
-            <span className="font-semibold text-gray-800 dark:text-gray-200">{pagination.total_pages}</span> ({pagination.total} en total)
+          <div className="flex items-center gap-2">
+            <span>
+              Página <span className="font-semibold text-gray-800 dark:text-gray-200">{pagination.page}</span> de{' '}
+              <span className="font-semibold text-gray-800 dark:text-gray-200">{pagination.total_pages}</span> ({pagination.total} en total)
+            </span>
+            {isFetching && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-champagne-gold animate-fade-in">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Cargando...
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
             <button
               onClick={() => onPageChange(pagination.page - 1)}
-              disabled={pagination.page <= 1}
+              disabled={pagination.page <= 1 || isFetching}
               className="p-1 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               title="Anterior"
             >
@@ -263,7 +327,7 @@ export const RecurringTripsTable: React.FC<RecurringTripsTableProps> = ({
             </button>
             <button
               onClick={() => onPageChange(pagination.page + 1)}
-              disabled={pagination.page >= pagination.total_pages}
+              disabled={pagination.page >= pagination.total_pages || isFetching}
               className="p-1 rounded hover:bg-gray-200 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
               title="Siguiente"
             >

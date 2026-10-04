@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
-import { ArrowRight, CalendarClock, Inbox, Repeat } from 'lucide-react';
+import { ArrowRight, CalendarClock, Inbox, Repeat, Loader2 } from 'lucide-react';
 import { TripsBadge } from '../../trips/components/TripsBadge';
 import { ScheduledTripPaymentBadge } from './ScheduledTripPaymentBadge';
 import type { ScheduledTrip, ScheduledTripPagination } from '../../../core/scheduledTrips/scheduledTrip.api';
@@ -10,6 +10,8 @@ interface ScheduledTripsTableProps {
   trips: ScheduledTrip[];
   pagination: ScheduledTripPagination | undefined;
   isLoading: boolean;
+  isFetching?: boolean;
+  isPlaceholderData?: boolean;
   isError: boolean;
   /** Viajes con una alerta abierta (chofer no disponible, sin cobrar, sin aceptar, cobro duplicado). */
   attentionTripIds: Set<string>;
@@ -37,6 +39,8 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
   trips,
   pagination,
   isLoading,
+  isFetching,
+  isPlaceholderData,
   isError,
   attentionTripIds,
   onPageChange,
@@ -168,8 +172,17 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
   const totalPages = pagination?.total_pages ?? 1;
   const total = pagination?.total ?? 0;
 
+  const showSkeleton = isLoading || isPlaceholderData;
+
   return (
-    <div className="flex w-full flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-dark-border dark:bg-dark-surface">
+    <div className="relative flex w-full flex-col overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-dark-border dark:bg-dark-surface transition-colors">
+      {/* Top accent loading bar for active fetching / pagination */}
+      {isFetching && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-champagne-gold/20 overflow-hidden z-20">
+          <div className="h-full bg-champagne-gold animate-pulse" />
+        </div>
+      )}
+
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left">
           <thead>
@@ -187,11 +200,11 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
             ))}
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-dark-border">
-            {isLoading ? (
+            {showSkeleton ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <tr key={i} className="animate-pulse">
                   {columns.map((_, j) => (
-                    <td key={j} className="px-5 py-3">
+                    <td key={j} className="px-5 py-3.5">
                       <div className="h-4 w-24 rounded bg-gray-200 dark:bg-white/10" />
                     </td>
                   ))}
@@ -234,13 +247,21 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
       </div>
 
       <div className="flex flex-col items-center justify-between gap-3 border-t border-gray-100 bg-white px-5 py-3 text-xs dark:border-dark-border dark:bg-dark-surface sm:flex-row">
-        <span className="text-gray-500 dark:text-gray-400">
-          {total} viaje{total === 1 ? '' : 's'} reservado{total === 1 ? '' : 's'}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-gray-500 dark:text-gray-400">
+            {total} viaje{total === 1 ? '' : 's'} reservado{total === 1 ? '' : 's'}
+          </span>
+          {isFetching && (
+            <span className="inline-flex items-center gap-1 text-[11px] font-medium text-champagne-gold animate-fade-in">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              Cargando...
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage <= 1 || isLoading}
+            disabled={currentPage <= 1 || isFetching}
             className="rounded border border-gray-200 px-2.5 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-border dark:text-gray-300 dark:hover:bg-white/5"
           >
             Anterior
@@ -250,7 +271,7 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
           </span>
           <button
             onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage >= totalPages || isLoading}
+            disabled={currentPage >= totalPages || isFetching}
             className="rounded border border-gray-200 px-2.5 py-1 text-xs text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-dark-border dark:text-gray-300 dark:hover:bg-white/5"
           >
             Siguiente

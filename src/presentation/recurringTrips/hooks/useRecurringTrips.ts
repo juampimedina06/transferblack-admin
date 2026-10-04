@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import {
   getRecurringTrips,
   type GetRecurringTripsParams,
@@ -8,6 +8,8 @@ export function useRecurringTrips(params?: GetRecurringTripsParams) {
   return useQuery({
     queryKey: ['recurring-trips', params],
     queryFn: ({ signal }) => getRecurringTrips(params, signal),
+    placeholderData: keepPreviousData,
     staleTime: 30_000,
   });
 }
+

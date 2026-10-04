@@ -32,7 +32,7 @@ export const ScheduledTripsScreen: React.FC = () => {
     [filters, page],
   );
 
-  const { data, isLoading, isError } = useScheduledTrips(queryFilters);
+  const { data, isLoading, isFetching, isPlaceholderData, isError } = useScheduledTrips(queryFilters);
   const { data: alerts = [] } = useScheduledTripAlerts();
 
   const attentionTripIds = useMemo(
@@ -98,6 +98,8 @@ export const ScheduledTripsScreen: React.FC = () => {
         trips={data?.data ?? []}
         pagination={data?.pagination}
         isLoading={isLoading}
+        isFetching={isFetching}
+        isPlaceholderData={isPlaceholderData}
         isError={isError}
         attentionTripIds={attentionTripIds}
         onPageChange={setPage}

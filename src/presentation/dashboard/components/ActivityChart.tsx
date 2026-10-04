@@ -6,14 +6,9 @@ import {
   XAxis, 
   Tooltip 
 } from 'recharts';
-import type { PeriodoDashboard } from '../../../core/dashboard/interfaces/dashboard-stats.interface';
+import type { PeriodoDashboard, SerieTemporalItem } from '../../../core/dashboard/interfaces/dashboard-stats.interface';
 
-export interface ChartSeriesItem {
-  label: string;
-  completados: number;
-  cancelados: number;
-  total?: number;
-}
+export type ChartSeriesItem = SerieTemporalItem;
 
 interface ActivityChartProps {
   periodo: PeriodoDashboard;
@@ -27,20 +22,46 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({
   totalViajes,
   series,
 }) => {
-  // Título y descripción según el período seleccionado (Día, Mes, Año)
+  // Título y descripción según el período seleccionado (Hora en día, Día en mes, Mes en año)
   const title = periodo === 'day' 
-    ? 'Viajes por día' 
-    : periodo === 'month' 
+    ? 'Viajes por hora' 
+    : periodo === 'year' 
       ? 'Viajes por mes' 
-      : 'Viajes por año';
+      : 'Viajes por día';
 
-  const subtitle = totalViajes !== undefined
-    ? periodo === 'day'
-      ? `${totalViajes.toLocaleString('es-AR')} viajes en el día`
-      : periodo === 'month'
-        ? `${totalViajes.toLocaleString('es-AR')} viajes en el mes`
-        : `${totalViajes.toLocaleString('es-AR')} viajes en el año`
-    : 'Actividad del período seleccionado';
+  const subtitle = React.useMemo(() => {
+    if (!series || series.length === 0) {
+      return totalViajes !== undefined
+        ? `${totalViajes.toLocaleString('es-AR')} viajes en el período`
+        : 'Actividad del período seleccionado';
+    }
+
+    const totalCompletados = series.reduce((acc, s) => acc + (s.completados || 0), 0);
+    const activeBuckets = series.length;
+    const avg = activeBuckets > 0 ? (totalCompletados / activeBuckets) : 0;
+    
+    let peakItem = series[0];
+    let maxVal = -1;
+    for (const item of series) {
+      const val = item.completados || 0;
+      if (val > maxVal) {
+        maxVal = val;
+        peakItem = item;
+      }
+    }
+
+    const unit = periodo === 'day' ? 'hora' : periodo === 'month' ? 'día' : 'mes';
+    const avgFormatted = avg < 10 ? avg.toFixed(1) : Math.round(avg).toLocaleString('es-AR');
+
+    if (maxVal > 0 && peakItem) {
+      const prefix = periodo === 'day' ? 'a las' : periodo === 'month' ? 'el' : 'en';
+      return `Promedio ${avgFormatted} viajes/${unit} · pico ${prefix} ${peakItem.label} con ${maxVal.toLocaleString('es-AR')}`;
+    }
+
+    return totalViajes !== undefined
+      ? `${totalViajes.toLocaleString('es-AR')} viajes en el período`
+      : `Promedio ${avgFormatted} viajes/${unit}`;
+  }, [series, totalViajes, periodo]);
 
   const hasSeriesData = Boolean(series && series.length > 0);
 

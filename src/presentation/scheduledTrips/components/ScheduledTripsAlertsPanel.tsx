@@ -1,9 +1,13 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { AlertTriangle, Bell } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useScheduledTripAlerts } from '../hooks/useScheduledTripAlerts';
 import { scheduledTripAlertLabels, type ScheduledTripAlertType } from '../../../core/scheduledTrips/scheduledTripAlerts.api';
+
+/** Esta alerta no se resuelve seleccionando el viaje en esta pantalla: se resuelve en "Reclamos de reembolso". */
+const REFUND_DUE_ALERT_TYPE: ScheduledTripAlertType = 'scheduled_trip_cancelled_refund_due';
 
 interface ScheduledTripsAlertsPanelProps {
   onSelectTrip?: (tripId: string) => void;
@@ -11,9 +15,9 @@ interface ScheduledTripsAlertsPanelProps {
 
 /**
  * Panel chico de alertas operativas de viajes reservados (chofer no
- * disponible, sin cobrar, nadie acepto, cobro duplicado). El panel todavia
- * no tiene una pantalla general de alertas: alcance acotado, pedido del
- * usuario.
+ * disponible, sin cobrar, nadie acepto, cobro duplicado, cancelado con
+ * reembolso pendiente). El panel todavia no tiene una pantalla general de
+ * alertas: alcance acotado, pedido del usuario.
  */
 export const ScheduledTripsAlertsPanel: React.FC<ScheduledTripsAlertsPanelProps> = ({ onSelectTrip }) => {
   const { data: alerts = [], isLoading } = useScheduledTripAlerts();
@@ -29,14 +33,9 @@ export const ScheduledTripsAlertsPanel: React.FC<ScheduledTripsAlertsPanelProps>
         </h3>
       </div>
       <ul className="flex flex-col gap-1.5">
-        {alerts.slice(0, 5).map((alert) => (
-          <li key={alert.id}>
-            <button
-              type="button"
-              disabled={!alert.trip_id || !onSelectTrip}
-              onClick={() => alert.trip_id && onSelectTrip?.(alert.trip_id)}
-              className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left text-xs transition-colors hover:bg-amber-100/70 disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-amber-900/30"
-            >
+        {alerts.slice(0, 5).map((alert) => {
+          const content = (
+            <>
               <span className="flex items-center gap-1.5 text-amber-900 dark:text-amber-200">
                 <AlertTriangle
                   className={`h-3.5 w-3.5 shrink-0 ${
@@ -48,9 +47,38 @@ export const ScheduledTripsAlertsPanel: React.FC<ScheduledTripsAlertsPanelProps>
               <span className="whitespace-nowrap text-[11px] text-amber-700/80 dark:text-amber-300/70">
                 {formatDistanceToNow(new Date(alert.detected_at), { addSuffix: true, locale: es })}
               </span>
-            </button>
-          </li>
-        ))}
+            </>
+          );
+
+          // El reembolso de un reservado cancelado no se resuelve
+          // seleccionando el viaje en esta pantalla: lleva a la pantalla de
+          // reclamos de reembolso, donde el admin de verdad lo cierra.
+          if (alert.type === REFUND_DUE_ALERT_TYPE) {
+            return (
+              <li key={alert.id}>
+                <Link
+                  to="/reclamos-reembolso"
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left text-xs transition-colors hover:bg-amber-100/70 dark:hover:bg-amber-900/30"
+                >
+                  {content}
+                </Link>
+              </li>
+            );
+          }
+
+          return (
+            <li key={alert.id}>
+              <button
+                type="button"
+                disabled={!alert.trip_id || !onSelectTrip}
+                onClick={() => alert.trip_id && onSelectTrip?.(alert.trip_id)}
+                className="flex w-full items-center justify-between gap-3 rounded-lg px-2 py-1.5 text-left text-xs transition-colors hover:bg-amber-100/70 disabled:cursor-default disabled:hover:bg-transparent dark:hover:bg-amber-900/30"
+              >
+                {content}
+              </button>
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

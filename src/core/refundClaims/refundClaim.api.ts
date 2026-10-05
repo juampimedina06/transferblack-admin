@@ -281,12 +281,19 @@ export async function getRefundClaims(
  * Resuelve un reclamo. Exige `Idempotency-Key`: el llamador decide cuando
  * reusarla (mismo intento, mismo monto/modo) y cuando pedir una nueva (otro
  * intento, o cambio de monto/modo) - ver `useResolveRefundClaimForm`.
+ *
+ * `null` significa que el POST ya respondio 2xx (el reembolso se hizo) pero
+ * el cuerpo no matcheo el esquema esperado (campo nuevo o viejo que este
+ * panel no conoce). Eso NUNCA es un error: el llamador lo trata como exito
+ * sin detalle (ver `useResolveRefundClaim`/`ResolveRefundClaimModal`), solo
+ * se loguea para diagnostico. Una excepcion de esta funcion es siempre un
+ * fallo real (red, 4xx/5xx).
  */
 export async function resolveRefundClaim(
   tripId: string,
   idempotencyKey: string,
   payload: ResolveRefundClaimPayload,
-): Promise<ResolveRefundClaimResult> {
+): Promise<ResolveRefundClaimResult | null> {
   const { data } = await adminApi.post(
     `/admin/rides/${tripId}/refund`,
     {
@@ -297,15 +304,22 @@ export async function resolveRefundClaim(
     },
     { headers: { 'Idempotency-Key': idempotencyKey } },
   );
-  const parsed = resolveRefundClaimResponseApiSchema.parse(data.data);
+  const parsed = resolveRefundClaimResponseApiSchema.safeParse(data.data);
+  if (!parsed.success) {
+    console.warn(
+      'Reembolso resuelto (POST 2xx) pero la respuesta no matcheo el esquema esperado:',
+      parsed.error.issues,
+    );
+    return null;
+  }
   return {
-    paymentId: parsed.payment_id,
-    tripId: parsed.trip_id,
-    refundStatus: parsed.refund_status,
-    refundResolutionMode: parsed.refund_resolution_mode,
-    amountRefunded: parsed.amount_refunded,
-    providerRefundId: parsed.provider_refund_id,
-    manualReference: parsed.manual_reference,
+    paymentId: parsed.data.payment_id,
+    tripId: parsed.data.trip_id,
+    refundStatus: parsed.data.refund_status,
+    refundResolutionMode: parsed.data.refund_resolution_mode,
+    amountRefunded: parsed.data.amount_refunded,
+    providerRefundId: parsed.data.provider_refund_id,
+    manualReference: parsed.data.manual_reference,
   };
 }
 

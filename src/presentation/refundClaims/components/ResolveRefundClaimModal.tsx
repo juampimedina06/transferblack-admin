@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { AlertTriangle, Landmark, RotateCcw, Wallet, X } from 'lucide-react';
+import { AlertTriangle, Landmark, RotateCcw, Wallet } from 'lucide-react';
 import {
   canAttemptMercadoPagoRefund,
   extractErrorCode,
@@ -16,6 +16,7 @@ import {
 import { extractApiErrorMessage } from '../../../core/api/adminApi';
 import { useResolveRefundClaim } from '../hooks/useResolveRefundClaim';
 import { Button, Input, Textarea } from '../../components/common';
+import { Modal } from '../../companies/components/Modal';
 import { cn } from '../../utils/cn';
 
 interface ResolveRefundClaimModalProps {
@@ -37,7 +38,7 @@ function buildFormSchema(maxAmount: number) {
       mode: z.enum(['mercado_pago', 'manual']),
       amount: moneyAmount.refine(
         (value) => Number(value) <= maxAmount,
-        `El importe no puede superar lo reclamado ($${maxAmount.toFixed(2)})`,
+        `El importe no puede superar lo pendiente de reembolso ($${maxAmount.toFixed(2)})`,
       ),
       reference: z.string().trim().max(150).optional().or(z.literal('')),
       notes: z.string().trim().max(500).optional().or(z.literal('')),
@@ -70,7 +71,13 @@ export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = (
   const lastErrorRetryableRef = useRef(false);
 
   const mpEligible = claim ? canAttemptMercadoPagoRefund(claim) : false;
-  const maxAmount = claim ? Number.parseFloat(claim.amount) || 0 : 0;
+  // El pendiente real (`pendingAmount`) es lo que de verdad queda por
+  // devolver: si ya hubo una resolucion parcial que esta lista no conocia,
+  // `amount` (el total reclamado original) ya no sirve de default ni de
+  // tope. Si el backend desplegado todavia no manda `pendingAmount`, se cae
+  // al reclamado original (mismo comportamiento de antes).
+  const pendingAmount = claim ? claim.pendingAmount ?? claim.amount : '0';
+  const maxAmount = claim ? Number.parseFloat(pendingAmount) || 0 : 0;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(buildFormSchema(maxAmount)),
@@ -88,7 +95,7 @@ export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = (
       setCanRetrySameAttempt(false);
       form.reset({
         mode: mpEligible ? 'mercado_pago' : 'manual',
-        amount: claim.amount,
+        amount: pendingAmount,
         reference: '',
         notes: '',
       });
@@ -129,19 +136,27 @@ export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = (
     setCanRetrySameAttempt(false);
 
     const key = resolveIdempotencyKey(values.amount, values.mode);
-    const isFullAmount = Number(values.amount) === Number(claim.amount);
+    // Sin cambios respecto al pendiente por defecto, se omite `amount`: el
+    // backend reintegra todo lo pendiente de verdad (fuente de verdad, por
+    // si otra resolucion parcial paso entre que se cargo la lista y este
+    // envio).
+    const isUnchangedAmount = Number(values.amount) === Number(pendingAmount);
     const payload: ResolveRefundClaimPayload = {
       mode: values.mode,
-      // Sin monto, el backend reintegra todo lo pendiente de verdad (incluye
-      // resoluciones parciales previas que este panel no conoce: la lista no
-      // trae el acumulado ya devuelto, solo el total reclamado).
-      ...(isFullAmount ? {} : { amount: values.amount }),
+      ...(isUnchangedAmount ? {} : { amount: values.amount }),
       ...(values.mode === 'manual' && values.reference ? { reference: values.reference.trim() } : {}),
       ...(values.notes ? { notes: values.notes.trim() } : {}),
     };
 
     try {
       await resolveMutation.mutateAsync({ tripId: claim.tripId, idempotencyKey: key, payload });
+      // Reset total del intento: ni esta clave ni este monto/modo quedan
+      // disponibles para un "Reintentar" desde un modal que por algun motivo
+      // no llego a cerrarse (el reembolso ya se hizo, con o sin detalle
+      // verificado — ver `resolveRefundClaim`).
+      lastAttemptRef.current = null;
+      lastErrorRetryableRef.current = false;
+      setCanRetrySameAttempt(false);
       onResolved?.();
       onClose();
     } catch (error) {
@@ -169,145 +184,124 @@ export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = (
 
   const confirmationText =
     selectedMode === 'mercado_pago'
-      ? `Se devolverán ${formatMoney(watchedAmount || claim.amount, claim.currency)} al pasajero por Mercado Pago.`
-      : `Se registrará una devolución manual de ${formatMoney(watchedAmount || claim.amount, claim.currency)} al pasajero.`;
+      ? `Se devolverán ${formatMoney(watchedAmount || pendingAmount, claim.currency)} al pasajero por Mercado Pago.`
+      : `Se registrará una devolución manual de ${formatMoney(watchedAmount || pendingAmount, claim.currency)} al pasajero.`;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      role="dialog"
-      aria-modal="true"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] overflow-y-auto"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-dark-border">
-          <div>
-            <h2 className="text-base font-bold text-gray-900 dark:text-white">Resolver reclamo de reembolso</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Viaje {claim.tripPublicCode} • {paymentMethodLabel(claim.paymentMethod)} •{' '}
-              {formatMoney(claim.amount, claim.currency)} reclamado
-            </p>
+    <Modal title="Resolver reclamo de reembolso" onClose={onClose} dismissible={!resolveMutation.isPending}>
+      <div className="px-6 pt-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Viaje {claim.tripPublicCode} • {paymentMethodLabel(claim.paymentMethod)} •{' '}
+          {formatMoney(pendingAmount, claim.currency)} pendiente
+        </p>
+      </div>
+
+      <form onSubmit={form.handleSubmit(submit)} className="p-6 pt-2 space-y-4">
+        {/* Selector de modo */}
+        <div>
+          <span className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
+            ¿Cómo se devuelve?
+          </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={!mpEligible}
+              onClick={() => form.setValue('mode', 'mercado_pago')}
+              title={
+                mpEligible
+                  ? undefined
+                  : 'Este cobro no entró por Mercado Pago: solo se puede resolver en modo manual.'
+              }
+              className={cn(
+                'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors text-left',
+                selectedMode === 'mercado_pago'
+                  ? 'border-champagne-gold bg-champagne-gold/10 text-[#9A7D3A] dark:text-champagne-gold'
+                  : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5',
+                !mpEligible && 'opacity-50 cursor-not-allowed',
+              )}
+            >
+              <Wallet className="w-4 h-4 shrink-0" />
+              Devolver por Mercado Pago
+            </button>
+            <button
+              type="button"
+              onClick={() => form.setValue('mode', 'manual')}
+              className={cn(
+                'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors text-left',
+                selectedMode === 'manual'
+                  ? 'border-champagne-gold bg-champagne-gold/10 text-[#9A7D3A] dark:text-champagne-gold'
+                  : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5',
+              )}
+            >
+              <Landmark className="w-4 h-4 shrink-0" />
+              Registrar devolución manual
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            disabled={resolveMutation.isPending}
-            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
-            aria-label="Cerrar modal"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          {!mpEligible && (
+            <p className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+              El cobro de este viaje fue por {paymentMethodLabel(claim.paymentMethod).toLowerCase()}, no por
+              Mercado Pago.
+            </p>
+          )}
         </div>
 
-        <form onSubmit={form.handleSubmit(submit)} className="p-6 space-y-4">
-          {/* Selector de modo */}
-          <div>
-            <span className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
-              ¿Cómo se devuelve?
-            </span>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={!mpEligible}
-                onClick={() => form.setValue('mode', 'mercado_pago')}
-                title={
-                  mpEligible
-                    ? undefined
-                    : 'Este cobro no entró por Mercado Pago: solo se puede resolver en modo manual.'
-                }
-                className={cn(
-                  'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors text-left',
-                  selectedMode === 'mercado_pago'
-                    ? 'border-champagne-gold bg-champagne-gold/10 text-[#9A7D3A] dark:text-champagne-gold'
-                    : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5',
-                  !mpEligible && 'opacity-50 cursor-not-allowed',
-                )}
-              >
-                <Wallet className="w-4 h-4 shrink-0" />
-                Devolver por Mercado Pago
-              </button>
-              <button
-                type="button"
-                onClick={() => form.setValue('mode', 'manual')}
-                className={cn(
-                  'flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors text-left',
-                  selectedMode === 'manual'
-                    ? 'border-champagne-gold bg-champagne-gold/10 text-[#9A7D3A] dark:text-champagne-gold'
-                    : 'border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5',
-                )}
-              >
-                <Landmark className="w-4 h-4 shrink-0" />
-                Registrar devolución manual
-              </button>
-            </div>
-            {!mpEligible && (
-              <p className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
-                El cobro de este viaje fue por {paymentMethodLabel(claim.paymentMethod).toLowerCase()}, no por
-                Mercado Pago.
-              </p>
-            )}
-          </div>
+        <Input
+          label="Importe a devolver"
+          inputMode="decimal"
+          error={form.formState.errors.amount?.message}
+          helperText={`Lo pendiente de reembolso es ${formatMoney(pendingAmount, claim.currency)}. Dejalo igual para devolver todo lo pendiente.`}
+          {...form.register('amount')}
+        />
 
+        {selectedMode === 'manual' && (
           <Input
-            label="Importe a devolver"
-            inputMode="decimal"
-            error={form.formState.errors.amount?.message}
-            helperText={`Lo reclamado es ${formatMoney(claim.amount, claim.currency)}. Dejalo igual para devolver todo lo pendiente.`}
-            {...form.register('amount')}
+            label="Referencia de la transferencia"
+            placeholder="Ej: nº de operación o CBU de destino"
+            error={form.formState.errors.reference?.message}
+            {...form.register('reference')}
           />
+        )}
 
-          {selectedMode === 'manual' && (
-            <Input
-              label="Referencia de la transferencia"
-              placeholder="Ej: nº de operación o CBU de destino"
-              error={form.formState.errors.reference?.message}
-              {...form.register('reference')}
-            />
-          )}
+        <Textarea
+          label="Notas (opcional)"
+          rows={3}
+          placeholder="Detalle interno de la resolución…"
+          error={form.formState.errors.notes?.message}
+          {...form.register('notes')}
+        />
 
-          <Textarea
-            label="Notas (opcional)"
-            rows={3}
-            placeholder="Detalle interno de la resolución…"
-            error={form.formState.errors.notes?.message}
-            {...form.register('notes')}
-          />
+        <div className="rounded-lg border border-champagne-gold/40 bg-champagne-gold/10 p-3 text-xs text-gray-700 dark:text-white/80">
+          {confirmationText}
+        </div>
 
-          <div className="rounded-lg border border-champagne-gold/40 bg-champagne-gold/10 p-3 text-xs text-gray-700 dark:text-white/80">
-            {confirmationText}
-          </div>
-
-          {errorMessage && (
-            <div className="p-3 text-xs font-medium text-red-700 bg-red-50 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
-              <div className="flex-1 flex flex-col gap-1.5">
-                <span>{errorMessage}</span>
-                {canRetrySameAttempt && (
-                  <button
-                    type="button"
-                    onClick={form.handleSubmit(submit)}
-                    className="inline-flex items-center gap-1.5 self-start text-xs font-bold text-red-700 dark:text-red-300 hover:underline"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    Reintentar
-                  </button>
-                )}
-              </div>
+        {errorMessage && (
+          <div className="p-3 text-xs font-medium text-red-700 bg-red-50 dark:bg-red-950/40 dark:text-red-400 border border-red-200 dark:border-red-800/40 rounded-lg flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div className="flex-1 flex flex-col gap-1.5">
+              <span>{errorMessage}</span>
+              {canRetrySameAttempt && (
+                <button
+                  type="button"
+                  onClick={form.handleSubmit(submit)}
+                  className="inline-flex items-center gap-1.5 self-start text-xs font-bold text-red-700 dark:text-red-300 hover:underline"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Reintentar
+                </button>
+              )}
             </div>
-          )}
-
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-dark-border">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={resolveMutation.isPending}>
-              Cancelar
-            </Button>
-            <Button type="submit" variant="gold" isLoading={resolveMutation.isPending}>
-              Confirmar devolución
-            </Button>
           </div>
-        </form>
-      </div>
-    </div>
+        )}
+
+        <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100 dark:border-dark-border">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={resolveMutation.isPending}>
+            Cancelar
+          </Button>
+          <Button type="submit" variant="gold" isLoading={resolveMutation.isPending}>
+            Confirmar devolución
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };

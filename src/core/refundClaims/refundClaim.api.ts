@@ -8,12 +8,13 @@ import { adminApi } from '../api/adminApi';
  * admin lo cierra aca: por Mercado Pago (si el cobro de verdad entro por ahi)
  * o a mano (transferencia bancaria de vuelta, con referencia).
  *
- * El DTO del backend (`admin-refund.dto.ts`) solo trae `passenger_user_id`
- * (sin nombre/email) y un unico `amount` (el total reclamado, no el desglose
- * pendiente/ya devuelto de una resolucion parcial). El nombre, el email y si
- * el viaje es reservado se completan aparte con `getTripDetail` (mismo
- * `GET /rides/:tripId` que ya usa el detalle de viajes), sin tocar el
- * backend.
+ * `GET /admin/refund-claims` (backend `feature/reclamos-detalle`) ya trae
+ * `passenger`, `booking_type`, `paid_via_mercado_pago`, el desglose
+ * `claim_amount`/`refunded_amount`/`pending_amount` y, si ya se resolvio,
+ * `resolution`. Son campos aditivos: un backend viejo que todavia no los
+ * manda no tiene que romper la lista (ver `parseClaimItem`), por eso todos
+ * son opcionales en el esquema y la UI cae al dato legado (`amount`,
+ * `passengerUserId`) cuando faltan.
  */
 
 export const refundClaimListStatuses = ['pending', 'resolved'] as const;
@@ -22,7 +23,35 @@ export type RefundClaimListStatus = (typeof refundClaimListStatuses)[number];
 export const refundResolutionModes = ['mercado_pago', 'manual'] as const;
 export type RefundResolutionMode = (typeof refundResolutionModes)[number];
 
-const refundClaimApiSchema = z.object({
+export const refundClaimBookingTypes = ['immediate', 'scheduled'] as const;
+export type RefundClaimBookingType = (typeof refundClaimBookingTypes)[number];
+
+const refundClaimPassengerApiSchema = z.object({
+  id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+  email: z.string(),
+});
+
+const refundClaimResolvedByApiSchema = z.object({
+  id: z.string(),
+  first_name: z.string(),
+  last_name: z.string(),
+});
+
+const refundClaimResolutionApiSchema = z.object({
+  mode: z.enum(refundResolutionModes),
+  manual_reference: z.string().nullable(),
+  notes: z.string().nullable(),
+  resolved_by: refundClaimResolvedByApiSchema.nullable(),
+  resolved_at: z.string(),
+});
+
+// Campos legados: los unicos que un backend viejo (sin `feature/reclamos-detalle`)
+// garantiza. Sirven de red de contencion: si el item completo no matchea
+// `refundClaimApiSchema` (un campo nuevo vino con un tipo inesperado), se
+// reintenta solo con estos para no tirar abajo toda la lista por eso.
+const legacyRefundClaimApiSchema = z.object({
   trip_id: z.string(),
   trip_public_code: z.string(),
   passenger_user_id: z.string(),
@@ -36,8 +65,21 @@ const refundClaimApiSchema = z.object({
   cancellation_reason_code: z.string().nullable(),
 });
 
+// Campos nuevos aditivos (backend `feature/reclamos-detalle`): todos
+// opcionales para que un backend que todavia no los manda siga pasando el
+// `parse` sin tocarlos.
+const refundClaimApiSchema = legacyRefundClaimApiSchema.extend({
+  passenger: refundClaimPassengerApiSchema.optional(),
+  booking_type: z.enum(refundClaimBookingTypes).optional(),
+  paid_via_mercado_pago: z.boolean().optional(),
+  claim_amount: z.string().optional(),
+  refunded_amount: z.string().optional(),
+  pending_amount: z.string().optional(),
+  resolution: refundClaimResolutionApiSchema.nullable().optional(),
+});
+
 const refundClaimListApiSchema = z.object({
-  data: z.array(refundClaimApiSchema),
+  data: z.array(z.unknown()),
   pagination: z.object({
     page: z.number(),
     limit: z.number(),
@@ -56,6 +98,27 @@ const resolveRefundClaimResponseApiSchema = z.object({
   manual_reference: z.string().nullable(),
 });
 
+export interface RefundClaimPassenger {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+}
+
+export interface RefundClaimResolvedBy {
+  id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface RefundClaimResolution {
+  mode: RefundResolutionMode;
+  manualReference: string | null;
+  notes: string | null;
+  resolvedBy: RefundClaimResolvedBy | null;
+  resolvedAt: string;
+}
+
 export interface RefundClaim {
   tripId: string;
   tripPublicCode: string;
@@ -68,6 +131,16 @@ export interface RefundClaim {
   refundResolutionMode: RefundResolutionMode | null;
   cancelledAt: string | null;
   cancellationReasonCode: string | null;
+  // Campos aditivos de `feature/reclamos-detalle`: `null` si el backend
+  // desplegado todavia no los manda (ver `parseClaimItem`), nunca por un
+  // reclamo real sin esos datos.
+  passenger: RefundClaimPassenger | null;
+  bookingType: RefundClaimBookingType | null;
+  paidViaMercadoPago: boolean | null;
+  claimAmount: string | null;
+  refundedAmount: string | null;
+  pendingAmount: string | null;
+  resolution: RefundClaimResolution | null;
 }
 
 export interface RefundClaimPagination {
@@ -105,7 +178,9 @@ export interface ResolveRefundClaimResult {
   manualReference: string | null;
 }
 
-function mapClaim(dto: z.infer<typeof refundClaimApiSchema>): RefundClaim {
+function mapClaim(
+  dto: z.infer<typeof legacyRefundClaimApiSchema> & Partial<z.infer<typeof refundClaimApiSchema>>,
+): RefundClaim {
   return {
     tripId: dto.trip_id,
     tripPublicCode: dto.trip_public_code,
@@ -118,7 +193,61 @@ function mapClaim(dto: z.infer<typeof refundClaimApiSchema>): RefundClaim {
     refundResolutionMode: dto.refund_resolution_mode,
     cancelledAt: dto.cancelled_at,
     cancellationReasonCode: dto.cancellation_reason_code,
+    passenger: dto.passenger
+      ? {
+          id: dto.passenger.id,
+          firstName: dto.passenger.first_name,
+          lastName: dto.passenger.last_name,
+          email: dto.passenger.email,
+        }
+      : null,
+    bookingType: dto.booking_type ?? null,
+    paidViaMercadoPago: dto.paid_via_mercado_pago ?? null,
+    claimAmount: dto.claim_amount ?? null,
+    refundedAmount: dto.refunded_amount ?? null,
+    pendingAmount: dto.pending_amount ?? null,
+    resolution: dto.resolution
+      ? {
+          mode: dto.resolution.mode,
+          manualReference: dto.resolution.manual_reference,
+          notes: dto.resolution.notes,
+          resolvedBy: dto.resolution.resolved_by
+            ? {
+                id: dto.resolution.resolved_by.id,
+                firstName: dto.resolution.resolved_by.first_name,
+                lastName: dto.resolution.resolved_by.last_name,
+              }
+            : null,
+          resolvedAt: dto.resolution.resolved_at,
+        }
+      : null,
   };
+}
+
+/**
+ * Parsea un item de la lista tolerando que los campos aditivos de
+ * `feature/reclamos-detalle` falten (backend viejo) o, si estan, vengan con
+ * un tipo inesperado: en vez de tirar abajo toda la lista, se reintenta solo
+ * con los campos legados y ese reclamo se muestra sin el detalle nuevo
+ * (`null` en los campos aditivos; la UI cae al dato legado o esconde esas
+ * columnas). Solo se omite el reclamo si ni siquiera los campos legados
+ * matchean.
+ */
+function parseClaimItem(raw: unknown): RefundClaim | null {
+  const extended = refundClaimApiSchema.safeParse(raw);
+  if (extended.success) return mapClaim(extended.data);
+
+  const legacy = legacyRefundClaimApiSchema.safeParse(raw);
+  if (legacy.success) {
+    console.warn(
+      'Reclamo de reembolso con campos nuevos invalidos, se muestra sin ese detalle:',
+      extended.error.issues,
+    );
+    return mapClaim(legacy.data);
+  }
+
+  console.error('Reclamo de reembolso invalido, se omite de la lista:', legacy.error.issues);
+  return null;
 }
 
 export async function getRefundClaims(
@@ -134,8 +263,11 @@ export async function getRefundClaims(
     signal,
   });
   const parsed = refundClaimListApiSchema.parse(data);
+  const claims = parsed.data
+    .map(parseClaimItem)
+    .filter((claim): claim is RefundClaim => claim !== null);
   return {
-    claims: parsed.data.map(mapClaim),
+    claims,
     pagination: {
       page: parsed.pagination.page,
       limit: parsed.pagination.limit,
@@ -177,14 +309,6 @@ export async function resolveRefundClaim(
   };
 }
 
-/**
- * Medio de pago (`payment.type` del backend): el unico valor que de verdad
- * paso por Mercado Pago es `account_money`. `cash`, `voucher` y `corporate`
- * nunca tienen un cobro en la pasarela, asi que el modo "Mercado Pago" de la
- * resolucion no aplica. Es una inferencia del lado del panel (el DTO de la
- * lista no trae un campo explicito "paso por MP"): el backend confirma o
- * corrige esto con `409 REFUND_REQUIRES_MANUAL_MODE` al resolver.
- */
 export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   account_money: 'Mercado Pago',
   cash: 'Efectivo',
@@ -196,8 +320,17 @@ export function paymentMethodLabel(method: string): string {
   return PAYMENT_METHOD_LABELS[method] ?? method;
 }
 
-export function canAttemptMercadoPagoRefund(paymentMethod: string): boolean {
-  return paymentMethod === 'account_money';
+/**
+ * `paid_via_mercado_pago` (backend `feature/reclamos-detalle`) ya confirma
+ * si el cobro de verdad entro por la pasarela. Si el backend desplegado
+ * todavia no manda ese campo (`null`), se cae a la inferencia vieja por
+ * `payment.type`: el unico valor que de verdad pasa por Mercado Pago es
+ * `account_money` (`cash`, `voucher` y `corporate` nunca tienen un cobro en
+ * la pasarela). En ambos casos el backend tiene la ultima palabra: corrige
+ * con `409 REFUND_REQUIRES_MANUAL_MODE` al resolver.
+ */
+export function canAttemptMercadoPagoRefund(claim: RefundClaim): boolean {
+  return claim.paidViaMercadoPago ?? claim.paymentMethod === 'account_money';
 }
 
 /**

@@ -5,7 +5,6 @@ import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, Inbox, CalendarClock, MapPin } from 'lucide-react';
 import type { RefundClaim, RefundClaimPagination, RefundClaimListStatus } from '../../../core/refundClaims/refundClaim.api';
 import { cancellationReasonLabel, paymentMethodLabel } from '../../../core/refundClaims/refundClaim.api';
-import type { TripDetail } from '../../../core/trips/interfaces/trip.interface';
 import { RefundClaimStatusBadge } from './RefundClaimStatusBadge';
 
 interface RefundClaimsTableProps {
@@ -14,7 +13,6 @@ interface RefundClaimsTableProps {
   isLoading: boolean;
   isError: boolean;
   activeTab: RefundClaimListStatus;
-  detailsByTripId: Map<string, TripDetail>;
   onPageChange: (page: number) => void;
   onResolve: (claim: RefundClaim) => void;
 }
@@ -45,12 +43,18 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
   isLoading,
   isError,
   activeTab,
-  detailsByTripId,
   onPageChange,
   onResolve,
 }) => {
-  const columns = React.useMemo(
-    () => [
+  // Campos aditivos de `feature/reclamos-detalle`: si el backend desplegado
+  // todavia no los manda, `claimAmount`/`resolution` quedan en `null` para
+  // todos los reclamos (ver `parseClaimItem`). En ese caso se esconden las
+  // columnas de detalle en vez de mostrarlas vacias.
+  const hasDetailedAmounts = claims.some((claim) => claim.claimAmount !== null);
+  const hasResolutionDetails = activeTab === 'resolved' && claims.some((claim) => claim.resolution !== null);
+
+  const columns = React.useMemo(() => {
+    const cols = [
       columnHelper.accessor('cancelledAt', {
         header: 'CANCELADO',
         cell: (info) => (
@@ -65,16 +69,15 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
         header: 'PASAJERO',
         cell: (info) => {
           const claim = info.row.original;
-          const detail = detailsByTripId.get(claim.tripId);
-          const fullName = detail?.passenger ? `${detail.passenger.firstName} ${detail.passenger.lastName}`.trim() : '';
+          const fullName = claim.passenger ? `${claim.passenger.firstName} ${claim.passenger.lastName}`.trim() : '';
           return (
             <div className="flex flex-col max-w-[200px]">
               <span className="text-[13px] font-semibold text-gray-900 dark:text-white truncate">
                 {fullName || `ID ${claim.passengerUserId.slice(0, 8)}…`}
               </span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
-                {detail?.passenger?.email || (fullName ? '' : 'Cargando datos del pasajero…')}
-              </span>
+              {claim.passenger?.email && (
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate">{claim.passenger.email}</span>
+              )}
             </div>
           );
         },
@@ -85,14 +88,13 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
         header: 'VIAJE',
         cell: (info) => {
           const claim = info.row.original;
-          const detail = detailsByTripId.get(claim.tripId);
-          const isScheduled = detail?.bookingType === 'scheduled';
+          const isScheduled = claim.bookingType === 'scheduled';
           return (
             <div className="flex flex-col gap-0.5">
               <span className="text-xs font-mono font-semibold text-gray-800 dark:text-gray-200">
                 {claim.tripPublicCode}
               </span>
-              {detail && (
+              {claim.bookingType && (
                 <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
                   {isScheduled ? <CalendarClock className="w-3 h-3" /> : <MapPin className="w-3 h-3" />}
                   {isScheduled ? 'Reservado' : 'Inmediato'}
@@ -118,16 +120,62 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
           <span className="text-xs text-gray-600 dark:text-gray-400">{cancellationReasonLabel(info.getValue())}</span>
         ),
       }),
+    ];
 
-      columnHelper.accessor('amount', {
-        header: activeTab === 'pending' ? 'MONTO RECLAMADO' : 'MONTO DEVUELTO',
-        cell: (info) => (
-          <span className="text-[13px] font-bold text-gray-900 dark:text-white font-mono">
-            {formatMoney(info.getValue(), info.row.original.currency)}
-          </span>
-        ),
-      }),
+    if (hasDetailedAmounts) {
+      cols.push(
+        columnHelper.display({
+          id: 'claimAmount',
+          header: 'RECLAMADO',
+          cell: (info) => {
+            const claim = info.row.original;
+            const value = claim.claimAmount ?? claim.amount;
+            return (
+              <span className="text-[13px] font-bold text-gray-900 dark:text-white font-mono">
+                {formatMoney(value, claim.currency)}
+              </span>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: 'refundedAmount',
+          header: 'DEVUELTO',
+          cell: (info) => {
+            const claim = info.row.original;
+            return (
+              <span className="text-[13px] font-semibold text-emerald-700 dark:text-emerald-400 font-mono">
+                {formatMoney(claim.refundedAmount ?? '0', claim.currency)}
+              </span>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: 'pendingAmount',
+          header: 'PENDIENTE',
+          cell: (info) => {
+            const claim = info.row.original;
+            return (
+              <span className="text-[13px] font-semibold text-amber-700 dark:text-amber-400 font-mono">
+                {formatMoney(claim.pendingAmount ?? '0', claim.currency)}
+              </span>
+            );
+          },
+        }),
+      );
+    } else {
+      cols.push(
+        columnHelper.accessor('amount', {
+          header: activeTab === 'pending' ? 'MONTO RECLAMADO' : 'MONTO DEVUELTO',
+          cell: (info) => (
+            <span className="text-[13px] font-bold text-gray-900 dark:text-white font-mono">
+              {formatMoney(info.getValue(), info.row.original.currency)}
+            </span>
+          ),
+        }),
+      );
+    }
 
+    cols.push(
       columnHelper.display({
         id: 'status',
         header: 'ESTADO',
@@ -145,7 +193,42 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
           );
         },
       }),
+    );
 
+    if (hasResolutionDetails) {
+      cols.push(
+        columnHelper.display({
+          id: 'resolution',
+          header: 'RESOLUCIÓN',
+          cell: (info) => {
+            const resolution = info.row.original.resolution;
+            if (!resolution) return <span className="text-xs text-gray-400">—</span>;
+            const resolvedByName = resolution.resolvedBy
+              ? `${resolution.resolvedBy.firstName} ${resolution.resolvedBy.lastName}`.trim()
+              : null;
+            return (
+              <div className="flex flex-col gap-0.5 max-w-[220px]">
+                <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+                  {resolution.mode === 'mercado_pago' ? 'Mercado Pago' : 'Manual'}
+                  {resolution.manualReference ? ` · ${resolution.manualReference}` : ''}
+                </span>
+                {resolution.notes && (
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate" title={resolution.notes}>
+                    {resolution.notes}
+                  </span>
+                )}
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                  {resolvedByName ? `${resolvedByName} · ` : ''}
+                  {formatDate(resolution.resolvedAt)}
+                </span>
+              </div>
+            );
+          },
+        }),
+      );
+    }
+
+    cols.push(
       columnHelper.display({
         id: 'actions',
         header: 'ACCIONES',
@@ -165,9 +248,10 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
           );
         },
       }),
-    ],
-    [activeTab, detailsByTripId, onResolve],
-  );
+    );
+
+    return cols;
+  }, [activeTab, hasDetailedAmounts, hasResolutionDetails, onResolve]);
 
   const table = useReactTable({
     data: claims,
@@ -213,7 +297,7 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, idx) => (
                 <tr key={idx} className="animate-pulse">
-                  {Array.from({ length: 8 }).map((__, cellIdx) => (
+                  {Array.from({ length: columns.length }).map((__, cellIdx) => (
                     <td key={cellIdx} className="px-4 py-4">
                       <div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-20" />
                     </td>
@@ -222,7 +306,7 @@ export const RefundClaimsTable: React.FC<RefundClaimsTableProps> = ({
               ))
             ) : claims.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-16 text-center">
+                <td colSpan={columns.length} className="px-4 py-16 text-center">
                   <div className="flex flex-col items-center justify-center">
                     <div className="p-3 bg-gray-100 dark:bg-white/5 rounded-full text-gray-400 mb-3">
                       <Inbox className="w-8 h-8" />

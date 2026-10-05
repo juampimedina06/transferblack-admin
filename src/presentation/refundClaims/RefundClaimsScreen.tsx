@@ -4,7 +4,6 @@ import { AlertCircle, CheckCircle2, RefreshCw } from 'lucide-react';
 import type { RefundClaim, RefundClaimListStatus } from '../../core/refundClaims/refundClaim.api';
 import { refundClaimListStatuses } from '../../core/refundClaims/refundClaim.api';
 import { useRefundClaims } from './hooks/useRefundClaims';
-import { useRefundClaimTripDetails } from './hooks/useRefundClaimTripDetails';
 import { RefundClaimsTable } from './components/RefundClaimsTable';
 import { ResolveRefundClaimModal } from './components/ResolveRefundClaimModal';
 
@@ -30,9 +29,6 @@ export const RefundClaimsScreen: React.FC = () => {
     page: currentPage,
     limit: 15,
   });
-
-  const tripIds = (data?.claims ?? []).map((claim) => claim.tripId);
-  const { detailsByTripId } = useRefundClaimTripDetails(tripIds);
 
   const [selectedClaim, setSelectedClaim] = useState<RefundClaim | null>(null);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -129,7 +125,6 @@ export const RefundClaimsScreen: React.FC = () => {
         isLoading={isLoading}
         isError={isError}
         activeTab={activeTab}
-        detailsByTripId={detailsByTripId}
         onPageChange={handlePageChange}
         onResolve={setSelectedClaim}
       />

@@ -69,7 +69,7 @@ export const ResolveRefundClaimModal: React.FC<ResolveRefundClaimModalProps> = (
   const lastAttemptRef = useRef<{ amount: string; mode: RefundResolutionMode } | null>(null);
   const lastErrorRetryableRef = useRef(false);
 
-  const mpEligible = claim ? canAttemptMercadoPagoRefund(claim.paymentMethod) : false;
+  const mpEligible = claim ? canAttemptMercadoPagoRefund(claim) : false;
   const maxAmount = claim ? Number.parseFloat(claim.amount) || 0 : 0;
 
   const form = useForm<FormValues>({

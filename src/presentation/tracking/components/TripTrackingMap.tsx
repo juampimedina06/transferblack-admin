@@ -1,42 +1,78 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
-import L, { type LatLngBoundsExpression, type LatLngExpression } from 'leaflet';
+import { Map, AdvancedMarker, Marker, Polyline, useMap } from '@vis.gl/react-google-maps';
 import { Locate } from 'lucide-react';
-import 'leaflet/dist/leaflet.css';
+import { GoogleMapsProvider } from '../../shared/googleMaps/GoogleMapsProvider';
+import { GOOGLE_MAPS_MAP_ID, supportsAdvancedMarkers } from '../../shared/googleMaps/googleMapsConfig';
+import { GOOGLE_MAPS_DARK_STYLE } from '../../shared/googleMaps/googleMapsDarkStyle';
 import type {
   TripTrackingDriverLocation,
   TripTrackingPoint,
   TripTrackingRoute,
 } from '../../../core/tracking/interfaces/trip-tracking.interface';
 
-const TILES_URL =
-  import.meta.env.VITE_MAP_TILES_URL || 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png';
+type DotColor = 'origin' | 'destination';
 
-const TILES_ATTRIBUTION = '&copy; OpenStreetMap contributors &copy; CARTO';
+const DOT_HEX: Record<DotColor, string> = {
+  origin: '#10B981', // emerald-500
+  destination: '#EF4444', // red-500
+};
 
-// Iconos propios via divIcon: el icono default de Leaflet se rompe con Vite
-// porque las rutas de sus PNG no se resuelven al empaquetar.
-function buildDotIcon(colorClassName: string): L.DivIcon {
-  return L.divIcon({
-    className: '',
-    html: `<span class="block w-4 h-4 rounded-full border-2 border-white shadow ${colorClassName}"></span>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
-  });
+const DOT_CLASS: Record<DotColor, string> = {
+  origin: 'bg-emerald-500',
+  destination: 'bg-red-500',
+};
+
+function DotMarkerContent({ color }: { color: DotColor }) {
+  return <span className={`block w-4 h-4 rounded-full border-2 border-white shadow ${DOT_CLASS[color]}`} />;
 }
 
-function buildCarIcon(): L.DivIcon {
-  return L.divIcon({
-    className: '',
-    html: `<span class="flex items-center justify-center w-8 h-8 rounded-full bg-obsidian border-2 border-champagne-gold shadow-lg text-champagne-gold text-base leading-none">🚗</span>`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-  });
+function CarMarkerContent() {
+  return (
+    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-obsidian border-2 border-champagne-gold shadow-lg text-champagne-gold text-base leading-none">
+      🚗
+    </span>
+  );
 }
 
-const originIcon = buildDotIcon('bg-emerald-500');
-const destinationIcon = buildDotIcon('bg-red-500');
-const carIcon = buildCarIcon();
+// Iconos propios via SVG en data URI: el icono default de Google Maps se usa como fallback
+// cuando no hay Map ID (sin AdvancedMarker), igual que el divIcon que reemplazaba al de Leaflet.
+function buildClassicDotIcon(color: DotColor): google.maps.Icon {
+  const hex = DOT_HEX[color];
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+    <circle cx="8" cy="8" r="6" fill="${hex}" stroke="#ffffff" stroke-width="2" />
+  </svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: { width: 16, height: 16 } as google.maps.Size,
+    anchor: { x: 8, y: 8 } as google.maps.Point,
+  };
+}
+
+function buildClassicCarIcon(): google.maps.Icon {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+    <circle cx="16" cy="16" r="15" fill="#0b0b0b" stroke="#D4AF37" stroke-width="2" />
+    <text x="16" y="21" font-size="15" text-anchor="middle">🚗</text>
+  </svg>`;
+  return {
+    url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
+    scaledSize: { width: 32, height: 32 } as google.maps.Size,
+    anchor: { x: 16, y: 16 } as google.maps.Point,
+  };
+}
+
+/** Patron de icono repetido que simula un trazo punteado (Polyline de Google no tiene dashArray nativo). */
+const DASHED_LINE_ICONS: google.maps.IconSequence[] = [
+  {
+    icon: {
+      path: 'M 0,-1 0,1',
+      strokeOpacity: 1,
+      strokeColor: '#D4AF37',
+      scale: 3,
+    } as google.maps.Symbol,
+    offset: '0',
+    repeat: '14px',
+  },
+];
 
 interface Props {
   origin: TripTrackingPoint | null;
@@ -45,27 +81,31 @@ interface Props {
   route: TripTrackingRoute | null;
 }
 
+interface TrackingMapControllerProps {
+  points: google.maps.LatLngLiteral[];
+  recenterRequestId: number;
+}
+
 /** Ajusta el encuadre una sola vez al cargar, y de nuevo cuando se pide "centrar". */
-function FitBounds({ points, recenterRequestId }: { points: LatLngExpression[]; recenterRequestId: number }) {
+function TrackingMapController({ points, recenterRequestId }: TrackingMapControllerProps) {
   const map = useMap();
   const hasFitOnce = useRef(false);
 
   useEffect(() => {
-    if (points.length === 0 || hasFitOnce.current) {
-      return;
-    }
-    map.fitBounds(points as LatLngBoundsExpression, { padding: [32, 32], maxZoom: 15 });
+    if (!map || points.length === 0 || hasFitOnce.current) return;
+    const bounds = new google.maps.LatLngBounds();
+    points.forEach((p) => bounds.extend(p));
+    map.fitBounds(bounds, 32);
     hasFitOnce.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points]);
+  }, [map, points]);
 
   useEffect(() => {
-    if (recenterRequestId === 0 || points.length === 0) {
-      return;
-    }
-    map.fitBounds(points as LatLngBoundsExpression, { padding: [32, 32], maxZoom: 15 });
+    if (!map || recenterRequestId === 0 || points.length === 0) return;
+    const bounds = new google.maps.LatLngBounds();
+    points.forEach((p) => bounds.extend(p));
+    map.fitBounds(bounds, 32);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recenterRequestId]);
+  }, [map, recenterRequestId]);
 
   return null;
 }
@@ -73,28 +113,28 @@ function FitBounds({ points, recenterRequestId }: { points: LatLngExpression[]; 
 export const TripTrackingMap: React.FC<Props> = ({ origin, destination, driverLocation, route }) => {
   const [recenterRequestId, setRecenterRequestId] = useState(0);
 
-  const points = useMemo<LatLngExpression[]>(() => {
-    const result: LatLngExpression[] = [];
-    if (origin) result.push([origin.latitude, origin.longitude]);
-    if (destination) result.push([destination.latitude, destination.longitude]);
-    if (driverLocation) result.push([driverLocation.latitude, driverLocation.longitude]);
+  const points = useMemo<google.maps.LatLngLiteral[]>(() => {
+    const result: google.maps.LatLngLiteral[] = [];
+    if (origin) result.push({ lat: origin.latitude, lng: origin.longitude });
+    if (destination) result.push({ lat: destination.latitude, lng: destination.longitude });
+    if (driverLocation) result.push({ lat: driverLocation.latitude, lng: driverLocation.longitude });
     return result;
   }, [origin, destination, driverLocation]);
 
-  const routeLine = useMemo<LatLngExpression[] | null>(() => {
+  const routeLine = useMemo<google.maps.LatLngLiteral[] | null>(() => {
     if (!route || route.coordinates.length === 0) {
       return null;
     }
-    return route.coordinates.flat().map(([lng, lat]) => [lat, lng] as LatLngExpression);
+    return route.coordinates.flat().map(([lng, lat]) => ({ lat, lng }));
   }, [route]);
 
-  const fallbackLine = useMemo<LatLngExpression[] | null>(() => {
+  const fallbackLine = useMemo<google.maps.LatLngLiteral[] | null>(() => {
     if (routeLine || !origin || !destination) {
       return null;
     }
     return [
-      [origin.latitude, origin.longitude],
-      [destination.latitude, destination.longitude],
+      { lat: origin.latitude, lng: origin.longitude },
+      { lat: destination.latitude, lng: destination.longitude },
     ];
   }, [routeLine, origin, destination]);
 
@@ -108,25 +148,58 @@ export const TripTrackingMap: React.FC<Props> = ({ origin, destination, driverLo
 
   return (
     <div className="relative h-full w-full rounded-xl overflow-hidden">
-      <MapContainer
-        center={points[0]}
-        zoom={14}
-        scrollWheelZoom
-        className="h-full w-full"
-        attributionControl
-      >
-        <TileLayer url={TILES_URL} attribution={TILES_ATTRIBUTION} />
-        <FitBounds points={points} recenterRequestId={recenterRequestId} />
+      <GoogleMapsProvider placeholderClassName="rounded-xl">
+        <Map
+          className="h-full w-full"
+          defaultCenter={points[0]}
+          defaultZoom={14}
+          mapId={GOOGLE_MAPS_MAP_ID}
+          styles={GOOGLE_MAPS_MAP_ID ? undefined : GOOGLE_MAPS_DARK_STYLE}
+          disableDefaultUI
+          zoomControl
+          gestureHandling="greedy"
+        >
+          <TrackingMapController points={points} recenterRequestId={recenterRequestId} />
 
-        {origin && <Marker position={[origin.latitude, origin.longitude]} icon={originIcon} />}
-        {destination && <Marker position={[destination.latitude, destination.longitude]} icon={destinationIcon} />}
-        {driverLocation && <Marker position={[driverLocation.latitude, driverLocation.longitude]} icon={carIcon} />}
+          {origin &&
+            (supportsAdvancedMarkers ? (
+              <AdvancedMarker position={{ lat: origin.latitude, lng: origin.longitude }}>
+                <DotMarkerContent color="origin" />
+              </AdvancedMarker>
+            ) : (
+              <Marker position={{ lat: origin.latitude, lng: origin.longitude }} icon={buildClassicDotIcon('origin')} />
+            ))}
 
-        {routeLine && <Polyline positions={routeLine} pathOptions={{ color: '#D4AF37', weight: 4 }} />}
-        {fallbackLine && (
-          <Polyline positions={fallbackLine} pathOptions={{ color: '#D4AF37', weight: 3, dashArray: '6 8' }} />
-        )}
-      </MapContainer>
+          {destination &&
+            (supportsAdvancedMarkers ? (
+              <AdvancedMarker position={{ lat: destination.latitude, lng: destination.longitude }}>
+                <DotMarkerContent color="destination" />
+              </AdvancedMarker>
+            ) : (
+              <Marker
+                position={{ lat: destination.latitude, lng: destination.longitude }}
+                icon={buildClassicDotIcon('destination')}
+              />
+            ))}
+
+          {driverLocation &&
+            (supportsAdvancedMarkers ? (
+              <AdvancedMarker position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}>
+                <CarMarkerContent />
+              </AdvancedMarker>
+            ) : (
+              <Marker
+                position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}
+                icon={buildClassicCarIcon()}
+              />
+            ))}
+
+          {routeLine && <Polyline path={routeLine} strokeColor="#D4AF37" strokeWeight={4} strokeOpacity={0.95} />}
+          {fallbackLine && (
+            <Polyline path={fallbackLine} strokeOpacity={0} icons={DASHED_LINE_ICONS} strokeColor="#D4AF37" />
+          )}
+        </Map>
+      </GoogleMapsProvider>
 
       <button
         type="button"

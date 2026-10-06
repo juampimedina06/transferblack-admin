@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check, MapPin } from 'lucide-react';
 import { Input } from '../../components/common';
 import { useAddressAutocomplete } from '../hooks/useAddressAutocomplete';
+import type { PlaceSuggestion } from '../../../core/places/places.api';
 import type { ScheduledTripPointFormValues } from '../../../core/scheduledTrips/scheduledTrip.api';
 
 interface AddressAutocompleteFieldProps {
@@ -12,10 +13,14 @@ interface AddressAutocompleteFieldProps {
 }
 
 /**
- * Campo de direccion con autocompletado resuelto por el backend (el admin
- * ya no pega directo a Geoapify desde el navegador). Si el backend responde
- * 503 (`PLACES_PROVIDER_UNAVAILABLE`) se muestra el aviso y se habilitan dos
- * campos numericos manuales como alternativa, para no bloquear el alta.
+ * Campo de direccion con autocompletado de Google resuelto por el backend
+ * (el admin no pega directo a Google desde el navegador). El autocompletado
+ * no trae coordenadas: al elegir una sugerencia se pide el detalle
+ * (`useAddressAutocomplete().selectPlace`), que cierra la sesion y recien
+ * ahi devuelve `lat`/`lng`. Si el backend responde 503
+ * (`PLACES_PROVIDER_UNAVAILABLE`) o 429 (`RATE_LIMIT_EXCEEDED`) se muestra el
+ * aviso correspondiente; el 503 habilita dos campos numericos manuales como
+ * alternativa, para no bloquear el alta.
  */
 const isValidLat = (lat: number): boolean => Number.isFinite(lat) && lat >= -90 && lat <= 90;
 const isValidLng = (lng: number): boolean => Number.isFinite(lng) && lng >= -180 && lng <= 180;
@@ -23,9 +28,10 @@ const isValidLng = (lng: number): boolean => Number.isFinite(lng) && lng >= -180
 export const AddressAutocompleteField: React.FC<AddressAutocompleteFieldProps> = ({ label, value, onChange, error }) => {
   const [query, setQuery] = useState(value?.address ?? '');
   const [isOpen, setIsOpen] = useState(false);
+  const [isResolving, setIsResolving] = useState(false);
   const [manualLat, setManualLat] = useState(value?.lat !== undefined ? String(value.lat) : '');
   const [manualLng, setManualLng] = useState(value?.lng !== undefined ? String(value.lng) : '');
-  const { results, isLoading, isUnavailable } = useAddressAutocomplete(query);
+  const { results, isLoading, isUnavailable, rateLimitRetryAfter, selectPlace } = useAddressAutocomplete(query);
 
   useEffect(() => {
     const timer = setTimeout(() => setQuery(value?.address ?? ''), 0);
@@ -44,6 +50,16 @@ export const AddressAutocompleteField: React.FC<AddressAutocompleteFieldProps> =
     const isComplete =
       address !== '' && nextLat.trim() !== '' && nextLng.trim() !== '' && isValidLat(lat) && isValidLng(lng);
     onChange(isComplete ? { address, lat, lng } : null);
+  };
+
+  const handleSelect = async (suggestion: PlaceSuggestion) => {
+    setIsOpen(false);
+    setIsResolving(true);
+    const place = await selectPlace(suggestion);
+    setIsResolving(false);
+    if (!place) return;
+    onChange({ address: place.address, lat: place.lat, lng: place.lng, place_id: place.placeId });
+    setQuery(place.address);
   };
 
   return (
@@ -67,28 +83,32 @@ export const AddressAutocompleteField: React.FC<AddressAutocompleteFieldProps> =
 
         {isOpen && query.trim().length >= 3 && (
           <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-xl dark:border-dark-border dark:bg-dark-surface">
-            {isLoading ? (
-              <p className="px-3 py-2 text-xs text-gray-400">Buscando...</p>
+            {isLoading || isResolving ? (
+              <p className="px-3 py-2 text-xs text-gray-400">{isResolving ? 'Buscando la direccion...' : 'Buscando...'}</p>
             ) : isUnavailable ? (
               <p className="px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
                 El buscador de direcciones no está disponible en este momento.
               </p>
+            ) : rateLimitRetryAfter !== null ? (
+              <p className="px-3 py-2 text-xs text-amber-600 dark:text-amber-400">
+                Demasiadas búsquedas, esperá {rateLimitRetryAfter} segundo{rateLimitRetryAfter === 1 ? '' : 's'} e
+                intentá de nuevo.
+              </p>
             ) : results.length === 0 ? (
               <p className="px-3 py-2 text-xs text-gray-400">Sin resultados.</p>
             ) : (
-              results.map((place) => (
+              results.map((suggestion) => (
                 <button
-                  key={place.placeId}
+                  key={suggestion.placeId}
                   type="button"
-                  onClick={() => {
-                    onChange({ address: place.address, lat: place.lat, lng: place.lng, place_id: place.placeId });
-                    setQuery(place.address);
-                    setIsOpen(false);
-                  }}
+                  onClick={() => handleSelect(suggestion)}
                   className="block w-full truncate px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-white/5"
-                  title={place.address}
+                  title={suggestion.description || suggestion.primaryText}
                 >
-                  {place.address}
+                  <span className="font-medium">{suggestion.primaryText}</span>
+                  {suggestion.secondaryText && (
+                    <span className="text-gray-400"> · {suggestion.secondaryText}</span>
+                  )}
                 </button>
               ))
             )}

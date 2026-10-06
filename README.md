@@ -11,7 +11,7 @@ El frontend está desarrollado bajo estándares modernos de rendimiento, tipado 
 - **Framework**: [React 19](https://react.dev/) sobre [Vite 8](https://vitejs.dev/)
 - **Lenguaje**: [TypeScript](https://www.typescriptlang.org/) (configuración estricta)
 - **Estilos**: [Tailwind CSS v3](https://tailwindcss.com/) con soporte nativo de modo oscuro (`class`) y paleta de diseño Transfer Black (`obsidian`, `champagne-gold`, `charcoal`, `platinum`)
-- **Mapeo en Vivo**: [Leaflet](https://leafletjs.com/) + [React Leaflet v5](https://react-leaflet.js.org/)
+- **Mapeo en Vivo**: [Google Maps JavaScript API](https://developers.google.com/maps/documentation/javascript) vía [@vis.gl/react-google-maps](https://visgl.github.io/react-google-maps/)
 - **Tablas de Datos**: [TanStack Table v8](https://tanstack.com/table/latest) con paginación, ordenamiento y renderizado optimizado
 - **Estado Asíncrono de Servidor**: [TanStack Query v5](https://tanstack.com/query/latest) con revalidación en segundo plano, cache distribuido y polling
 - **Estado Global de Cliente**: [Zustand](https://github.com/pmndrs/zustand) con persistencia en `localStorage` (sesión y preferencias de interfaz)
@@ -89,7 +89,7 @@ admin-web/
 │   │   │   ├── hooks/            # useTrips, useTripDetail, useTripStatusHistory
 │   │   │   └── TripsScreen.tsx
 │   │   ├── tracking/             # Pantalla pública de seguimiento (/track)
-│   │   │   └── components/       # TripTrackingMap (Leaflet), DriverCard, TripStatusTimeline
+│   │   │   └── components/       # TripTrackingMap (Google Maps), DriverCard, TripStatusTimeline
 │   │   ├── screens/              # Páginas principales (Login, ForgotPasswordScreen, Dashboard, TrackTrip)
 │   │   ├── providers/            # TanStack QueryClientProvider
 │   │   └── store/                # Stores de UI (useUIStore para Sidebar y tema)
@@ -159,19 +159,19 @@ admin-web/
 - **Alcance**: reservas que la agencia arma por un pasajero (acordadas por WhatsApp) y cobra **por adelantado**; el backend las activa solo, cerca de la hora de retiro (`scheduled-trips` del backend, no hay `GET /admin/scheduled-trips/:id`: el detalle siempre sale del listado ya cargado).
 - **Listado**: tabla con hora de retiro, pasajero, origen → destino, precio acordado, estado del viaje y del cobro (`Pagado` / `Pendiente` / `Requiere reembolso`) y chofer reservado. Filtros por estado y rango de fechas, y resalte de filas sin cobrar cerca de la hora de retiro o con una alerta abierta.
 - **Alertas**: panel chico con las alertas operativas nuevas (`scheduled_trip_driver_unavailable`, `scheduled_trip_unpaid`, `scheduled_trip_unaccepted`, `scheduled_trip_duplicate_payment`); el panel todavía no tiene una pantalla general de alertas.
-- **Alta**: pasajero por email, origen y destino con autocompletado de direcciones (Geoapify, mismo proveedor que la app del pasajero y el backend) con vista previa en el mapa, fecha y hora de retiro (mínimo de anticipación validado en el cliente y por el servidor), precio acordado y chofer opcional buscable entre los choferes aprobados (`/admin/applications?status=approved`: no existe un endpoint que liste choferes aprobados con vehículo).
+- **Alta**: pasajero por email, origen y destino con autocompletado de direcciones de Google (Places API, con sesión y detalle recién al elegir una sugerencia) con vista previa en el mapa, fecha y hora de retiro (mínimo de anticipación validado en el cliente y por el servidor), precio acordado y chofer opcional buscable entre los choferes aprobados (`/admin/applications?status=approved`: no existe un endpoint que liste choferes aprobados con vehículo).
 - **Detalle**: edición de hora, chofer y notas mientras el viaje sigue `scheduled`, cancelación con motivo, y la sección de cobro (link de Checkout Pro o transferencia registrada, con clave de idempotencia nueva en cada link) con historial. Si el viaje ya se activó, un botón lleva al seguimiento normal en `/viajes`.
 
 ### 7. 📍 Seguimiento Público de Viajes (`/track?token=...`)
 - **Acceso para Invitados**: Pantalla pública optimizada para terceros que no requieren inicio de sesión, accesible vía enlaces distribuidos por WhatsApp o email.
 - **Cliente HTTP Autónomo (`publicApi`)**: Consume `GET /rides/track/{token}` sin adjuntar credenciales ni disparar cierres de sesión del panel.
-- **Mapa en Vivo**: Representación cartográfica interactiva con Leaflet mostrando la ubicación del móvil, punto de partida, punto de destino y trazado de ruta.
+- **Mapa en Vivo**: Representación cartográfica interactiva con Google Maps mostrando la ubicación del móvil, punto de partida, punto de destino y trazado de ruta.
 - **Línea de Tiempo**: Estados secuenciales del viaje (`requested`, `driver_assigned`, `driver_arrived`, `in_progress`, `completed`).
 - **Ficha del Conductor**: Visualización del nombre del conductor, calificación, modelo de vehículo y patente.
 - **Sondeo Inteligente**: Polling automático cada 5 segundos mientras el viaje permanezca activo, deteniéndose ante estados terminales.
 
 ### 7. 🗺 Mapa en Vivo y Despacho Operativo (`/mapa`)
-- **Monitoreo de Flota en Tiempo Real**: Visualización interactiva sobre mapa cartográfico oscuro (CARTO Dark Matter) sin restricciones ni bloqueos de servidores voluntarios.
+- **Monitoreo de Flota en Tiempo Real**: Visualización interactiva sobre Google Maps con estilo oscuro (Cloud Styling con Map ID, o JSON local si no hay Map ID configurado).
 - **Marcadores Vehiculares por Estado**:
   - 🟢 **Verde brillante**: Conductor en línea y disponible para recibir viajes.
   - 🟡 **Ámbar / Dorado brillante**: Conductor ocupado en viaje activo.
@@ -210,9 +210,10 @@ npm install
 Crear un archivo `.env` en la raíz del proyecto a partir de `.env.example`:
 ```env
 VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
-VITE_MAP_TILES_URL=
+VITE_GOOGLE_MAPS_API_KEY=
+VITE_GOOGLE_MAPS_MAP_ID=
 ```
-> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet. El autocompletado de direcciones del alta de un viaje reservado no usa una variable `VITE_*`: lo resuelve el backend (`GET /admin/places/autocomplete`), que necesita `GEOAPIFY_API_KEY` configurada del lado del servidor; si el backend no la tiene o el proveedor no responde, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
+> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_GOOGLE_MAPS_API_KEY` habilita los mapas del panel (`LiveMapCanvas` en `/mapa`, `TripTrackingMap` en `/track` y en los drawers/modales de viajes); es pública por naturaleza (queda en el bundle del navegador) y se restringe en Google Cloud Console por referente HTTP y a la Maps JavaScript API — sin ella, cada mapa muestra un aviso ("Mapa no configurado") en vez de romper la pantalla. `VITE_GOOGLE_MAPS_MAP_ID` es opcional: con un Map ID (Cloud Styling) el panel usa `AdvancedMarker` y el estilo oscuro se define en la consola de Google Cloud; sin Map ID, cae a marcadores clásicos (`Marker` con icono SVG) y a un estilo oscuro JSON local (`src/presentation/shared/googleMaps/googleMapsDarkStyle.ts`). El autocompletado de direcciones del alta de un viaje reservado no usa una variable `VITE_*`: lo resuelve el backend (`GET /places/autocomplete` y `GET /places/details/:placeId`, con fallback a `/admin/places/...`), que necesita `GOOGLE_MAPS_API_KEY` configurada del lado del servidor; si el backend no la tiene o el proveedor no responde, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
 
 ### 3. Ejecutar en modo desarrollo:
 ```bash

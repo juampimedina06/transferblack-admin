@@ -4,6 +4,9 @@ import Login from './presentation/screens/Login';
 import ForgotPasswordScreen from './presentation/screens/ForgotPasswordScreen';
 import Dashboard from './presentation/screens/Dashboard';
 import TrackTrip from './presentation/screens/TrackTrip';
+import TermsScreen from './presentation/legal/TermsScreen';
+import PrivacyScreen from './presentation/legal/PrivacyScreen';
+import ReturnToAppScreen from './presentation/payments/ReturnToAppScreen';
 import ProtectedRoute from './presentation/components/ProtectedRoute';
 import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
 import DriversScreen from './presentation/drivers/DriversScreen';
@@ -29,6 +32,11 @@ function App() {
 
         {/* Publica: la abre un invitado sin sesion desde un link de WhatsApp/email */}
         <Route path="/track" element={<TrackTrip />} />
+
+        {/* Publicas: legales (link en la app) y puente de vuelta desde Mercado Pago */}
+        <Route path="/terminos" element={<TermsScreen />} />
+        <Route path="/privacidad" element={<PrivacyScreen />} />
+        <Route path="/volver-a-la-app" element={<ReturnToAppScreen />} />
 
         {/* Protected Routes */}
         <Route element={<ProtectedRoute />}>

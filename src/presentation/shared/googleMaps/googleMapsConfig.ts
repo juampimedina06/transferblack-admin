@@ -9,11 +9,11 @@
  * Styling y es requisito de Google para usar `AdvancedMarker`. Sin Map ID, los
  * mapas usan `Marker` clasico + estilos JSON locales (ver `googleMapsDarkStyle.ts`).
  */
-export const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as
+export const GOOGLE_MAPS_API_KEY = import.meta.env.CLIENT_VITE_GOOGLE_MAPS_API_KEY as
   | string
   | undefined;
 
-export const GOOGLE_MAPS_MAP_ID = import.meta.env.VITE_GOOGLE_MAPS_MAP_ID as
+export const GOOGLE_MAPS_MAP_ID = import.meta.env.CLIENT_VITE_GOOGLE_MAPS_MAP_ID as
   | string
   | undefined;
 

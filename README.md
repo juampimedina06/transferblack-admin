@@ -159,7 +159,7 @@ admin-web/
 - **Alcance**: reservas que la agencia arma por un pasajero (acordadas por WhatsApp) y cobra **por adelantado**; el backend las activa solo, cerca de la hora de retiro (`scheduled-trips` del backend, no hay `GET /admin/scheduled-trips/:id`: el detalle siempre sale del listado ya cargado).
 - **Listado**: tabla con hora de retiro, pasajero, origen → destino, precio acordado, estado del viaje y del cobro (`Pagado` / `Pendiente` / `Requiere reembolso`) y chofer reservado. Filtros por estado y rango de fechas, y resalte de filas sin cobrar cerca de la hora de retiro o con una alerta abierta.
 - **Alertas**: panel chico con las alertas operativas nuevas (`scheduled_trip_driver_unavailable`, `scheduled_trip_unpaid`, `scheduled_trip_unaccepted`, `scheduled_trip_duplicate_payment`); el panel todavía no tiene una pantalla general de alertas.
-- **Alta**: pasajero por email, origen y destino con autocompletado de direcciones (Geoapify, mismo proveedor que la app del pasajero y el backend) con vista previa en el mapa, fecha y hora de retiro (mínimo de anticipación validado en el cliente y por el servidor), precio acordado y chofer opcional buscable entre los choferes aprobados (`/admin/applications?status=approved`: no existe un endpoint que liste choferes aprobados con vehículo).
+- **Alta**: pasajero por email, origen y destino con autocompletado de direcciones de Google (Places API, con sesión y detalle recién al elegir una sugerencia) con vista previa en el mapa, fecha y hora de retiro (mínimo de anticipación validado en el cliente y por el servidor), precio acordado y chofer opcional buscable entre los choferes aprobados (`/admin/applications?status=approved`: no existe un endpoint que liste choferes aprobados con vehículo).
 - **Detalle**: edición de hora, chofer y notas mientras el viaje sigue `scheduled`, cancelación con motivo, y la sección de cobro (link de Checkout Pro o transferencia registrada, con clave de idempotencia nueva en cada link) con historial. Si el viaje ya se activó, un botón lleva al seguimiento normal en `/viajes`.
 
 ### 7. 📍 Seguimiento Público de Viajes (`/track?token=...`)
@@ -212,7 +212,7 @@ Crear un archivo `.env` en la raíz del proyecto a partir de `.env.example`:
 VITE_API_URL=https://transfer-black-api.onrender.com/api/v1
 VITE_MAP_TILES_URL=
 ```
-> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet. El autocompletado de direcciones del alta de un viaje reservado no usa una variable `VITE_*`: lo resuelve el backend (`GET /admin/places/autocomplete`), que necesita `GEOAPIFY_API_KEY` configurada del lado del servidor; si el backend no la tiene o el proveedor no responde, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
+> **Nota técnica:** `VITE_API_URL` debe incluir la base de versión `/api/v1`. `VITE_MAP_TILES_URL` es opcional para proveedores de cartografía personalizados en Leaflet. El autocompletado de direcciones del alta de un viaje reservado no usa una variable `VITE_*`: lo resuelve el backend (`GET /places/autocomplete` y `GET /places/details/:placeId`, con fallback a `/admin/places/...`), que necesita `GOOGLE_MAPS_API_KEY` configurada del lado del servidor; si el backend no la tiene o el proveedor no responde, ese formulario muestra un aviso y permite ingresar latitud/longitud a mano.
 
 ### 3. Ejecutar en modo desarrollo:
 ```bash

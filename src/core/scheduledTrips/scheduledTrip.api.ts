@@ -117,9 +117,10 @@ export async function getScheduledTrips(
 
 // --- Alta ---------------------------------------------------------------------
 
-// Lo elige `AddressAutocompleteField` (autocompletado de Geoapify o, sin
-// API key, los campos manuales de lat/lng): no hay un zod schema para esto
-// porque nunca se tipea a mano, siempre sale ya armado del selector.
+// Lo elige `AddressAutocompleteField` (autocompletado de Google con detalle
+// al elegir, o si el proveedor esta caido, los campos manuales de lat/lng):
+// no hay un zod schema para esto porque nunca se tipea a mano, siempre sale
+// ya armado del selector.
 export interface ScheduledTripPointFormValues {
   address: string;
   lat: number;

@@ -448,12 +448,21 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                           addressText: 'Aeropuerto Ambrosio Taravella',
                         }
                   }
-                  driverLocation={{
-                    latitude: -31.3900,
-                    longitude: -64.1900,
-                    updatedAt: new Date().toISOString(),
-                  }}
-                  route={null}
+                  driverLocation={
+                    trip.currentDriverLocation
+                      ? {
+                          latitude: trip.currentDriverLocation.latitude,
+                          longitude: trip.currentDriverLocation.longitude,
+                          updatedAt: new Date().toISOString(),
+                        }
+                      : null
+                  }
+                  route={
+                    trip.routeCoordinates && trip.routeCoordinates.length > 0
+                      ? { type: 'MultiLineString', coordinates: [trip.routeCoordinates] }
+                      : null
+                  }
+                  driverLocationIntervalMs={3000}
                 />
               </div>
 

@@ -283,9 +283,13 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
             {!showRawHistory ? (
               <div className="space-y-0 relative pl-2 py-1">
                 {STATUS_PROGRESSION.map((step, idx) => {
-                  const isCompleted = currentStepIndex > idx;
-                  const isActive = currentStepIndex === idx;
                   const isCancelled = trip.status === 'cancelled';
+                  // El ultimo paso ("Viaje completado") no tiene un paso siguiente que lo
+                  // deje marcado como hecho por `currentStepIndex > idx`: sin este caso
+                  // especial, un viaje ya finalizado se mostraba "en curso" para siempre.
+                  const isFinished = trip.status === 'completed';
+                  const isCompleted = currentStepIndex > idx || (isFinished && currentStepIndex === idx);
+                  const isActive = currentStepIndex === idx && !isFinished;
                   const isLast = idx === STATUS_PROGRESSION.length - 1;
 
                   const stepTime = getStepTimestamp(step.status, trip);

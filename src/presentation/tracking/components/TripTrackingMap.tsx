@@ -4,6 +4,7 @@ import { Locate } from 'lucide-react';
 import { GoogleMapsProvider } from '../../shared/googleMaps/GoogleMapsProvider';
 import { GOOGLE_MAPS_MAP_ID, supportsAdvancedMarkers } from '../../shared/googleMaps/googleMapsConfig';
 import { GOOGLE_MAPS_DARK_STYLE } from '../../shared/googleMaps/googleMapsDarkStyle';
+import { useAnimatedDriverPosition } from '../../shared/googleMaps/useAnimatedDriverPosition';
 import type {
   TripTrackingDriverLocation,
   TripTrackingPoint,
@@ -26,10 +27,15 @@ function DotMarkerContent({ color }: { color: DotColor }) {
   return <span className={`block w-4 h-4 rounded-full border-2 border-white shadow ${DOT_CLASS[color]}`} />;
 }
 
-function CarMarkerContent() {
+function CarMarkerContent({ rotation }: { rotation: number }) {
   return (
     <span className="flex items-center justify-center w-8 h-8 rounded-full bg-obsidian border-2 border-champagne-gold shadow-lg text-champagne-gold text-base leading-none">
-      🚗
+      <span
+        className="block transition-transform duration-150 ease-linear"
+        style={{ transform: `rotate(${rotation}deg)` }}
+      >
+        🚗
+      </span>
     </span>
   );
 }
@@ -48,10 +54,13 @@ function buildClassicDotIcon(color: DotColor): google.maps.Icon {
   };
 }
 
-function buildClassicCarIcon(): google.maps.Icon {
+function buildClassicCarIcon(rotation: number): google.maps.Icon {
+  // El icono `Icon` (imagen) no soporta `rotation` como un `Symbol`: se hornea
+  // el giro adentro del propio SVG, rotando solo el glifo del auto alrededor
+  // del centro del circulo (16,16), que es el mismo punto que ancla el marker.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
     <circle cx="16" cy="16" r="15" fill="#0b0b0b" stroke="#D4AF37" stroke-width="2" />
-    <text x="16" y="21" font-size="15" text-anchor="middle">🚗</text>
+    <text x="16" y="21" font-size="15" text-anchor="middle" transform="rotate(${rotation} 16 16)">🚗</text>
   </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
@@ -79,6 +88,8 @@ interface Props {
   destination: TripTrackingPoint | null;
   driverLocation: TripTrackingDriverLocation | null;
   route: TripTrackingRoute | null;
+  /** Cada cuanto llega una posicion nueva (sondeo REST): define cuanto dura la animacion entre un punto y el siguiente. */
+  driverLocationIntervalMs?: number;
 }
 
 interface TrackingMapControllerProps {
@@ -110,8 +121,26 @@ function TrackingMapController({ points, recenterRequestId }: TrackingMapControl
   return null;
 }
 
-export const TripTrackingMap: React.FC<Props> = ({ origin, destination, driverLocation, route }) => {
+export const TripTrackingMap: React.FC<Props> = ({
+  origin,
+  destination,
+  driverLocation,
+  route,
+  driverLocationIntervalMs = 5000,
+}) => {
   const [recenterRequestId, setRecenterRequestId] = useState(0);
+
+  // El auto se anima entre el punto anterior y el nuevo en vez de saltar: cada
+  // sondeo trae una posicion fresca, pero sin esto se dibujaba de un lugar al
+  // otro de un cuadro a otro (igual se veia "no ir" por donde va de verdad).
+  const driverTarget = useMemo(
+    () => (driverLocation ? { latitude: driverLocation.latitude, longitude: driverLocation.longitude } : null),
+    [driverLocation]
+  );
+  const { coordinate: animatedDriverPosition, rotation: driverRotation } = useAnimatedDriverPosition(
+    driverTarget,
+    driverLocationIntervalMs
+  );
 
   const points = useMemo<google.maps.LatLngLiteral[]>(() => {
     const result: google.maps.LatLngLiteral[] = [];
@@ -182,15 +211,17 @@ export const TripTrackingMap: React.FC<Props> = ({ origin, destination, driverLo
               />
             ))}
 
-          {driverLocation &&
+          {animatedDriverPosition &&
             (supportsAdvancedMarkers ? (
-              <AdvancedMarker position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}>
-                <CarMarkerContent />
+              <AdvancedMarker
+                position={{ lat: animatedDriverPosition.latitude, lng: animatedDriverPosition.longitude }}
+              >
+                <CarMarkerContent rotation={driverRotation} />
               </AdvancedMarker>
             ) : (
               <Marker
-                position={{ lat: driverLocation.latitude, lng: driverLocation.longitude }}
-                icon={buildClassicCarIcon()}
+                position={{ lat: animatedDriverPosition.latitude, lng: animatedDriverPosition.longitude }}
+                icon={buildClassicCarIcon(driverRotation)}
               />
             ))}
 

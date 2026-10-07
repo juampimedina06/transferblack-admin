@@ -83,7 +83,10 @@ export const getTripDetail = async (tripId: string): Promise<TripDetail> => {
     paymentStatus: raw.payment_status || raw.paymentStatus || null,
     payment: raw.payment || null,
     fareBreakdown: raw.fare_breakdown || raw.fareBreakdown || null,
-    currentDriverLocation: raw.currentDriverLocation || null,
+    // El backend hoy no expone ninguno de los dos en `GET /rides/:id` (si en algun
+    // momento lo suma, lo mas probable es snake_case como el resto del contrato).
+    currentDriverLocation: raw.current_driver_location || raw.currentDriverLocation || null,
+    routeCoordinates: raw.route_coordinates || raw.routeCoordinates || undefined,
   };
 
   return detail;

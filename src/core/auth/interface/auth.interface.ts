@@ -28,18 +28,21 @@ export class AuthError extends Error {
   status?: number;
   code?: string;
   details?: unknown;
+  retryAfter?: number;
 
   constructor(
     message: string,
     status?: number,
     code?: string,
-    details?: unknown
+    details?: unknown,
+    retryAfter?: number
   ) {
     super(message);
     this.name = 'AuthError';
     this.status = status;
     this.code = code;
     this.details = details;
+    this.retryAfter = retryAfter;
   }
 }
 

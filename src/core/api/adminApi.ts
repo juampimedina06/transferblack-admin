@@ -25,6 +25,35 @@ adminApi.interceptors.request.use(
   }
 );
 
+export const extractRetryAfterSeconds = (error: unknown): number | null => {
+  if (!axios.isAxiosError(error)) return null;
+
+  // 1. Cabecera Retry-After de la respuesta HTTP
+  const retryAfterHeader =
+    error.response?.headers?.['retry-after'] ??
+    (typeof error.response?.headers?.get === 'function'
+      ? error.response.headers.get('retry-after')
+      : undefined);
+
+  if (retryAfterHeader !== undefined && retryAfterHeader !== null) {
+    const parsed = parseInt(String(retryAfterHeader), 10);
+    if (!Number.isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  // 2. Fallback de resiliencia: detalles en cuerpo JSON si CORS oculta la cabecera
+  const details = error.response?.data?.error?.details as
+    | { retry_after_seconds?: number }
+    | undefined;
+
+  if (typeof details?.retry_after_seconds === 'number' && details.retry_after_seconds > 0) {
+    return details.retry_after_seconds;
+  }
+
+  return null;
+};
+
 adminApi.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -33,6 +62,11 @@ adminApi.interceptors.response.use(
       if (!isLoginRequest) {
         console.warn("Token expired or invalid, logging out");
         useAuthStore.getState().logout();
+      }
+    } else if (error.response?.status === 429) {
+      const retryAfter = extractRetryAfterSeconds(error);
+      if (retryAfter !== null) {
+        (error as { retryAfter?: number }).retryAfter = retryAfter;
       }
     }
     return Promise.reject(error);

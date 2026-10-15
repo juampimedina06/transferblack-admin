@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -21,6 +21,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 const Login = () => {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [errorMsg, setErrorMsg] = useState('');
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
@@ -34,11 +35,22 @@ const Login = () => {
     resolver: zodResolver(loginSchema),
   });
 
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+
+    const timer = setInterval(() => {
+      setLockoutSeconds((prev) => (prev <= 1 ? 0 : prev - 1));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [lockoutSeconds]);
+
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
   const onSubmit = async (data: LoginFormValues) => {
+    if (lockoutSeconds > 0) return;
     setErrorMsg('');
     try {
       const response = await authActions.login(data.email, data.password);
@@ -46,6 +58,12 @@ const Login = () => {
       navigate('/dashboard');
     } catch (error: unknown) {
       if (error instanceof AuthError) {
+        if (error.status === 429) {
+          const seconds = error.retryAfter && error.retryAfter > 0 ? error.retryAfter : 60;
+          setLockoutSeconds(seconds);
+          setErrorMsg('');
+          return;
+        }
         setErrorMsg(error.message);
       } else {
         setErrorMsg('Error al intentar iniciar sesión. Intente más tarde.');
@@ -119,11 +137,15 @@ const Login = () => {
             <p className="text-gray-500 dark:text-gray-400 text-sm">Usá tu cuenta de operaciones de Transfer Black.</p>
           </div>
 
-          {errorMsg && (
+          {lockoutSeconds > 0 ? (
+            <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-lg text-sm text-center border border-red-200 dark:border-red-800/40">
+              Demasiados intentos fallidos. Intente nuevamente en {lockoutSeconds} segundos
+            </div>
+          ) : errorMsg ? (
             <div className="mb-6 p-3 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-lg text-sm text-center border border-red-200 dark:border-red-800/40">
               {errorMsg}
             </div>
-          )}
+          ) : null}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input
@@ -166,9 +188,10 @@ const Login = () => {
               fullWidth
               size="lg"
               isLoading={isSubmitting}
+              disabled={isSubmitting || lockoutSeconds > 0}
               className="mt-2 font-bold"
             >
-              Ingresar
+              {lockoutSeconds > 0 ? `Reintentar en ${lockoutSeconds}s` : 'Ingresar'}
             </Button>
           </form>
 

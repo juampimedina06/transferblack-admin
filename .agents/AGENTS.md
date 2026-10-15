@@ -90,3 +90,9 @@
 - Usar el sistema de theming ya definido en el proyecto (tokens de color, variables de Tailwind con `dark:`, o el theme provider que corresponda), no valores sueltos por componente.
 - Antes de dar por terminada una tarea, verificar visualmente (o mentalmente si no hay forma de togglear) que el componente se ve bien en ambos temas: contraste de texto, bordes, iconos, estados (hover/focus/disabled) y sombras.
 - Si el proyecto no tiene aún un token o color definido para un caso nuevo, no inventar uno suelto: agregarlo al sistema de theming centralizado (config de Tailwind, theme file, etc.) para que quede disponible para todos.
+
+## Cierre de tareas y Pull Requests
+- Al finalizar cualquier tarea o feature solicitada por el usuario:
+  - Ejecutar siempre `git add .` y crear el commit correspondiente siguiendo la convención de `conventional commits` (sin autoría de IA ni `Co-Authored-By`).
+  - **Nunca hacer push** (`git push`) salvo indicación expresa del usuario.
+  - Proporcionar siempre la propuesta de Pull Request formateada en Markdown de GitHub (Título semántico, Descripción/Motivación, Cambios Principales y Checklist de Validación).

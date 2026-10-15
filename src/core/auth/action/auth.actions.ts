@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { adminApi } from '../../api/adminApi';
+import { adminApi, extractRetryAfterSeconds } from '../../api/adminApi';
 import type {
   ApiErrorResponse,
   AuthResponse,
@@ -13,13 +13,28 @@ const handleApiError = (error: unknown, fallbackMessage: string): never => {
   if (error instanceof AuthError) {
     throw error;
   }
+  const retryAfter =
+    (error as { retryAfter?: number })?.retryAfter ??
+    extractRetryAfterSeconds(error) ??
+    undefined;
+
   if (axios.isAxiosError<ApiErrorResponse>(error) && error.response?.data?.error) {
     const apiError = error.response.data.error;
     throw new AuthError(
       apiError.message || fallbackMessage,
       error.response.status,
       apiError.code,
-      apiError.details
+      apiError.details,
+      retryAfter
+    );
+  }
+  if (axios.isAxiosError(error) && error.response?.status === 429) {
+    throw new AuthError(
+      fallbackMessage,
+      429,
+      'RATE_LIMIT_EXCEEDED',
+      error.response.data,
+      retryAfter
     );
   }
   if (error instanceof Error) {

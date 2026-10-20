@@ -11,13 +11,14 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
+  user: authStorage.getUser(),
   isAuthenticated: !!authStorage.getAccessToken(),
   
   setSession: (authData: AuthResponse) => {
     const { profile, tokens } = authData.data;
 
     authStorage.setTokens(tokens.access_token, tokens.refresh_token);
+    authStorage.setUser(profile);
     
     set({
       user: profile,
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   setUser: (userData: UserProfile) => {
+    authStorage.setUser(userData);
     set({ user: userData });
   },
 
@@ -37,3 +39,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   }
 }));
+

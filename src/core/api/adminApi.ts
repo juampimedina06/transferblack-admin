@@ -54,21 +54,97 @@ export const extractRetryAfterSeconds = (error: unknown): number | null => {
   return null;
 };
 
+let isRefreshing = false;
+let failedQueue: {
+  resolve: (value?: unknown) => void;
+  reject: (reason?: unknown) => void;
+}[] = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 adminApi.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      const isLoginRequest = error.config?.url?.includes('/auth/login');
-      if (!isLoginRequest) {
-        console.warn("Token expired or invalid, logging out");
-        useAuthStore.getState().logout();
+  async (error) => {
+    const originalRequest = error.config;
+    const status = error.response?.status;
+
+    if (
+      status === 401 &&
+      originalRequest &&
+      !originalRequest._retry &&
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/refresh')
+    ) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            return adminApi(originalRequest);
+          })
+          .catch((err) => Promise.reject(err));
       }
-    } else if (error.response?.status === 429) {
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const refreshToken = authStorage.getRefreshToken();
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
+
+        const refreshResponse = await axios.post(
+          `${import.meta.env.VITE_API_URL}/auth/refresh`,
+          { refresh_token: refreshToken },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
+        const tokens =
+          refreshResponse.data?.data?.tokens || refreshResponse.data?.tokens;
+        const newAccessToken = tokens?.access_token;
+        const newRefreshToken = tokens?.refresh_token;
+
+        if (!newAccessToken) {
+          throw new Error('No access token returned from refresh');
+        }
+
+        authStorage.setTokens(newAccessToken, newRefreshToken || refreshToken);
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        }
+
+        processQueue(null, newAccessToken);
+        return adminApi(originalRequest);
+      } catch (refreshErr) {
+        processQueue(refreshErr, null);
+        console.warn('Session expired and refresh failed, logging out');
+        useAuthStore.getState().logout();
+        return Promise.reject(refreshErr);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    if (status === 429) {
       const retryAfter = extractRetryAfterSeconds(error);
       if (retryAfter !== null) {
         (error as { retryAfter?: number }).retryAfter = retryAfter;
       }
     }
+
     return Promise.reject(error);
   }
 );

@@ -11,12 +11,13 @@ import {
   AlertTriangle,
   ArrowRight,
   ShieldCheck,
+  Clock,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Link } from 'react-router-dom';
 import type { AdminPayoutItem } from '../../../core/payouts/interfaces/payout.interface';
-import { PayoutBadge } from './PayoutBadge';
+import { PayoutBadge, PayoutTypeBadge, PayoutOutsideHoursBadge } from './PayoutBadge';
 
 interface PayoutDetailModalProps {
   payout: AdminPayoutItem | null;
@@ -49,13 +50,22 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
     }, 2000);
   };
 
-  const formattedAmount = new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: payout.currency || 'ARS',
-    minimumFractionDigits: 2,
-  }).format(parseFloat(payout.amount) || 0);
+  const grossAmount = parseFloat(String(payout.amount)) || 0;
+  const feeAmount = payout.fee_amount !== undefined && payout.fee_amount !== null
+    ? parseFloat(String(payout.fee_amount)) || 0
+    : (payout.type === 'immediate' ? 500 : 0);
+  const netAmount = payout.net_amount !== undefined && payout.net_amount !== null
+    ? parseFloat(String(payout.net_amount)) || 0
+    : grossAmount - feeAmount;
 
-  const formatDate = (dateStr: string | null) => {
+  const formatMoney = (val: number) =>
+    new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: payout.currency || 'ARS',
+      minimumFractionDigits: 2,
+    }).format(val);
+
+  const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return '-';
     try {
       return format(new Date(dateStr), "dd/MM/yyyy 'a las' HH:mm 'hs'", { locale: es });
@@ -64,9 +74,13 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
     }
   };
 
-  const isPending = payout.status === 'requested';
-  const isApproved = payout.status === 'approved';
-  const isActionable = isPending || isApproved;
+  const isPending = payout.status === 'pending' || payout.status === 'requested';
+  const isProcessing = payout.status === 'processing' || payout.status === 'approved';
+  const isCompleted = payout.status === 'completed' || payout.status === 'paid';
+  const isFailed = payout.status === 'failed' || payout.status === 'rejected';
+  const isActionable = isPending || isProcessing;
+
+  const requestDate = payout.requested_at || payout.created_at;
 
   return (
     <div
@@ -86,11 +100,13 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
               <Building2 className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Detalle de Solicitud de Retiro
+                  Detalle de Retiro
                 </h2>
                 <PayoutBadge status={payout.status} />
+                <PayoutTypeBadge type={payout.type} showFeeLabel />
+                {payout.is_outside_hours && <PayoutOutsideHoursBadge />}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">
                 ID: {payout.id}
@@ -108,36 +124,80 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
 
         {/* Content body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin">
-          {/* Card Destacada: Monto */}
-          <div className="p-5 rounded-xl bg-gradient-to-br from-champagne-gold/10 via-transparent to-amber-500/5 dark:from-champagne-gold/15 dark:to-transparent border border-champagne-gold/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-xs font-semibold uppercase tracking-wider text-amber-900 dark:text-champagne-gold">
-                Monto Exacto a Transferir
-              </span>
-              <div className="text-3xl font-extrabold text-gray-900 dark:text-white mt-1">
-                {formattedAmount}
+          {/* Card Destacada: Monto Neto y Desglose */}
+          <div className="p-5 rounded-xl bg-gradient-to-br from-champagne-gold/10 via-transparent to-emerald-500/5 dark:from-champagne-gold/15 dark:to-transparent border border-champagne-gold/30 flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-champagne-gold">
+                  Monto Neto Exacto a Transferir
+                </span>
+                <div className="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono mt-1">
+                  {formatMoney(netAmount)}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Link
+                  to={`/conductores/${payout.driver_id}`}
+                  target="_blank"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-200 hover:text-champagne-gold hover:border-champagne-gold transition-colors shadow-sm"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  <span>Ver Conductor</span>
+                  <ExternalLink className="w-3 h-3 ml-0.5 opacity-60" />
+                </Link>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <Link
-                to={`/conductores/${payout.driver_id}`}
-                target="_blank"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-200 hover:text-champagne-gold hover:border-champagne-gold transition-colors shadow-sm"
-              >
-                <User className="w-3.5 h-3.5" />
-                <span>Ver Conductor</span>
-                <ExternalLink className="w-3 h-3 ml-0.5 opacity-60" />
-              </Link>
+            {/* Desglose de montos */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-3 border-t border-champagne-gold/20 text-xs">
+              <div>
+                <span className="text-gray-500 dark:text-gray-400 block">Importe Bruto:</span>
+                <span className="font-mono font-bold text-gray-900 dark:text-white">
+                  {formatMoney(grossAmount)}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400 block">Comisión retenida:</span>
+                <span className="font-mono font-semibold text-gray-700 dark:text-gray-300">
+                  {formatMoney(feeAmount)}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400 block">Modalidad:</span>
+                <span className="font-semibold text-gray-800 dark:text-gray-200">
+                  {payout.type === 'weekly' ? 'Semanal ($0 fee)' : 'Inmediato ($500 fee)'}
+                </span>
+              </div>
             </div>
           </div>
 
-          {/* Datos Bancarios Congelados */}
+          {/* Fuera de Horario / Programación */}
+          {(payout.is_outside_hours || payout.scheduled_for) && (
+            <div className="p-4 rounded-xl border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 text-xs text-amber-900 dark:text-amber-300 space-y-1.5">
+              <div className="flex items-center gap-2 font-bold">
+                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span>Horario Operativo y Programación</span>
+              </div>
+              {payout.is_outside_hours && (
+                <p className="text-[11px] leading-relaxed">
+                  Esta solicitud fue emitida fuera del horario hábil (8:00 a 20:00). Requiere atención prioritaria al abrir la franja bancaria.
+                </p>
+              )}
+              {payout.scheduled_for && (
+                <p className="text-[11px]">
+                  Fecha/Hora programada de ejecución: <b className="font-mono">{formatDate(payout.scheduled_for)}</b>
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Datos Bancarios con Copiado en 1-Clic */}
           <div>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4 text-emerald-500" />
-                Datos bancarios de destino (Congelados por la solicitud)
+                Datos Bancarios de Destino
               </h3>
             </div>
 
@@ -147,9 +207,24 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
                 <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
                   Titular de la Cuenta
                 </span>
-                <span className="text-sm font-semibold text-gray-900 dark:text-white text-right">
-                  {payout.account_holder_name || 'Sin titular informado'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {payout.account_holder_name || 'Sin titular informado'}
+                  </span>
+                  {payout.account_holder_name && (
+                    <button
+                      onClick={() => handleCopy(payout.account_holder_name!, 'holder')}
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:text-champagne-gold transition-colors"
+                      title="Copiar nombre del titular"
+                    >
+                      {copiedField === 'holder' ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-500" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* DNI / CUIT */}
@@ -164,7 +239,7 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
                   {payout.account_holder_document && (
                     <button
                       onClick={() => handleCopy(payout.account_holder_document!, 'document')}
-                      className="p-1 text-gray-400 hover:text-champagne-gold transition-colors"
+                      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-600 dark:text-gray-300 hover:text-champagne-gold transition-colors"
                       title="Copiar CUIT/DNI"
                     >
                       {copiedField === 'document' ? (
@@ -179,11 +254,9 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
 
               {/* CBU / CVU */}
               <div className="px-4 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    {payout.payment_method || 'CBU / CVU'} (22 dígitos)
-                  </span>
-                </div>
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  {payout.payment_method || 'CBU / CVU'} (22 dígitos)
+                </span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-bold text-gray-900 dark:text-white font-mono tracking-wider break-all">
                     {payout.destination_cbu_cvu || '-'}
@@ -191,8 +264,8 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
                   {payout.destination_cbu_cvu && (
                     <button
                       onClick={() => handleCopy(payout.destination_cbu_cvu!, 'cbu')}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:border-champagne-gold hover:text-champagne-gold transition-colors shadow-sm"
-                      title="Copiar clave completa"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:border-champagne-gold hover:text-champagne-gold transition-colors shadow-sm"
+                      title="Copiar CBU/CVU completo"
                     >
                       {copiedField === 'cbu' ? (
                         <>
@@ -222,7 +295,7 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
                   {payout.destination_alias && (
                     <button
                       onClick={() => handleCopy(payout.destination_alias!, 'alias')}
-                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:border-champagne-gold hover:text-champagne-gold transition-colors shadow-sm"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border text-gray-700 dark:text-gray-300 hover:border-champagne-gold hover:text-champagne-gold transition-colors shadow-sm"
                       title="Copiar Alias"
                     >
                       {copiedField === 'alias' ? (
@@ -243,11 +316,11 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Información de Tiempos y Resolución */}
+          {/* Información de Tiempos y Trazabilidad */}
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-1.5">
               <Calendar className="w-4 h-4" />
-              Trazabilidad
+              Trazabilidad de la Solicitud
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="p-3 rounded-lg border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-white/[0.02]">
@@ -255,7 +328,7 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
                   Fecha de Solicitud
                 </span>
                 <span className="font-semibold text-gray-900 dark:text-white">
-                  {formatDate(payout.requested_at)}
+                  {formatDate(requestDate)}
                 </span>
               </div>
               <div className="p-3 rounded-lg border border-gray-200 dark:border-dark-border bg-gray-50 dark:bg-white/[0.02]">
@@ -269,12 +342,12 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
             </div>
           </div>
 
-          {/* Datos si está pagado */}
-          {payout.status === 'paid' && (
+          {/* Datos si está completado / pagado */}
+          {isCompleted && (
             <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/5 space-y-3">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs uppercase tracking-wider">
                 <Check className="w-4 h-4" />
-                Información del Pago Realizado
+                Información de la Transferencia Realizada
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 <div>
@@ -306,8 +379,8 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
             </div>
           )}
 
-          {/* Datos si está rechazado */}
-          {payout.status === 'rejected' && (
+          {/* Datos si está rechazado / fallido */}
+          {isFailed && (
             <div className="p-4 rounded-xl border border-red-500/30 bg-red-500/5 space-y-2">
               <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-bold text-xs uppercase tracking-wider">
                 <AlertTriangle className="w-4 h-4" />
@@ -315,6 +388,9 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
               </div>
               <p className="text-sm text-gray-800 dark:text-gray-200 bg-white dark:bg-dark-surface p-3 rounded-lg border border-red-200 dark:border-red-900/30 font-medium">
                 {payout.rejection_reason || 'Sin motivo detallado'}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Los fondos solicitados ({formatMoney(grossAmount)}) fueron reintegrados a la billetera del conductor.
               </p>
             </div>
           )}
@@ -359,7 +435,7 @@ export const PayoutDetailModal: React.FC<PayoutDetailModalProps> = ({
                 disabled={isResolving}
                 className="px-4 py-2 text-sm font-bold text-obsidian bg-champagne-gold hover:bg-champagne-gold/90 rounded-lg transition-all shadow-sm hover:shadow flex items-center gap-1.5 disabled:opacity-50"
               >
-                <span>Marcar como Pagado</span>
+                <span>Marcar como Transferido</span>
               </button>
             </div>
           )}

@@ -1,11 +1,13 @@
 import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Search, RefreshCw, AlertCircle, CheckCircle2, Zap, Filter } from 'lucide-react';
 import type {
   AdminPayoutItem,
   AdminPayoutFilterStatus,
+  AdminPayoutFilterType,
   AdminResolvePayoutPayload,
   AdminPayoutStatus,
+  AdminPayoutType,
 } from '../../core/payouts/interfaces/payout.interface';
 import { usePayouts } from './hooks/usePayouts';
 import { useResolvePayout } from './hooks/useResolvePayout';
@@ -13,14 +15,21 @@ import { PayoutsKPIs } from './components/PayoutsKPIs';
 import { PayoutsTable } from './components/PayoutsTable';
 import { PayoutDetailModal } from './components/PayoutDetailModal';
 import { PayoutResolveModal } from './components/PayoutResolveModal';
+import { RunWeeklyBatchModal } from './components/RunWeeklyBatchModal';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
 
 const STATUS_TABS: { value: AdminPayoutFilterStatus; label: string }[] = [
-  { value: 'requested', label: 'Pendientes' },
-  { value: 'approved', label: 'En gestión' },
-  { value: 'paid', label: 'Pagadas' },
-  { value: 'rejected', label: 'Rechazadas' },
+  { value: 'pending', label: 'Pendientes' },
+  { value: 'processing', label: 'En gestión' },
+  { value: 'completed', label: 'Completadas' },
+  { value: 'failed', label: 'Rechazadas' },
   { value: 'all', label: 'Todas' },
+];
+
+const TYPE_OPTIONS: { value: AdminPayoutFilterType; label: string }[] = [
+  { value: 'all', label: 'Todos los tipos' },
+  { value: 'immediate', label: 'Inmediato ($500 fee)' },
+  { value: 'weekly', label: 'Semanal Automático (Sin fee)' },
 ];
 
 export const PayoutsScreen: React.FC = () => {
@@ -28,7 +37,12 @@ export const PayoutsScreen: React.FC = () => {
 
   // Params de URL
   const currentPage = parseInt(searchParams.get('page') || '1', 10);
-  const statusParam = (searchParams.get('status') as AdminPayoutFilterStatus) || 'requested';
+  const rawStatusParam = searchParams.get('status') as AdminPayoutFilterStatus | null;
+  // Compatibilidad con viejo 'requested'
+  const statusParam: AdminPayoutFilterStatus =
+    rawStatusParam === 'requested' ? 'pending' : rawStatusParam || 'pending';
+
+  const typeParam = (searchParams.get('type') as AdminPayoutFilterType) || 'all';
   const driverIdParam = searchParams.get('driver_id') || '';
 
   // Filtros para la query
@@ -36,6 +50,7 @@ export const PayoutsScreen: React.FC = () => {
     page: currentPage,
     limit: 15,
     ...(statusParam !== 'all' ? { status: statusParam as AdminPayoutStatus } : {}),
+    ...(typeParam !== 'all' ? { type: typeParam as AdminPayoutType } : {}),
     ...(driverIdParam ? { driver_id: driverIdParam } : {}),
   };
 
@@ -45,7 +60,8 @@ export const PayoutsScreen: React.FC = () => {
   // Modales
   const [selectedPayout, setSelectedPayout] = useState<AdminPayoutItem | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
-  const [resolveMode, setResolveMode] = useState<'paid' | 'rejected' | null>(null);
+  const [resolveMode, setResolveMode] = useState<'completed' | 'failed' | null>(null);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
 
   // Notificaciones de feedback temporal
   const [feedback, setFeedback] = useState<{
@@ -57,17 +73,32 @@ export const PayoutsScreen: React.FC = () => {
     setFeedback({ type, message });
     setTimeout(() => {
       setFeedback(null);
-    }, 4500);
+    }, 5000);
   };
 
   // Handlers de cambio de filtros
   const handleTabChange = useCallback(
     (newStatus: AdminPayoutFilterStatus) => {
       setSearchParams((prev) => {
-        if (newStatus === 'requested') {
-          prev.delete('status'); // 'requested' es el default
+        if (newStatus === 'pending') {
+          prev.delete('status'); // 'pending' es el default
         } else {
           prev.set('status', newStatus);
+        }
+        prev.set('page', '1');
+        return prev;
+      });
+    },
+    [setSearchParams]
+  );
+
+  const handleTypeChange = useCallback(
+    (newType: AdminPayoutFilterType) => {
+      setSearchParams((prev) => {
+        if (newType === 'all') {
+          prev.delete('type');
+        } else {
+          prev.set('type', newType);
         }
         prev.set('page', '1');
         return prev;
@@ -112,14 +143,14 @@ export const PayoutsScreen: React.FC = () => {
     try {
       await resolveMutation.mutateAsync({
         payoutId: payout.id,
-        payload: { status: 'approved' },
+        payload: { status: 'processing' },
       });
       showNotification('success', 'Solicitud colocada en gestión bancaria.');
       if (selectedPayout?.id === payout.id) {
         setIsDetailOpen(false);
       }
     } catch (err) {
-      const msg = extractApiErrorMessage(err, 'No se pudo pasar la solicitud a gestión');
+      const msg = extractApiErrorMessage(err, 'No se pudo pasar la solicitud a gestión bancaria');
       showNotification('error', msg);
     }
   };
@@ -127,13 +158,13 @@ export const PayoutsScreen: React.FC = () => {
   const handleOpenPayModal = (payout: AdminPayoutItem) => {
     setSelectedPayout(payout);
     setIsDetailOpen(false);
-    setResolveMode('paid');
+    setResolveMode('completed');
   };
 
   const handleOpenRejectModal = (payout: AdminPayoutItem) => {
     setSelectedPayout(payout);
     setIsDetailOpen(false);
-    setResolveMode('rejected');
+    setResolveMode('failed');
   };
 
   const handleConfirmResolve = async (payload: AdminResolvePayoutPayload) => {
@@ -144,10 +175,10 @@ export const PayoutsScreen: React.FC = () => {
         payload,
       });
 
-      if (payload.status === 'paid') {
-        showNotification('success', '¡Retiro marcado como pagado exitosamente!');
+      if (payload.status === 'completed' || payload.status === 'paid') {
+        showNotification('success', '¡Retiro marcado como completado y transferido exitosamente!');
       } else {
-        showNotification('success', 'Solicitud de retiro rechazada.');
+        showNotification('success', 'Solicitud de retiro rechazada. El saldo fue reintegrado al chofer.');
       }
 
       setResolveMode(null);
@@ -155,7 +186,7 @@ export const PayoutsScreen: React.FC = () => {
     } catch (err) {
       const msg = extractApiErrorMessage(
         err,
-        payload.status === 'paid'
+        payload.status === 'completed' || payload.status === 'paid'
           ? 'Error al completar el pago del retiro'
           : 'Error al rechazar el retiro'
       );
@@ -169,21 +200,32 @@ export const PayoutsScreen: React.FC = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Retiros y Billeteras
+            Gestión de Retiros
           </h1>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-            Gestión manual de transferencias bancarias y resolución de retiros de conductores.
+            Cola de transferencias bancarias manuales y liquidación semanal de conductores.
           </p>
         </div>
 
-        <button
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors shadow-sm disabled:opacity-50"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
-          <span>Actualizar cola</span>
-        </button>
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => setIsBatchModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-champagne-gold/15 dark:bg-champagne-gold/10 hover:bg-champagne-gold/25 dark:hover:bg-champagne-gold/20 border border-champagne-gold/40 text-xs font-bold text-amber-900 dark:text-champagne-gold rounded-lg transition-all shadow-sm"
+            title="Ejecutar corrida manual de liquidación semanal"
+          >
+            <Zap className="w-3.5 h-3.5 text-amber-600 dark:text-champagne-gold" />
+            <span>Ejecutar Lote Semanal</span>
+          </button>
+
+          <button
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="flex items-center gap-2 px-3.5 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors shadow-sm disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isFetching ? 'animate-spin' : ''}`} />
+            <span>Actualizar</span>
+          </button>
+        </div>
       </div>
 
       {/* Banner de Feedback flotante/inline */}
@@ -215,8 +257,8 @@ export const PayoutsScreen: React.FC = () => {
       {/* Métricas KPI */}
       <PayoutsKPIs />
 
-      {/* Filtros: Pestañas de Estado y Búsqueda */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+      {/* Barra de Filtros: Pestañas de Estado, Selector de Tipo y Buscador */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
         {/* Tabs de Estado */}
         <div className="flex items-center gap-1 p-1 bg-gray-100/80 dark:bg-dark-surface border border-gray-200/80 dark:border-dark-border rounded-xl overflow-x-auto scrollbar-none">
           {STATUS_TABS.map((tab) => {
@@ -237,18 +279,42 @@ export const PayoutsScreen: React.FC = () => {
           })}
         </div>
 
-        {/* Buscador de Conductor */}
-        <div className="relative w-full md:w-80">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-            <Search className="w-4 h-4" />
+        {/* Filtro por Tipo y Buscador de Conductor */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Selector de Tipo */}
+          <div className="relative min-w-[200px]">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <Filter className="w-3.5 h-3.5" />
+            </div>
+            <select
+              value={typeParam}
+              onChange={(e) => handleTypeChange(e.target.value as AdminPayoutFilterType)}
+              className="w-full pl-8 pr-8 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-champagne-gold/50 focus:border-champagne-gold transition-all shadow-sm cursor-pointer appearance-none"
+            >
+              {TYPE_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value} className="bg-white dark:bg-dark-surface">
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">
+              ▼
+            </div>
           </div>
-          <input
-            type="text"
-            placeholder="Filtrar por UUID de conductor..."
-            value={driverIdParam}
-            onChange={handleDriverSearch}
-            className="w-full pl-9 pr-4 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-champagne-gold/50 focus:border-champagne-gold transition-all shadow-sm"
-          />
+
+          {/* Buscador de Conductor */}
+          <div className="relative w-full sm:w-64">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+              <Search className="w-4 h-4" />
+            </div>
+            <input
+              type="text"
+              placeholder="Filtrar por UUID chofer..."
+              value={driverIdParam}
+              onChange={handleDriverSearch}
+              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-champagne-gold/50 focus:border-champagne-gold transition-all shadow-sm"
+            />
+          </div>
         </div>
       </div>
 
@@ -279,7 +345,7 @@ export const PayoutsScreen: React.FC = () => {
         isResolving={resolveMutation.isPending}
       />
 
-      {/* Modal de Resolución (Pagar con comprobante o Rechazar) */}
+      {/* Modal de Resolución (Marcar como transferido o Rechazar) */}
       <PayoutResolveModal
         payout={selectedPayout}
         mode={resolveMode}
@@ -289,6 +355,13 @@ export const PayoutsScreen: React.FC = () => {
         }}
         onConfirm={handleConfirmResolve}
         isLoading={resolveMutation.isPending}
+      />
+
+      {/* Modal de Confirmación de Lote Semanal */}
+      <RunWeeklyBatchModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        onSuccessMessage={(msg) => showNotification('success', msg)}
       />
     </div>
   );

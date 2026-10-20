@@ -5,6 +5,8 @@ import type {
   AdminPayoutDetailResponse,
   AdminResolvePayoutPayload,
   AdminPayoutItem,
+  RunWeeklyBatchPayload,
+  RunWeeklyBatchResponse,
 } from '../interfaces/payout.interface';
 
 export const getPayouts = async (
@@ -31,3 +33,14 @@ export const resolvePayout = async (
   );
   return data.data;
 };
+
+export const runWeeklyBatch = async (
+  payload: RunWeeklyBatchPayload = { force: true }
+): Promise<RunWeeklyBatchResponse> => {
+  const { data } = await adminApi.post<RunWeeklyBatchResponse>(
+    '/admin/payouts/run-weekly-batch',
+    payload
+  );
+  return data;
+};
+

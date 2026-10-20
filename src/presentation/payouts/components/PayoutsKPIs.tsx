@@ -4,45 +4,52 @@ import { AnimatedNumber } from '../../components/common/AnimatedNumber';
 import { usePayouts } from '../hooks/usePayouts';
 
 export const PayoutsKPIs: React.FC = () => {
-  // Obtenemos conteos específicos para métricas
-  const { data: requestedData, isLoading: loadingRequested } = usePayouts({
-    status: 'requested',
+  // Obtenemos conteos específicos para métricas con los nuevos estados del backend
+  const { data: pendingData, isLoading: loadingPending } = usePayouts({
+    status: 'pending',
     page: 1,
     limit: 100,
   });
 
-  const { data: approvedData, isLoading: loadingApproved } = usePayouts({
-    status: 'approved',
+  const { data: processingData, isLoading: loadingProcessing } = usePayouts({
+    status: 'processing',
     page: 1,
     limit: 1,
   });
 
-  const { data: paidData, isLoading: loadingPaid } = usePayouts({
-    status: 'paid',
+  const { data: completedData, isLoading: loadingCompleted } = usePayouts({
+    status: 'completed',
     page: 1,
     limit: 1,
   });
 
-  // Calculamos el monto total pendiente en cola a partir de las solicitudes requested
-  const totalRequestedAmount = React.useMemo(() => {
-    if (!requestedData?.payouts) return 0;
-    return requestedData.payouts.reduce((acc, item) => {
-      const num = parseFloat(item.amount) || 0;
-      return acc + num;
+  // Calculamos el monto total NETO pendiente en cola a partir de las solicitudes pendientes
+  const totalPendingNetAmount = React.useMemo(() => {
+    if (!pendingData?.payouts) return 0;
+    return pendingData.payouts.reduce((acc, item) => {
+      const gross = parseFloat(String(item.amount)) || 0;
+      const fee = item.fee_amount !== undefined && item.fee_amount !== null
+        ? parseFloat(String(item.fee_amount)) || 0
+        : (item.type === 'immediate' ? 500 : 0);
+      const net = item.net_amount !== undefined && item.net_amount !== null
+        ? parseFloat(String(item.net_amount)) || 0
+        : gross - fee;
+
+      return acc + (isNaN(net) ? 0 : net);
     }, 0);
-  }, [requestedData?.payouts]);
+  }, [pendingData?.payouts]);
 
-  const requestedCount = requestedData?.pagination.total ?? 0;
-  const approvedCount = approvedData?.pagination.total ?? 0;
-  const paidCount = paidData?.pagination.total ?? 0;
+  const pendingCount = pendingData?.pagination.total ?? 0;
+  const processingCount = processingData?.pagination.total ?? 0;
+  const completedCount = completedData?.pagination.total ?? 0;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
-      {/* Tarjeta 1: Solicitado en Cola */}
+      {/* Tarjeta 1: Solicitado en Cola (Pendiente) */}
       <div className="relative overflow-hidden rounded-xl bg-white dark:bg-dark-surface p-5 border border-gray-200/80 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-champagne-gold/40 transition-all duration-300">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Total en cola de pago
+            Total neto en cola de pago
           </span>
           <div className="p-2 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
             <Clock className="w-4 h-4" />
@@ -50,11 +57,11 @@ export const PayoutsKPIs: React.FC = () => {
         </div>
         <div>
           <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            {loadingRequested ? (
+            {loadingPending ? (
               <span className="text-gray-400 dark:text-gray-600 text-lg">Cargando...</span>
             ) : (
               <AnimatedNumber
-                value={totalRequestedAmount}
+                value={totalPendingNetAmount}
                 decimals={2}
                 decimal=","
                 separator="."
@@ -64,14 +71,14 @@ export const PayoutsKPIs: React.FC = () => {
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
             <span className="font-semibold text-amber-600 dark:text-amber-400">
-              {requestedCount}
+              {pendingCount}
             </span>{' '}
-            {requestedCount === 1 ? 'solicitud pendiente' : 'solicitudes pendientes de procesar'}
+            {pendingCount === 1 ? 'solicitud pendiente' : 'solicitudes pendientes de procesar'}
           </p>
         </div>
       </div>
 
-      {/* Tarjeta 2: En Proceso / Gestión */}
+      {/* Tarjeta 2: En Proceso / Gestión Bancaria */}
       <div className="relative overflow-hidden rounded-xl bg-white dark:bg-dark-surface p-5 border border-gray-200/80 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-sky-500/40 transition-all duration-300">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
@@ -83,23 +90,23 @@ export const PayoutsKPIs: React.FC = () => {
         </div>
         <div>
           <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            {loadingApproved ? (
+            {loadingProcessing ? (
               <span className="text-gray-400 dark:text-gray-600 text-lg">...</span>
             ) : (
-              <AnimatedNumber value={approvedCount} />
+              <AnimatedNumber value={processingCount} />
             )}
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Solicitudes aprobadas pendientes de adjuntar comprobante
+            Solicitudes en curso pendientes de comprobante
           </p>
         </div>
       </div>
 
-      {/* Tarjeta 3: Resueltos / Pagados */}
+      {/* Tarjeta 3: Resueltos / Completados */}
       <div className="relative overflow-hidden rounded-xl bg-white dark:bg-dark-surface p-5 border border-gray-200/80 dark:border-dark-border shadow-sm flex flex-col justify-between group hover:border-emerald-500/40 transition-all duration-300">
         <div className="flex items-center justify-between mb-2">
           <span className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Total transferencias pagadas
+            Total transferencias completadas
           </span>
           <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <CheckCircle2 className="w-4 h-4" />
@@ -107,14 +114,14 @@ export const PayoutsKPIs: React.FC = () => {
         </div>
         <div>
           <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            {loadingPaid ? (
+            {loadingCompleted ? (
               <span className="text-gray-400 dark:text-gray-600 text-lg">...</span>
             ) : (
-              <AnimatedNumber value={paidCount} />
+              <AnimatedNumber value={completedCount} />
             )}
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Retiros liquidados con éxito a conductores
+            Retiros transferidos y liquidados a conductores
           </p>
         </div>
       </div>

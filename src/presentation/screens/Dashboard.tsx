@@ -99,7 +99,7 @@ export default function Dashboard() {
     data: payoutsData,
     isLoading: isLoadingPayouts,
     isError: isErrorPayouts,
-  } = usePayouts({ status: 'requested', page: 1, limit: 5 });
+  } = usePayouts({ status: 'pending', page: 1, limit: 5 });
 
   const pendingApplicationsCount =
     driversData?.pendingCount ?? driversData?.pagination?.totalCount ?? 0;

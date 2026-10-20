@@ -50,7 +50,7 @@ export const PendingPayoutsListCard: React.FC<PendingPayoutsListCardProps> = ({
             )}
           </div>
           <Link
-            to="/retiros?status=requested"
+            to="/retiros?status=pending"
             className="text-xs font-semibold text-amber-600 dark:text-champagne-gold hover:underline flex items-center gap-0.5"
           >
             <span>Ver cola completa</span>
@@ -94,16 +94,16 @@ export const PendingPayoutsListCard: React.FC<PendingPayoutsListCardProps> = ({
                     {payout.account_holder_name || 'Conductor'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
-                    {formatDateTime(payout.requested_at)}
+                    {formatDateTime(payout.requested_at || payout.created_at || '')}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-4 flex-shrink-0">
                   <span className="text-sm font-bold text-gray-900 dark:text-white font-mono">
-                    {formatMoney(payout.amount, payout.currency)}
+                    {formatMoney(payout.net_amount ?? payout.amount, payout.currency)}
                   </span>
                   <Link
-                    to="/retiros?status=requested"
+                    to="/retiros?status=pending"
                     className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-champagne-gold transition-colors"
                   >
                     Revisar

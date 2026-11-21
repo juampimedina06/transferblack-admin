@@ -6,6 +6,9 @@ import Dashboard from './presentation/screens/Dashboard';
 import TrackTrip from './presentation/screens/TrackTrip';
 import TermsScreen from './presentation/legal/TermsScreen';
 import PrivacyScreen from './presentation/legal/PrivacyScreen';
+import DriverTermsScreen from './presentation/legal/DriverTermsScreen';
+import DriverPrivacyScreen from './presentation/legal/DriverPrivacyScreen';
+import DeleteAccountInfoScreen from './presentation/legal/DeleteAccountInfoScreen';
 import ReturnToAppScreen from './presentation/payments/ReturnToAppScreen';
 import ProtectedRoute from './presentation/components/ProtectedRoute';
 import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
@@ -33,9 +36,12 @@ function App() {
         {/* Publica: la abre un invitado sin sesion desde un link de WhatsApp/email */}
         <Route path="/track" element={<TrackTrip />} />
 
-        {/* Publicas: legales (link en la app) y puente de vuelta desde Mercado Pago */}
+        {/* Publicas: legales (link en las apps y tiendas) y puente de vuelta desde Mercado Pago */}
         <Route path="/terminos" element={<TermsScreen />} />
         <Route path="/privacidad" element={<PrivacyScreen />} />
+        <Route path="/terminos-conductores" element={<DriverTermsScreen />} />
+        <Route path="/privacidad-conductores" element={<DriverPrivacyScreen />} />
+        <Route path="/eliminar-cuenta" element={<DeleteAccountInfoScreen />} />
         <Route path="/volver-a-la-app" element={<ReturnToAppScreen />} />
 
         {/* Protected Routes */}

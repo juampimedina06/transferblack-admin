@@ -74,7 +74,8 @@ export default function DeleteAccountInfoScreen() {
       <LegalSection title="4. Más información">
         <p>
           El responsable del tratamiento de tus datos personales es{' '}
-          <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>.
+          <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>,
+          con domicilio en <strong>{LEGAL_ENTITY.address}</strong>, República Argentina.
         </p>
         <p>
           Podés consultar el detalle completo sobre cómo tratamos tus datos en nuestra{' '}

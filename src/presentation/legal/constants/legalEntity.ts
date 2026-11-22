@@ -8,9 +8,9 @@
 export const LEGAL_ENTITY = {
   businessName: 'Transferblack',
   taxId: '30-71967194-9',
-  address: '[PENDIENTE — DOMICILIO LEGAL]',
+  address: 'Lázaro Langer 237, barrio Las Flores, Córdoba Capital',
   contactEmail: '[PENDIENTE — EMAIL DE CONTACTO]',
-  supportPhone: '[PENDIENTE — TELÉFONO DE SOPORTE]',
+  supportPhone: '3515901798',
   effectiveDate: '[PENDIENTE — FECHA DE VIGENCIA]',
   jurisdiction: 'Ciudad de Córdoba, Provincia de Córdoba, República Argentina',
 } as const;

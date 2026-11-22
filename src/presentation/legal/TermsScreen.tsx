@@ -22,7 +22,8 @@ export default function TermsScreen() {
           Transfer Black (en adelante, "la Plataforma" o "el Servicio"), operados por{' '}
           <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>,
           con domicilio en{' '}
-          <strong>[DOMICILIO]</strong>, República Argentina. Transfer Black conecta pasajeros con
+          <strong>{LEGAL_ENTITY.address}</strong>, República Argentina. Transfer Black conecta
+          pasajeros con
           conductores habilitados para la prestación de servicios de remis y transfer dentro del
           área de cobertura de la ciudad de Córdoba y zonas aledañas.
         </p>

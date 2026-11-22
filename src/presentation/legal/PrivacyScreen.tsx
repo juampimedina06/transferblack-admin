@@ -20,7 +20,8 @@ export default function PrivacyScreen() {
           El responsable del tratamiento de tus datos personales es{' '}
           <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>,
           con domicilio en{' '}
-          <strong>[DOMICILIO]</strong>, República Argentina ("Transfer Black", "nosotros"). Esta
+          <strong>{LEGAL_ENTITY.address}</strong>, República Argentina ("Transfer Black", "nosotros").
+          Esta
           Política describe qué datos recolectamos a través de la aplicación del pasajero, para
           qué los usamos y qué derechos tenés sobre ellos, de acuerdo con la Ley 25.326 de
           Protección de Datos Personales.

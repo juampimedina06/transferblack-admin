@@ -11,6 +11,7 @@ export const SHOW_LEGAL_DRAFT_BANNER = true;
 interface LegalLayoutProps {
   title: string;
   updatedAt: string;
+  showDraftBanner?: boolean;
   children: ReactNode;
 }
 
@@ -19,7 +20,12 @@ interface LegalLayoutProps {
  * Sigue el mismo patron que `TrackTrip`: no depende de `ProtectedRoute` ni del
  * store de auth del panel, y usa la identidad visual oscura con acento dorado.
  */
-export function LegalLayout({ title, updatedAt, children }: LegalLayoutProps) {
+export function LegalLayout({
+  title,
+  updatedAt,
+  showDraftBanner = SHOW_LEGAL_DRAFT_BANNER,
+  children,
+}: LegalLayoutProps) {
   return (
     <div className="min-h-screen bg-obsidian font-montserrat text-gray-300">
       <header className="border-b border-dark-border bg-obsidian px-4 py-4">
@@ -31,7 +37,7 @@ export function LegalLayout({ title, updatedAt, children }: LegalLayoutProps) {
         </div>
       </header>
 
-      {SHOW_LEGAL_DRAFT_BANNER && (
+      {showDraftBanner && (
         <div className="bg-amber-950/40 px-4 py-2 text-center text-xs font-semibold text-amber-300">
           Borrador — pendiente de revisión legal
         </div>

@@ -2,12 +2,12 @@
  * Datos legales de la entidad operadora de Transfer Black.
  *
  * IMPORTANTE (PRE-PRODUCCIÓN): Reemplazar todos los valores `[PENDIENTE]`
- * con los datos reales y desactivar `SHOW_LEGAL_DRAFT_BANNER` en `LegalLayout.tsx`
- * antes de compilar y publicar en Google Play / App Store.
+ * con los datos reales antes de compilar y publicar en Google Play / App Store.
+ * La visibilidad del aviso de borrador se configura por página en `LegalLayout`.
  */
 export const LEGAL_ENTITY = {
-  businessName: '[PENDIENTE — RAZÓN SOCIAL]',
-  taxId: '[PENDIENTE — CUIT]',
+  businessName: 'Transferblack',
+  taxId: '30-71967194-9',
   address: '[PENDIENTE — DOMICILIO LEGAL]',
   contactEmail: '[PENDIENTE — EMAIL DE CONTACTO]',
   supportPhone: '[PENDIENTE — TELÉFONO DE SOPORTE]',

@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { LegalLayout, LegalSection } from './components/LegalLayout';
+import { LEGAL_ENTITY } from './constants/legalEntity';
 
 const UPDATED_AT = '[FECHA DE VIGENCIA]';
 
@@ -14,12 +15,13 @@ export default function TermsScreen() {
   }, []);
 
   return (
-    <LegalLayout title="Términos y Condiciones" updatedAt={UPDATED_AT}>
+    <LegalLayout title="Términos y Condiciones" updatedAt={UPDATED_AT} showDraftBanner={false}>
       <LegalSection title="1. Objeto">
         <p>
           Estos Términos y Condiciones regulan el uso de la aplicación móvil y los servicios de
           Transfer Black (en adelante, "la Plataforma" o "el Servicio"), operados por{' '}
-          <strong>[RAZÓN SOCIAL]</strong>, CUIT <strong>[CUIT]</strong>, con domicilio en{' '}
+          <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>,
+          con domicilio en{' '}
           <strong>[DOMICILIO]</strong>, República Argentina. Transfer Black conecta pasajeros con
           conductores habilitados para la prestación de servicios de remis y transfer dentro del
           área de cobertura de la ciudad de Córdoba y zonas aledañas.

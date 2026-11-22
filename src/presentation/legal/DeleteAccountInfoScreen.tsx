@@ -73,6 +73,10 @@ export default function DeleteAccountInfoScreen() {
 
       <LegalSection title="4. Más información">
         <p>
+          El responsable del tratamiento de tus datos personales es{' '}
+          <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>.
+        </p>
+        <p>
           Podés consultar el detalle completo sobre cómo tratamos tus datos en nuestra{' '}
           <Link to="/privacidad-conductores" className="text-champagne-gold underline">
             Política de Privacidad para Conductores

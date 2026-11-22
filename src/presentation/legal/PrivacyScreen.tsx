@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { LegalLayout, LegalSection } from './components/LegalLayout';
+import { LEGAL_ENTITY } from './constants/legalEntity';
 
 const UPDATED_AT = '[FECHA DE VIGENCIA]';
 
@@ -13,12 +14,14 @@ export default function PrivacyScreen() {
   }, []);
 
   return (
-    <LegalLayout title="Política de Privacidad" updatedAt={UPDATED_AT}>
+    <LegalLayout title="Política de Privacidad" updatedAt={UPDATED_AT} showDraftBanner={false}>
       <LegalSection title="1. Responsable del tratamiento">
         <p>
           El responsable del tratamiento de tus datos personales es{' '}
-          <strong>[RAZÓN SOCIAL]</strong>, CUIT <strong>[CUIT]</strong>, con domicilio en{' '}
-          <strong>[DOMICILIO]</strong>, República Argentina ("Transfer Black", "nosotros"). Esta
+          <strong>{LEGAL_ENTITY.businessName}</strong>, CUIT <strong>{LEGAL_ENTITY.taxId}</strong>,
+          con domicilio en{' '}
+          <strong>{LEGAL_ENTITY.address}</strong>, República Argentina ("Transfer Black", "nosotros").
+          Esta
           Política describe qué datos recolectamos a través de la aplicación del pasajero, para
           qué los usamos y qué derechos tenés sobre ellos, de acuerdo con la Ley 25.326 de
           Protección de Datos Personales.

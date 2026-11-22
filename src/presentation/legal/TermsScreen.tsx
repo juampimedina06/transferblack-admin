@@ -153,8 +153,13 @@ export default function TermsScreen() {
 
       <LegalSection title="13. Contacto">
         <p>
-          Si tenés consultas sobre estos Términos, podés escribirnos a{' '}
-          <strong>[EMAIL DE CONTACTO]</strong>.
+          Si tenés consultas sobre estos Términos, podés comunicarte por teléfono al{' '}
+          <a
+            href={`tel:${LEGAL_ENTITY.supportPhone}`}
+            className="font-semibold text-champagne-gold hover:underline"
+          >
+            {LEGAL_ENTITY.supportPhone}
+          </a>.
         </p>
       </LegalSection>
     </LegalLayout>

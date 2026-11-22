@@ -14,7 +14,11 @@ export default function DeleteAccountInfoScreen() {
   }, []);
 
   return (
-    <LegalLayout title="Eliminación de Cuenta y Datos" updatedAt={LEGAL_ENTITY.effectiveDate}>
+    <LegalLayout
+      title="Eliminación de Cuenta y Datos"
+      updatedAt={LEGAL_ENTITY.effectiveDate}
+      showDraftBanner={false}
+    >
       <LegalSection title="1. Cómo eliminar tu cuenta desde la aplicación">
         <p>
           Tanto en <strong>Transfer Black Pasajero</strong> como en{' '}

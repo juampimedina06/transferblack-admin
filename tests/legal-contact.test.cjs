@@ -21,6 +21,19 @@ for (const extension of ['.ts', '.tsx']) {
     module._compile(outputText, filename);
   };
 }
+
+test('passenger terms contact section offers the supplied phone instead of an email', () => {
+  const Screen = require('../src/presentation/legal/TermsScreen.tsx').default;
+  const html = renderToStaticMarkup(
+    React.createElement(MemoryRouter, null, React.createElement(Screen)),
+  );
+  const section = html.match(/<section><h2[^>]*>13\. Contacto<\/h2>([\s\S]*?)<\/section>/)?.[1];
+  assert.ok(section, 'contact section must exist');
+  assert.ok(section.includes('href="tel:3515901798"'));
+  assert.ok(section.includes('3515901798</a>'));
+  assert.ok(!section.includes('[EMAIL DE CONTACTO]'));
+  assert.ok(!section.includes('mailto:'));
+});
 require.extensions['.png'] = (module) => { module.exports = 'logo.png'; };
 
 const screens = [

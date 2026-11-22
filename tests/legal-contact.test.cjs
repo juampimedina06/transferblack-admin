@@ -28,7 +28,7 @@ const screens = [
   ['PrivacyScreen', false],
   ['DriverTermsScreen', true],
   ['DriverPrivacyScreen', true],
-  ['DeleteAccountInfoScreen', true],
+  ['DeleteAccountInfoScreen', false],
 ];
 
 for (const [name, draftExpected] of screens) {

@@ -4,6 +4,7 @@ import { useDriverDetail } from './hooks/useDriverDetail';
 import { DriverDetailSkeleton } from './components/DriverDetail/DriverDetailSkeleton';
 import { DocumentCard } from './components/DriverDetail/DocumentCard';
 import { RejectionModal } from './components/DriverDetail/RejectionModal';
+import { GracePeriodModal } from './components/DriverDetail/GracePeriodModal';
 import { ArrowLeft, Calendar, MapPin, AlertTriangle, Check, X, Lock, CheckCircle2, Sparkles, Clock } from 'lucide-react';
 import { format, differenceInYears, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -22,6 +23,12 @@ const getApprovalStatusConfig = (status: string) => {
     case 'rejected':
       return {
         label: 'Rechazado',
+        badge: 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/25',
+        dot: 'bg-red-500',
+      };
+    case 'suspended_documents':
+      return {
+        label: 'Suspendido por documentación',
         badge: 'bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/25',
         dot: 'bg-red-500',
       };
@@ -92,10 +99,15 @@ const getMeetingStatusConfig = (status?: DriverMeeting['status']) => {
 export const DriverDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { detailQuery, documentMutation, statusMutation, scheduleMutation, finalizeMeetingMutation, rescheduleMutation } = useDriverDetail(id!);
+  const { detailQuery, documentMutation, gracePeriodMutation, statusMutation, scheduleMutation, finalizeMeetingMutation, rescheduleMutation } = useDriverDetail(id!);
 
   const [rejectingDocId, setRejectingDocId] = useState<string | null>(null);
   const [rejectingApp, setRejectingApp] = useState(false);
+  const [gracePeriodDoc, setGracePeriodDoc] = useState<{
+    id: string;
+    title: string;
+    graceUntil?: string | null;
+  } | null>(null);
 
   const [meetingDate, setMeetingDate] = useState('');
   const [meetingTime, setMeetingTime] = useState('');
@@ -285,7 +297,11 @@ export const DriverDetailScreen: React.FC = () => {
                   {...doc}
                   onApprove={handleApproveDocument}
                   onReject={setRejectingDocId}
-                  isUpdating={documentMutation.isPending && documentMutation.variables?.docId === doc.id}
+                  onGrantGracePeriod={(docId, title, graceUntil) => setGracePeriodDoc({ id: docId, title, graceUntil })}
+                  isUpdating={
+                    (documentMutation.isPending && documentMutation.variables?.docId === doc.id) ||
+                    (gracePeriodMutation.isPending && gracePeriodMutation.variables?.docId === doc.id)
+                  }
                 />
               ))}
             </div>
@@ -325,7 +341,11 @@ export const DriverDetailScreen: React.FC = () => {
                     {...doc}
                     onApprove={handleApproveDocument}
                     onReject={setRejectingDocId}
-                    isUpdating={documentMutation.isPending && documentMutation.variables?.docId === doc.id}
+                    onGrantGracePeriod={(docId, title, graceUntil) => setGracePeriodDoc({ id: docId, title, graceUntil })}
+                    isUpdating={
+                      (documentMutation.isPending && documentMutation.variables?.docId === doc.id) ||
+                      (gracePeriodMutation.isPending && gracePeriodMutation.variables?.docId === doc.id)
+                    }
                   />
                 ))}
               </div>
@@ -805,6 +825,21 @@ export const DriverDetailScreen: React.FC = () => {
         onSubmit={(reason) => {
           statusMutation.mutate({ status: 'rejected', reason });
           setRejectingApp(false);
+        }}
+      />
+
+      <GracePeriodModal
+        isOpen={!!gracePeriodDoc}
+        onClose={() => setGracePeriodDoc(null)}
+        documentTitle={gracePeriodDoc?.title || 'Documento'}
+        currentGraceUntil={gracePeriodDoc?.graceUntil}
+        isSubmitting={gracePeriodMutation.isPending}
+        onSubmit={(days) => {
+          if (!gracePeriodDoc) return;
+          gracePeriodMutation.mutate(
+            { docId: gracePeriodDoc.id, days },
+            { onSuccess: () => setGracePeriodDoc(null) },
+          );
         }}
       />
     </div>

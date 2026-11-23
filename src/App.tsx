@@ -21,6 +21,7 @@ import TripsScreen from './presentation/trips/TripsScreen';
 import ScheduledTripsScreen from './presentation/scheduledTrips/ScheduledTripsScreen';
 import RecurringTripsScreen from './presentation/recurringTrips/RecurringTripsScreen';
 import { LiveMapScreen } from './presentation/map/LiveMapScreen';
+import SettingsScreen from './presentation/settings/SettingsScreen';
 import RefundClaimsScreen from './presentation/refundClaims/RefundClaimsScreen';
 
 
@@ -59,7 +60,7 @@ function App() {
             <Route path="/empresas" element={<CompaniesScreen />} />
             <Route path="/empresas/:companyId" element={<CompanyDetailScreen />} />
             <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/configuracion" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/configuracion" element={<SettingsScreen />} />
             
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>

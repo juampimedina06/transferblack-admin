@@ -8,4 +8,14 @@
   body {
     @apply font-montserrat antialiased;
   }
+
+  /* Barras de scroll, selectores de fecha y controles nativos con el tema
+     oscuro (antes salian blancas sobre fondo negro). */
+  html.dark {
+    color-scheme: dark;
+  }
+
+  html:not(.dark) {
+    color-scheme: light;
+  }
 }

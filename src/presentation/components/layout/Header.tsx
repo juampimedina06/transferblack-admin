@@ -1,8 +1,10 @@
 import React from 'react';
-import { Menu, Search, Bell, LogOut, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Menu, LogOut, Sun, Moon, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useAuthStore } from '../../auth/store/useAuthStore';
 import { useUIStore } from '../../store/useUIStore';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { GlobalSearch } from './GlobalSearch';
+import { getPageTitle } from './pageTitles';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -13,6 +15,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const logout = useAuthStore((state) => state.logout);
   const user = useAuthStore((state) => state.user);
   const { theme, toggleTheme, isSidebarCollapsed, toggleSidebarCollapsed } = useUIStore();
+  const { pathname } = useLocation();
+  const pageTitle = getPageTitle(pathname);
+
+  React.useEffect(() => {
+    document.title = `${pageTitle} · Transfer Black`;
+  }, [pageTitle]);
 
   const handleLogout = () => {
     logout();
@@ -46,21 +54,12 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </button>
 
         <h1 className="text-lg font-semibold text-gray-900 dark:text-white hidden sm:block">
-          Dashboard <span className="text-gray-400 dark:text-gray-500 font-normal text-sm ml-2">agosto 2026</span>
+          {pageTitle}
         </h1>
       </div>
 
       <div className="flex items-center gap-3 lg:gap-5">
-        {/* Search */}
-        <div className="hidden md:flex relative group">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          <input 
-            type="text" 
-            placeholder="Buscar viaje, conductor o pasajero" 
-            className="pl-10 pr-4 py-2 bg-gray-100 dark:bg-dark-card border border-transparent dark:border-dark-border rounded-lg text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-500 focus:bg-white dark:focus:bg-dark-card focus:border-champagne-gold focus:ring-1 focus:ring-champagne-gold outline-none w-64 transition-all"
-            disabled
-          />
-        </div>
+        <GlobalSearch />
 
         {/* Theme Toggle (Dark / Light) */}
         <button
@@ -74,15 +73,6 @@ export const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           ) : (
             <Moon className="w-5 h-5 text-gray-600 hover:-rotate-12 transition-transform duration-300" />
           )}
-        </button>
-
-        {/* Notifications */}
-        <button 
-          className="p-2 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg relative transition-colors"
-          aria-label="Notificaciones"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-champagne-gold rounded-full ring-2 ring-white dark:ring-dark-surface" />
         </button>
 
         {/* User & Logout */}

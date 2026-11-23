@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getDriverDetail } from '../../../core/drivers/actions/getDriverDetail.action';
 import { updateDocumentStatus } from '../../../core/drivers/actions/updateDocumentStatus.action';
+import { grantDocumentGracePeriod } from '../../../core/drivers/actions/grantDocumentGracePeriod.action';
 import { updateApplicationStatus } from '../../../core/drivers/actions/updateApplicationStatus.action';
 import { scheduleMeeting } from '../../../core/drivers/actions/scheduleMeeting.action';
 import { finalizeMeeting } from '../../../core/drivers/actions/finalizeMeeting.action';
@@ -49,6 +50,17 @@ export const useDriverDetail = (id: string) => {
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['driver-detail', id] });
+    },
+  });
+
+  const gracePeriodMutation = useMutation({
+    mutationFn: ({ docId, days }: { docId: string; days: number }) =>
+      grantDocumentGracePeriod(docId, { days }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['driver-detail', id] });
+    },
+    onError: (error: unknown) => {
+      alert(extractApiErrorMessage(error, 'Error al otorgar el plazo de gracia'));
     },
   });
 
@@ -120,6 +132,7 @@ export const useDriverDetail = (id: string) => {
   return {
     detailQuery,
     documentMutation,
+    gracePeriodMutation,
     statusMutation,
     scheduleMutation,
     finalizeMeetingMutation,

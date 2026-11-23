@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { format, isBefore } from 'date-fns';
+import { format, isAfter, isBefore } from 'date-fns';
 import { 
   AlertTriangle, 
   Check, 
@@ -7,6 +7,7 @@ import {
   Loader2, 
   Eye, 
   Calendar, 
+  CalendarClock,
   CreditCard, 
   ShieldCheck, 
   FileText, 
@@ -34,14 +35,16 @@ interface DocumentCardProps {
   type?: string;
   name?: string;
   documentType?: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
   rejectionReason?: string;
   filePath: string;
   issuedAt?: string;
   expiresAt?: string;
+  graceUntil?: string | null;
   isUpdating?: boolean;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onGrantGracePeriod: (id: string, title: string, graceUntil?: string | null) => void;
 }
 
 export const DocumentCard: React.FC<DocumentCardProps> = ({
@@ -54,9 +57,11 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   filePath,
   issuedAt,
   expiresAt,
+  graceUntil,
   isUpdating = false,
   onApprove,
   onReject,
+  onGrantGracePeriod,
 }) => {
   const imageUrl = getImageUrl(filePath);
   const imageCacheKey = getImageCacheKey(imageUrl);
@@ -83,12 +88,15 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   const IconComponent = meta?.icon || FileText;
   const displayTitle = meta?.label || rawType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || 'Documento';
 
-  const isExpired = expiresAt ? isBefore(new Date(expiresAt), new Date()) : false;
+  const isExpired = status === 'expired' || (expiresAt ? isBefore(new Date(expiresAt), new Date()) : false);
+  const hasActiveGrace = Boolean(graceUntil && isAfter(new Date(graceUntil), new Date()));
 
   return (
     <div
       className={`group relative rounded-xl border p-4 transition-all duration-300 flex flex-col justify-between gap-3.5 shadow-2xs hover:shadow-md ${
-        isExpired
+        isExpired && hasActiveGrace
+          ? 'bg-amber-50/30 dark:bg-amber-950/10 border-amber-300/80 dark:border-amber-700/40 hover:border-amber-400'
+          : isExpired
           ? 'bg-red-50/20 dark:bg-red-950/10 border-red-200/90 dark:border-red-900/30 hover:border-red-300'
           : status === 'rejected'
           ? 'bg-white dark:bg-dark-surface border-red-200/60 dark:border-red-900/20 hover:border-red-300/80'
@@ -129,17 +137,23 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
 
         {/* Status Badge */}
         <div className="shrink-0">
-          {status === 'approved' && (
+          {isExpired && hasActiveGrace ? (
+            <Badge variant="gold" size="md" dot>
+              En prórroga
+            </Badge>
+          ) : isExpired ? (
+            <Badge variant="danger" size="md">
+              <AlertTriangle className="w-3 h-3 stroke-[2.5]" /> Vencido
+            </Badge>
+          ) : status === 'approved' ? (
             <Badge variant="success" size="md">
               <Check className="w-3 h-3 stroke-[2.5]" /> Aprobado
             </Badge>
-          )}
-          {status === 'rejected' && (
+          ) : status === 'rejected' ? (
             <Badge variant="danger" size="md">
               <X className="w-3 h-3 stroke-[2.5]" /> Rechazado
             </Badge>
-          )}
-          {status === 'pending' && (
+          ) : (
             <Badge variant={rejectionReason ? 'purple' : 'warning'} size="md" dot>
               {rejectionReason ? 'Re-subido' : 'Pendiente'}
             </Badge>
@@ -228,9 +242,49 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
         </div>
       )}
 
+      {/* Notice for active grace period */}
+      {isExpired && hasActiveGrace && graceUntil && (
+        <div className="bg-amber-50/90 dark:bg-amber-500/10 border-l-2 border-amber-500 rounded-r-md px-3 py-2 text-[12px] text-amber-900 dark:text-amber-200">
+          <span className="font-semibold">Plazo de gracia activo: </span>
+          habilitado hasta el <strong>{format(new Date(graceUntil), 'dd/MM/yyyy')}</strong> para operar mientras renueva este documento.
+        </div>
+      )}
+
+      {/* Notice when expired without grace period */}
+      {isExpired && !hasActiveGrace && (
+        <div className="bg-red-50/80 dark:bg-red-500/10 border-l-2 border-red-500 rounded-r-md px-3 py-2 text-[11.5px] text-red-700 dark:text-red-300">
+          Documento vencido: no se puede aprobar directamente. Podés otorgarle un plazo de gracia temporal o rechazarlo.
+        </div>
+      )}
+
       {/* Action Footer */}
       <div className="pt-1 flex items-center justify-between gap-2 border-t border-gray-100 dark:border-white/5">
-        {status === 'pending' ? (
+        {isExpired ? (
+          <div className={`grid gap-2 w-full ${status !== 'rejected' ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <Button
+              variant="warningOutline"
+              size="sm"
+              fullWidth
+              disabled={isUpdating}
+              onClick={() => onGrantGracePeriod(id, displayTitle, graceUntil)}
+              leftIcon={<CalendarClock className="w-3.5 h-3.5" />}
+            >
+              {hasActiveGrace ? 'Modificar plazo' : 'Otorgar plazo'}
+            </Button>
+            {status !== 'rejected' && (
+              <Button
+                variant="dangerOutline"
+                size="sm"
+                fullWidth
+                disabled={isUpdating}
+                onClick={() => onReject(id)}
+                leftIcon={<X className="w-3.5 h-3.5 stroke-[2.5]" />}
+              >
+                Rechazar
+              </Button>
+            )}
+          </div>
+        ) : status === 'pending' ? (
           <div className="grid grid-cols-2 gap-2 w-full">
             <Button
               variant="successOutline"

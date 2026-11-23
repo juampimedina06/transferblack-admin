@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  ResponsiveContainer, 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  Tooltip 
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  Tooltip
 } from 'recharts';
 import type { PeriodoDashboard, SerieTemporalItem } from '../../../core/dashboard/interfaces/dashboard-stats.interface';
 
@@ -17,16 +17,16 @@ interface ActivityChartProps {
   series?: ChartSeriesItem[];
 }
 
-export const ActivityChart: React.FC<ActivityChartProps> = ({ 
-  periodo, 
+export const ActivityChart: React.FC<ActivityChartProps> = ({
+  periodo,
   totalViajes,
   series,
 }) => {
   // Título y descripción según el período seleccionado (Hora en día, Día en mes, Mes en año)
-  const title = periodo === 'day' 
-    ? 'Viajes por hora' 
-    : periodo === 'year' 
-      ? 'Viajes por mes' 
+  const title = periodo === 'day'
+    ? 'Viajes por hora'
+    : periodo === 'year'
+      ? 'Viajes por mes'
       : 'Viajes por día';
 
   const subtitle = React.useMemo(() => {
@@ -36,31 +36,25 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({
         : 'Actividad del período seleccionado';
     }
 
-    const totalCompletados = series.reduce((acc, s) => acc + (s.completados || 0), 0);
-    const activeBuckets = series.length;
-    const avg = activeBuckets > 0 ? (totalCompletados / activeBuckets) : 0;
-    
-    let peakItem = series[0];
-    let maxVal = -1;
-    for (const item of series) {
-      const val = item.completados || 0;
-      if (val > maxVal) {
-        maxVal = val;
-        peakItem = item;
-      }
-    }
+    // Completados + cancelados por franja: el promedio sobre una sola de las
+    // dos daba "0.0 viajes/hora" en un dia con decenas de pedidos.
+    const totalPorFranja = series.map((s) => (s.completados || 0) + (s.cancelados || 0));
+    const totalSerie = totalPorFranja.reduce((acc, value) => acc + value, 0);
 
-    const unit = periodo === 'day' ? 'hora' : periodo === 'month' ? 'día' : 'mes';
-    const avgFormatted = avg < 10 ? avg.toFixed(1) : Math.round(avg).toLocaleString('es-AR');
+    let peakIndex = 0;
+    totalPorFranja.forEach((value, index) => {
+      if (value > (totalPorFranja[peakIndex] ?? 0)) peakIndex = index;
+    });
+    const maxVal = totalPorFranja[peakIndex] ?? 0;
+    const peakItem = series[peakIndex];
 
+    const resumen = `${totalSerie.toLocaleString('es-AR')} viajes terminados o cancelados`;
     if (maxVal > 0 && peakItem) {
       const prefix = periodo === 'day' ? 'a las' : periodo === 'month' ? 'el' : 'en';
-      return `Promedio ${avgFormatted} viajes/${unit} · pico ${prefix} ${peakItem.label} con ${maxVal.toLocaleString('es-AR')}`;
+      return `${resumen} · pico ${prefix} ${peakItem.label} con ${maxVal.toLocaleString('es-AR')}`;
     }
 
-    return totalViajes !== undefined
-      ? `${totalViajes.toLocaleString('es-AR')} viajes en el período`
-      : `Promedio ${avgFormatted} viajes/${unit}`;
+    return totalViajes !== undefined ? `${totalViajes.toLocaleString('es-AR')} viajes en el período` : resumen;
   }, [series, totalViajes, periodo]);
 
   const hasSeriesData = Boolean(series && series.length > 0);
@@ -84,32 +78,32 @@ export const ActivityChart: React.FC<ActivityChartProps> = ({
           </div>
         </div>
       </div>
-      
+
       {/* Gráfico Recharts si el backend provee series, o Empty State limpio sin datos inventados */}
       {hasSeriesData ? (
         <div className="w-full h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart 
-              data={series} 
+            <BarChart
+              data={series}
               margin={{ top: 10, right: 8, left: 8, bottom: 0 }}
             >
-              <XAxis 
-                dataKey="label" 
-                axisLine={false} 
-                tickLine={false} 
-                tick={{ fill: '#9CA3AF', fontSize: 11 }} 
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: '#9CA3AF', fontSize: 11 }}
               />
               <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255, 255, 255, 0.05)' }} />
-              <Bar 
-                dataKey="completados" 
-                stackId="activity" 
-                fill="#D4AF37" 
+              <Bar
+                dataKey="completados"
+                stackId="activity"
+                fill="#D4AF37"
                 radius={[0, 0, 0, 0]}
               />
-              <Bar 
-                dataKey="cancelados" 
-                stackId="activity" 
-                fill="#4B5563" 
+              <Bar
+                dataKey="cancelados"
+                stackId="activity"
+                fill="#4B5563"
                 radius={[2, 2, 0, 0]}
               />
             </BarChart>

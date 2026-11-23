@@ -1,4 +1,7 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { toLocalISODate } from '../utils/dates';
+import { downloadCsv } from '../utils/csv';
+import { ManualTripModal } from '../trips/components/ManualTripModal';
 import { useSearchParams } from 'react-router-dom';
 import clsx from 'clsx';
 import { useDashboardStats } from '../dashboard/hooks/useDashboardStats';
@@ -53,12 +56,9 @@ export default function Dashboard() {
 
   const { data: prevData } = useDashboardStats(periodo, previousDateInfo.iso);
 
-  // Cálculos de métricas derivadas del período
-  const ticketMedio = useMemo(() => {
-    return (data?.totalViajes && data.totalViajes > 0)
-      ? data.facturacionBruta / data.totalViajes
-      : 0;
-  }, [data?.totalViajes, data?.facturacionBruta]);
+  // Ticket medio sobre completados (backend): dividir por todos los pedidos,
+  // cancelados incluidos, daba un ticket irreal.
+  const ticketMedio = data?.ticketMedio ?? 0;
 
   const porcentajeSobreBruto = useMemo(() => {
     return (data?.facturacionBruta && data.facturacionBruta > 0)
@@ -66,20 +66,19 @@ export default function Dashboard() {
       : 0;
   }, [data?.facturacionBruta, data?.comisionNeta]);
 
-  const canceladosCount = useMemo(() => {
-    return Math.round((data?.ratioCancelaciones ?? 0) * (data?.totalViajes ?? 0));
-  }, [data?.ratioCancelaciones, data?.totalViajes]);
+  const canceladosCount = data?.totalCancelados ?? Math.round((data?.ratioCancelaciones ?? 0) * (data?.totalViajes ?? 0));
 
   // Deltas porcentuales vs período anterior
   const deltaTotalViajes = useMemo(() => {
     if (data?.totalViajes === undefined || prevData?.totalViajes === undefined) return null;
-    if (prevData.totalViajes === 0) return data.totalViajes > 0 ? 100 : 0;
+    // Sin datos en el periodo anterior un porcentaje no dice nada ("+100%").
+    if (prevData.totalViajes === 0) return null;
     return ((data.totalViajes - prevData.totalViajes) / prevData.totalViajes) * 100;
   }, [data?.totalViajes, prevData?.totalViajes]);
 
   const deltaFacturacion = useMemo(() => {
     if (data?.facturacionBruta === undefined || prevData?.facturacionBruta === undefined) return null;
-    if (prevData.facturacionBruta === 0) return data.facturacionBruta > 0 ? 100 : 0;
+    if (prevData.facturacionBruta === 0) return null;
     return ((data.facturacionBruta - prevData.facturacionBruta) / prevData.facturacionBruta) * 100;
   }, [data?.facturacionBruta, prevData?.facturacionBruta]);
 
@@ -121,6 +120,30 @@ export default function Dashboard() {
     }, { replace: true });
   };
 
+  // Fecha concreta del periodo (dia, mes o año). Se manda el mediodia de
+  // Cordoba para que ningun corrimiento horario la cambie de dia.
+  const fechaLocal = fecha ? new Date(fecha) : new Date();
+  const fechaISODate = toLocalISODate(fechaLocal);
+  const handleFechaChange = (isoDate: string) => {
+    if (!isoDate) return;
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('fecha', new Date(`${isoDate}T12:00:00.000-03:00`).toISOString());
+      return next;
+    }, { replace: true });
+  };
+
+  const [isManualTripOpen, setIsManualTripOpen] = useState(false);
+
+  const handleExportCsv = () => {
+    if (!data) return;
+    downloadCsv(
+      `dashboard-${periodo}-${fechaISODate}.csv`,
+      ['Franja', 'Completados', 'Cancelados'],
+      data.series.map((item) => [item.label, item.completados, item.cancelados]),
+    );
+  };
+
   return (
     <div className="w-full flex flex-col gap-4">
       {/* Top Actions & Filters - Siempre visibles y estables */}
@@ -143,15 +166,64 @@ export default function Dashboard() {
           ))}
         </div>
         
+        <div className="flex items-center gap-2">
+          {periodo === 'day' && (
+            <input
+              type="date"
+              lang="es-AR"
+              value={fechaISODate}
+              max={toLocalISODate(new Date())}
+              onChange={(event) => handleFechaChange(event.target.value)}
+              aria-label="Día"
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-800 dark:text-gray-200"
+            />
+          )}
+          {periodo === 'month' && (
+            <input
+              type="month"
+              lang="es-AR"
+              value={fechaISODate.slice(0, 7)}
+              max={toLocalISODate(new Date()).slice(0, 7)}
+              onChange={(event) => event.target.value && handleFechaChange(`${event.target.value}-15`)}
+              aria-label="Mes"
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-800 dark:text-gray-200"
+            />
+          )}
+          {periodo === 'year' && (
+            <select
+              value={fechaISODate.slice(0, 4)}
+              onChange={(event) => handleFechaChange(`${event.target.value}-06-15`)}
+              aria-label="Año"
+              className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-800 dark:text-gray-200"
+            >
+              {Array.from({ length: 4 }, (_, index) => new Date().getFullYear() - index).map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+
         <div className="flex items-center gap-3">
-          <button className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-surface border border-gray-300 dark:border-dark-border rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={!data}
+            className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-dark-surface border border-gray-300 dark:border-dark-border rounded-lg shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors disabled:opacity-50"
+          >
             Exportar CSV
           </button>
-          <button className="px-4 py-2 text-sm font-semibold text-obsidian bg-champagne-gold rounded-lg shadow-sm hover:brightness-105 transition-all">
+          <button
+            type="button"
+            onClick={() => setIsManualTripOpen(true)}
+            className="px-4 py-2 text-sm font-semibold text-obsidian bg-champagne-gold rounded-lg shadow-sm hover:brightness-105 transition-all"
+          >
             Nuevo viaje manual
           </button>
         </div>
       </div>
+      {isManualTripOpen && <ManualTripModal onClose={() => setIsManualTripOpen(false)} />}
 
       {/* Manejo de errores */}
       {error && (
@@ -178,7 +250,7 @@ export default function Dashboard() {
           {/* KPIs Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <KpiCard 
-              label="Total de viajes" 
+              label="Viajes pedidos" 
               value={
                 data?.totalViajes !== undefined ? (
                   <AnimatedNumber value={data.totalViajes} />
@@ -242,7 +314,7 @@ export default function Dashboard() {
               }
             />
             <KpiCard 
-              label="Comisión neta de plataforma" 
+              label="Ganancia Transfer Black" 
               value={
                 data?.comisionNeta !== undefined ? (
                   <AnimatedNumber 
@@ -266,7 +338,7 @@ export default function Dashboard() {
               }
             />
             <KpiCard 
-              label="Ratio de cancelaciones" 
+              label="Viajes cancelados" 
               value={
                 data?.ratioCancelaciones !== undefined ? (
                   <AnimatedNumber 

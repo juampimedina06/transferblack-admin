@@ -14,6 +14,8 @@ import ProtectedRoute from './presentation/components/ProtectedRoute';
 import { PrivateLayout } from './presentation/components/layout/PrivateLayout';
 import DriversScreen from './presentation/drivers/DriversScreen';
 import DriverDetailScreen from './presentation/drivers/DriverDetailScreen';
+import PassengersScreen from './presentation/passengers/PassengersScreen';
+import PassengerDetailScreen from './presentation/passengers/PassengerDetailScreen';
 import CompaniesScreen from './presentation/companies/CompaniesScreen';
 import CompanyDetailScreen from './presentation/companies/CompanyDetailScreen';
 import PayoutsScreen from './presentation/payouts/PayoutsScreen';
@@ -58,7 +60,8 @@ function App() {
             <Route path="/reclamos-reembolso" element={<RefundClaimsScreen />} />
             <Route path="/empresas" element={<CompaniesScreen />} />
             <Route path="/empresas/:companyId" element={<CompanyDetailScreen />} />
-            <Route path="/pasajeros" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/pasajeros" element={<PassengersScreen />} />
+            <Route path="/pasajeros/:id" element={<PassengerDetailScreen />} />
             <Route path="/configuracion" element={<Navigate to="/dashboard" replace />} />
             
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

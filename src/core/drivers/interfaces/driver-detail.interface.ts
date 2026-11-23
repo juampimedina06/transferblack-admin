@@ -1,22 +1,24 @@
 export interface DriverDocument {
   id: string;
   documentType: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
   rejectionReason?: string;
   filePath: string;
   issuedAt?: string;
   expiresAt?: string;
+  graceUntil?: string | null;
 }
 
 export interface VehicleDocument {
   id: string;
   vehicleId?: string;
   documentType: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'expired';
   rejectionReason?: string;
   filePath: string;
   issuedAt?: string;
   expiresAt?: string;
+  graceUntil?: string | null;
 }
 
 export interface DriverVehicle {
@@ -39,7 +41,7 @@ export interface DriverMeeting {
 export interface DriverDetailResponse {
   driverProfile: {
     id: string;
-    approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
+    approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended' | 'suspended_documents';
     availabilityStatus?: string;
     rejectionReason?: string | null;
     approvedAt?: string | null;

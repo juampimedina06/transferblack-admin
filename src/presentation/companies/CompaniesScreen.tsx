@@ -18,6 +18,7 @@ import { BalanceStatusBadge } from './components/BalanceStatusBadge';
 import { BillingStatusBadge } from './components/BillingStatusBadge';
 import { CloseStatementsCard } from './components/CloseStatementsCard';
 import { Modal } from './components/Modal';
+import { formatArs } from '../utils/money';
 
 const defaults: CompanyFormValues = {
   legal_name: '',
@@ -240,7 +241,7 @@ export default function CompaniesScreen() {
                         <p className="text-xs text-gray-500">{company.phone_e164 || '-'}</p>
                       </td>
                       <td className="px-5 py-3">
-                        {company.monthly_spend_limit ? `$ ${company.monthly_spend_limit}` : 'Sin tope'}
+                        {company.monthly_spend_limit ? formatArs(company.monthly_spend_limit) : 'Sin tope'}
                       </td>
                       <td className="px-5 py-3">
                         <Badge variant={company.status === 'active' ? 'success' : 'warning'}>

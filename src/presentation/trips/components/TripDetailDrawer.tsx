@@ -13,6 +13,7 @@ import {
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { TripsBadge } from './TripsBadge';
+import { CancelTripDialog } from './CancelTripDialog';
 import { useTripDetail } from '../hooks/useTripDetail';
 import { useTripStatusHistory } from '../hooks/useTripStatusHistory';
 import { TripTrackingMap } from '../../tracking/components/TripTrackingMap';
@@ -32,6 +33,11 @@ const REASON_SPANISH: Record<string, string> = {
   passenger_no_show: 'Pasajero no se presentó',
   vehicle_issue: 'Problema con el vehículo',
   fare_dispute: 'Disputa de tarifa',
+  admin_passenger_request: 'Cancelado por el panel: lo pidió el pasajero',
+  admin_no_driver: 'Cancelado por el panel: sin conductores',
+  admin_driver_issue: 'Cancelado por el panel: problema con el conductor',
+  admin_duplicate: 'Cancelado por el panel: duplicado o prueba',
+  admin_other: 'Cancelado por el panel',
 };
 
 const PAYMENT_STATUS_SPANISH: Record<string, string> = {
@@ -84,6 +90,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
   const isTripActive = Boolean(trip?.status && ACTIVE_STATUSES.includes(trip.status));
   const { data: history = [] } = useTripStatusHistory(tripId, isTripActive);
   const [showRawHistory, setShowRawHistory] = useState(false);
+  const [isCancelOpen, setIsCancelOpen] = useState(false);
 
   // Close on Escape key
   useEffect(() => {
@@ -131,25 +138,25 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
     ? format(new Date(trip.createdAt), "dd/MM/yyyy HH:mm", { locale: es })
     : '—';
 
+  // Sin dato no se muestra nada: antes se inventaban "14,8 km", "30 min" y $16.180.
   const distanceKm = trip?.estimatedDistanceM
     ? (trip.estimatedDistanceM / 1000).toLocaleString('es-AR', {
         minimumFractionDigits: 1,
         maximumFractionDigits: 1,
       }) + ' km'
-    : '14,8 km';
+    : null;
 
   const estimatedMin = trip?.estimatedDurationS
     ? Math.round(trip.estimatedDurationS / 60) + ' min estimados'
-    : '30 min estimados';
+    : null;
 
-  // Fee composition calculations
-  const finalFareNum = trip?.finalFare
-    ? parseFloat(trip.finalFare)
-    : trip?.estimatedFare
-    ? parseFloat(trip.estimatedFare)
-    : 16180;
-  const platformFee = Math.round(finalFareNum * 0.18 * 100) / 100;
-  const driverNet = finalFareNum - platformFee;
+  const fareAmount = trip?.finalFare ?? trip?.estimatedFare ?? null;
+  const subtitleParts = [
+    `Solicitado ${formattedRequestedDate}`,
+    trip?.bookingType === 'scheduled' ? 'reservado' : 'inmediato',
+    distanceKm,
+    estimatedMin,
+  ].filter(Boolean);
 
   return (
     <div className="w-full space-y-5 animate-fade-in">
@@ -167,7 +174,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
               <span>Volver</span>
             </button>
             <h2 className="text-xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              {trip?.publicCode || 'TB-7238'}
+              {trip?.publicCode ?? '—'}
             </h2>
             {trip && <TripsBadge status={trip.status} />}
             {isTripActive && (
@@ -184,13 +191,15 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                 <Users className="w-3 h-3" /> Para un tercero
               </span>
             )}
-            <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10">
-              {trip?.serviceType?.name || 'Comfort'}
-            </span>
+            {trip?.serviceType?.name && (
+              <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-white/10">
+                {trip.serviceType.name}
+              </span>
+            )}
           </div>
 
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Solicitado {formattedRequestedDate} · {trip?.bookingType === 'scheduled' ? 'programado' : 'inmediato'} · {distanceKm} · {estimatedMin}
+            {subtitleParts.join(' · ')}
           </p>
         </div>
 
@@ -222,7 +231,7 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
             {trip?.status !== 'completed' && trip?.status !== 'cancelled' && (
               <button
                 type="button"
-                onClick={() => alert(`Acción para cancelar viaje ${trip?.publicCode}`)}
+                onClick={() => setIsCancelOpen(true)}
                 className="px-3 py-1.5 text-xs font-semibold border border-red-200 dark:border-red-900/60 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
               >
                 Cancelar viaje
@@ -414,9 +423,11 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
             <div className="bg-white dark:bg-dark-surface rounded-xl border border-gray-200/80 dark:border-dark-border overflow-hidden shadow-sm">
               <div className="p-3.5 border-b border-gray-100 dark:border-dark-border flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white">Recorrido</h3>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
-                  Posición actual: {trip.currentDriverLocation?.addressText || 'Av. Juan B. Justo al 4200'}
-                </span>
+                {isTripActive && trip.currentDriverLocation?.updatedAt && (
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-[220px]">
+                    Posición del conductor: {format(new Date(trip.currentDriverLocation.updatedAt), 'HH:mm')}
+                  </span>
+                )}
               </div>
 
               {/* Interactive Map */}
@@ -424,44 +435,24 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                 <TripTrackingMap
                   origin={
                     trip.pickup
-                      ? {
-                          latitude: trip.pickup.latitude,
-                          longitude: trip.pickup.longitude,
-                          addressText: trip.pickup.address,
-                        }
-                      : {
-                          latitude: -31.4201,
-                          longitude: -64.1888,
-                          addressText: 'Av. Vélez Sarsfield 210',
-                        }
+                      ? { latitude: trip.pickup.latitude, longitude: trip.pickup.longitude, addressText: trip.pickup.address }
+                      : null
                   }
                   destination={
                     trip.dropoff
-                      ? {
-                          latitude: trip.dropoff.latitude,
-                          longitude: trip.dropoff.longitude,
-                          addressText: trip.dropoff.address,
-                        }
-                      : {
-                          latitude: -31.3155,
-                          longitude: -64.2144,
-                          addressText: 'Aeropuerto Ambrosio Taravella',
-                        }
+                      ? { latitude: trip.dropoff.latitude, longitude: trip.dropoff.longitude, addressText: trip.dropoff.address }
+                      : null
                   }
                   driverLocation={
-                    trip.currentDriverLocation
+                    isTripActive && trip.currentDriverLocation
                       ? {
                           latitude: trip.currentDriverLocation.latitude,
                           longitude: trip.currentDriverLocation.longitude,
-                          updatedAt: new Date().toISOString(),
+                          updatedAt: trip.currentDriverLocation.updatedAt ?? new Date().toISOString(),
                         }
                       : null
                   }
-                  route={
-                    trip.routeCoordinates && trip.routeCoordinates.length > 0
-                      ? { type: 'MultiLineString', coordinates: [trip.routeCoordinates] }
-                      : null
-                  }
+                  route={trip.routeGeometry ?? null}
                   driverLocationIntervalMs={3000}
                 />
               </div>
@@ -472,19 +463,27 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                   <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-800 dark:border-white shrink-0 mt-0.5" />
                   <div>
                     <p className="text-[10.5px] uppercase font-bold text-gray-400">Subida</p>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                      {trip.pickup?.address || 'Av. Vélez Sarsfield 210, Centro'}
-                    </p>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">{trip.pickup?.address || '—'}</p>
                   </div>
                 </div>
+
+                {trip.stops?.map((stop, index) => (
+                  <div key={`${stop.place_id}-${index}`} className="flex items-start gap-2.5">
+                    <div className="w-3.5 h-3.5 rounded-full bg-gray-400 text-[8px] font-bold text-white flex items-center justify-center shrink-0 mt-0.5">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="text-[10.5px] uppercase font-bold text-gray-400">Parada {index + 1}</p>
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white">{stop.address}</p>
+                    </div>
+                  </div>
+                ))}
 
                 <div className="flex items-start gap-2.5">
                   <div className="w-3.5 h-3.5 rounded-sm bg-amber-600 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[10.5px] uppercase font-bold text-gray-400">Bajada estimada</p>
-                    <p className="text-xs font-semibold text-gray-900 dark:text-white">
-                      {trip.dropoff?.address || 'Aeropuerto Ambrosio Taravella, partidas'}
-                    </p>
+                    <p className="text-[10.5px] uppercase font-bold text-gray-400">Destino</p>
+                    <p className="text-xs font-semibold text-gray-900 dark:text-white">{trip.dropoff?.address || '—'}</p>
                   </div>
                 </div>
               </div>
@@ -497,25 +496,38 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
               </h3>
 
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
-                  <span>Base {trip.serviceType?.name || 'Comfort'} {distanceKm} + espera</span>
-                  <span className="font-mono">{formatCurrency(finalFareNum, trip.currency)}</span>
-                </div>
+                {trip.fareBreakdown && (
+                  <>
+                    <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                      <span>Bajada de bandera</span>
+                      <span className="font-mono">{formatCurrency(trip.fareBreakdown.base, trip.currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-gray-600 dark:text-gray-300">
+                      <span>Distancia{distanceKm ? ` (${distanceKm})` : ''}</span>
+                      <span className="font-mono">{formatCurrency(trip.fareBreakdown.distance, trip.currency)}</span>
+                    </div>
+                  </>
+                )}
 
                 <div className="pt-2 border-t border-gray-100 dark:border-dark-border flex justify-between items-center font-bold text-gray-900 dark:text-white">
                   <span>Total a cobrar</span>
-                  <span className="font-mono text-sm">{formatCurrency(finalFareNum, trip.currency)}</span>
+                  <span className="font-mono text-sm">{fareAmount ? formatCurrency(fareAmount, trip.currency) : '—'}</span>
                 </div>
 
-                <div className="flex justify-between items-center text-gray-500 dark:text-gray-400 text-[11.5px]">
-                  <span>Comisión Transfer Black (18%)</span>
-                  <span className="font-mono">{formatCurrency(platformFee, trip.currency)}</span>
-                </div>
-
-                <div className="flex justify-between items-center text-gray-700 dark:text-gray-300 font-semibold text-[11.5px]">
-                  <span>Neto al conductor</span>
-                  <span className="font-mono">{formatCurrency(driverNet, trip.currency)}</span>
-                </div>
+                {trip.commission ? (
+                  <>
+                    <div className="flex justify-between items-center text-gray-500 dark:text-gray-400 text-[11.5px]">
+                      <span>Comisión Transfer Black ({Number(trip.commission.percent).toLocaleString('es-AR')}%)</span>
+                      <span className="font-mono">{formatCurrency(trip.commission.platformAmount, trip.currency)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-gray-700 dark:text-gray-300 font-semibold text-[11.5px]">
+                      <span>Neto al conductor</span>
+                      <span className="font-mono">{formatCurrency(trip.commission.driverAmount, trip.currency)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <p className="text-[11px] text-gray-400">Comisión: sin datos de la cotización.</p>
+                )}
               </div>
             </div>
           </div>
@@ -570,15 +582,25 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                 <>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-bold text-sm shrink-0">
-                      {trip.driver.firstName?.[0] || 'C'}
-                      {trip.driver.lastName?.[0] || ''}
+                      {trip.driver.avatarUrl ? (
+                        <img src={trip.driver.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <>
+                          {trip.driver.firstName?.[0] || 'C'}
+                          {trip.driver.lastName?.[0] || ''}
+                        </>
+                      )}
                     </div>
                     <div className="overflow-hidden">
                       <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                         {trip.driver.firstName} {trip.driver.lastName}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
-                        {trip.driver.phone || 'Sin teléfono'} · {trip.driver.rating ?? 4.89} ★ · {trip.driver.totalTrips ?? 0} viajes
+                        {[
+                          trip.driver.phone || 'Sin teléfono',
+                          trip.driver.rating != null ? `${trip.driver.rating.toFixed(2)} ★` : 'Sin calificaciones',
+                          `${trip.driver.totalTrips ?? 0} viajes`,
+                        ].join(' · ')}
                       </p>
                     </div>
                   </div>
@@ -600,10 +622,8 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                       <p className="font-semibold text-gray-800 dark:text-gray-200">{trip.vehicle?.color || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase text-gray-400">Categoría habilitada</p>
-                      <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">
-                        {trip.vehicle?.category || 'Essential y Comfort'}
-                      </p>
+                      <p className="text-[10px] uppercase text-gray-400">Categoría del viaje</p>
+                      <p className="font-semibold text-gray-800 dark:text-gray-200 truncate">{trip.serviceType?.name || '—'}</p>
                     </div>
                   </div>
 
@@ -626,35 +646,43 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
                 <h3 className="text-[10.5px] uppercase font-bold tracking-wider text-gray-400">
                   Pago
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                  {PAYMENT_STATUS_SPANISH[trip.paymentStatus?.toLowerCase() || ''] || trip.paymentStatus || 'Autorizado'}
-                </span>
+                {trip.paymentStatus && (
+                  <span className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    {PAYMENT_STATUS_SPANISH[trip.paymentStatus.toLowerCase()] || trip.paymentStatus}
+                  </span>
+                )}
               </div>
 
               <p className="text-xs font-semibold text-gray-900 dark:text-white">
                 {trip.paymentMethod === 'corporate'
-                  ? 'Cuenta corriente corporativa'
+                  ? 'Saldo corporativo'
                   : trip.paymentMethod === 'cash'
-                  ? 'Efectivo en mano'
-                  : 'Mercado Pago · tarjeta'}
+                  ? 'Efectivo'
+                  : trip.paymentMethod === 'account_money'
+                  ? 'Mercado Pago (tarjeta o dinero en cuenta)'
+                  : '—'}
               </p>
 
-              <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-dark-border text-xs">
-                <div>
-                  <p className="text-[10px] uppercase text-gray-400">Preferencia</p>
-                  <p className="font-mono text-gray-700 dark:text-gray-300">
-                    {trip.payment?.preferenceId || 'MP-DIRECT'}
-                  </p>
+              {trip.paymentMethod === 'account_money' && trip.payment && (
+                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-gray-100 dark:border-dark-border text-xs">
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-400">Monto</p>
+                    <p className="font-mono text-gray-700 dark:text-gray-300">{formatCurrency(trip.payment.amount ?? null, trip.currency)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] uppercase text-gray-400">Acreditado</p>
+                    <p className="text-gray-700 dark:text-gray-300">
+                      {trip.payment.approvedAt ? format(new Date(trip.payment.approvedAt), 'dd/MM HH:mm') : 'Todavía no'}
+                    </p>
+                  </div>
+                  {trip.payment.providerPaymentId && (
+                    <div className="col-span-2">
+                      <p className="text-[10px] uppercase text-gray-400">Pago en Mercado Pago</p>
+                      <p className="font-mono text-gray-700 dark:text-gray-300">{trip.payment.providerPaymentId}</p>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-[10px] uppercase text-gray-400">Reserva de fondos</p>
-                  <p className="font-mono text-gray-700 dark:text-gray-300">{formatCurrency(finalFareNum, trip.currency)}</p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-[10px] uppercase text-gray-400">Captura</p>
-                  <p className="text-gray-700 dark:text-gray-300 font-medium">al finalizar el viaje</p>
-                </div>
-              </div>
+              )}
 
               <p className="text-[10.5px] text-gray-400 pt-1 border-t border-gray-100 dark:border-dark-border leading-relaxed">
                 El asiento en la billetera del conductor se genera cuando el pago se acredita.
@@ -662,6 +690,10 @@ export const TripDetailDrawer: React.FC<TripDetailDrawerProps> = ({ tripId, onCl
             </div>
           </div>
         </div>
+      )}
+
+      {isCancelOpen && trip && (
+        <CancelTripDialog tripId={trip.id} publicCode={trip.publicCode} onClose={() => setIsCancelOpen(false)} />
       )}
     </div>
   );

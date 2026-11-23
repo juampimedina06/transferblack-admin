@@ -22,7 +22,8 @@ export const useLiveMap = () => {
   } = useQuery<FleetGeoJsonResponse>({
     queryKey: ['fleet-locations'],
     queryFn: async () => {
-      const data = await getFleetLocations('all');
+      // `everyone`: tambien los desconectados, en gris en su ultima posicion.
+      const data = await getFleetLocations('everyone');
       setLastUpdated(new Date());
       return data;
     },

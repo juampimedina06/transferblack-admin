@@ -1,74 +1,79 @@
 import { adminApi } from '../../api/adminApi';
-import type { TripDetail } from '../interfaces/trip.interface';
+import type { TripDetail, TripStopPoint } from '../interfaces/trip.interface';
 
+/* eslint-disable @typescript-eslint/no-explicit-any -- respuesta snake_case del backend, se normaliza aca */
+const toStop = (raw: any): TripStopPoint | null =>
+  raw
+    ? {
+        address: raw.address || raw.address_text || '',
+        place_id: raw.place_id,
+        latitude: raw.latitude,
+        longitude: raw.longitude,
+      }
+    : null;
+
+/**
+ * Detalle de un viaje para el panel (`GET /admin/trips/:id`). Lo que el
+ * backend no manda queda en `null`: la pantalla muestra "—", nunca un dato
+ * inventado.
+ */
 export const getTripDetail = async (tripId: string): Promise<TripDetail> => {
-  const response = await adminApi.get<{ data: any } | any>(`/rides/${tripId}`);
-  const raw = response.data?.data || response.data;
+  const response = await adminApi.get<{ data: any }>(`/admin/trips/${tripId}`);
+  const raw = response.data.data;
+  const admin = raw.admin ?? {};
+  const adminDriver = admin.driver;
 
-  // Normalizar campos con soporte para camelCase y snake_case
-  const detail: TripDetail = {
+  return {
     id: raw.id,
-    publicCode: raw.public_code || raw.publicCode || 'TB-0000',
+    publicCode: raw.public_code,
     status: raw.status,
-    bookingType: raw.booking_type || raw.bookingType || 'immediate',
-    serviceType: raw.service_type || raw.serviceType || null,
-    paymentMethod: raw.payment_method || raw.paymentMethod || null,
-    estimatedFare: raw.estimated_fare ?? raw.estimatedFare ?? null,
-    finalFare: raw.final_fare ?? raw.finalFare ?? null,
+    bookingType: raw.booking_type || 'immediate',
+    serviceType: raw.service_type ?? null,
+    paymentMethod: raw.payment_method ?? null,
+    estimatedFare: raw.estimated_fare ?? null,
+    finalFare: raw.final_fare ?? null,
     currency: raw.currency || 'ARS',
-    createdAt: raw.created_at || raw.createdAt || new Date().toISOString(),
-    confirmedAt: raw.confirmed_at || raw.confirmedAt || null,
-    assignedAt: raw.assigned_at || raw.assignedAt || null,
-    driverArrivedAt: raw.driver_arrived_at || raw.driverArrivedAt || null,
-    startedAt: raw.started_at || raw.startedAt || null,
-    finishedAt: raw.finished_at || raw.finishedAt || null,
-    cancelledAt: raw.cancelled_at || raw.cancelledAt || null,
-    cancellationReasonCode: raw.cancellation_reason_code || raw.cancellationReasonCode || null,
-    pickup: raw.pickup
+    createdAt: raw.requested_at ?? raw.confirmed_at ?? null,
+    confirmedAt: raw.confirmed_at ?? null,
+    assignedAt: raw.assigned_at ?? null,
+    driverArrivedAt: raw.driver_arrived_at ?? null,
+    startedAt: raw.started_at ?? null,
+    finishedAt: raw.finished_at ?? null,
+    cancelledAt: raw.cancelled_at ?? null,
+    cancellationReasonCode: raw.cancellation_reason_code ?? null,
+    pickup: toStop(raw.pickup),
+    dropoff: toStop(raw.dropoff),
+    stops: Array.isArray(raw.stops) ? raw.stops.map(toStop).filter(Boolean) : [],
+    driver: adminDriver
       ? {
-          address: raw.pickup.address || raw.pickup.addressText || '',
-          place_id: raw.pickup.place_id,
-          latitude: raw.pickup.latitude,
-          longitude: raw.pickup.longitude,
-        }
-      : null,
-    dropoff: raw.dropoff
-      ? {
-          address: raw.dropoff.address || raw.dropoff.addressText || '',
-          place_id: raw.dropoff.place_id,
-          latitude: raw.dropoff.latitude,
-          longitude: raw.dropoff.longitude,
-        }
-      : null,
-    driver: raw.driver
-      ? {
-          id: raw.driver.id,
-          firstName: raw.driver.first_name || raw.driver.firstName || '',
-          lastName: raw.driver.last_name || raw.driver.lastName || '',
-          phone: raw.driver.phone || raw.driver.phone_e164 || null,
-          email: raw.driver.email || '',
-          rating: raw.driver.rating ?? 4.89,
-          totalTrips: raw.driver.total_trips ?? raw.driver.totalTrips ?? 120,
+          id: adminDriver.id,
+          firstName: adminDriver.first_name,
+          lastName: adminDriver.last_name,
+          phone: adminDriver.phone_e164 ?? null,
+          email: '',
+          avatarUrl: adminDriver.avatar_url ?? null,
+          rating: adminDriver.rating_count > 0 ? adminDriver.rating_average : null,
+          totalTrips: adminDriver.completed_trips,
         }
       : null,
     vehicle: raw.vehicle
       ? {
-          id: raw.vehicle.id,
-          plate: raw.vehicle.plate || '',
-          brand: raw.vehicle.brand || '',
-          model: raw.vehicle.model || '',
-          color: raw.vehicle.color || '',
-          category: raw.vehicle.category || 'Essential y Comfort',
+          id: raw.vehicle.id ?? '',
+          plate: raw.vehicle.plate ?? '',
+          brand: raw.vehicle.brand ?? '',
+          model: raw.vehicle.model ?? '',
+          color: raw.vehicle.color ?? '',
+          category: raw.service_type?.name ?? '',
         }
       : null,
     passenger: raw.passenger
       ? {
           id: raw.passenger.id,
-          firstName: raw.passenger.first_name || raw.passenger.firstName || '',
-          lastName: raw.passenger.last_name || raw.passenger.lastName || '',
-          phone: raw.passenger.phone || raw.passenger.phone_e164 || null,
-          email: raw.passenger.email || '',
-          totalTrips: raw.passenger.total_trips ?? raw.passenger.totalTrips ?? 1,
+          firstName: raw.passenger.firstName ?? raw.passenger.first_name ?? '',
+          lastName: raw.passenger.lastName ?? raw.passenger.last_name ?? '',
+          phone: raw.passenger.phone ?? null,
+          email: raw.passenger.email ?? '',
+          totalTrips: raw.passenger.totalTrips ?? raw.passenger.total_trips ?? 0,
         }
       : null,
     thirdParty: raw.third_party
@@ -77,17 +82,35 @@ export const getTripDetail = async (tripId: string): Promise<TripDetail> => {
           phone: raw.third_party.phone || raw.third_party.phone_e164 || '',
           email: raw.third_party.email || null,
         }
-      : raw.thirdParty || null,
-    estimatedDistanceM: raw.estimated_distance_meters ?? raw.estimatedDistanceM ?? 0,
-    estimatedDurationS: raw.estimated_duration_seconds ?? raw.estimatedDurationS ?? 0,
-    paymentStatus: raw.payment_status || raw.paymentStatus || null,
-    payment: raw.payment || null,
-    fareBreakdown: raw.fare_breakdown || raw.fareBreakdown || null,
-    // El backend hoy no expone ninguno de los dos en `GET /rides/:id` (si en algun
-    // momento lo suma, lo mas probable es snake_case como el resto del contrato).
-    currentDriverLocation: raw.current_driver_location || raw.currentDriverLocation || null,
-    routeCoordinates: raw.route_coordinates || raw.routeCoordinates || undefined,
+      : null,
+    estimatedDistanceM: raw.estimated_distance_meters ?? 0,
+    estimatedDurationS: raw.estimated_duration_seconds ?? 0,
+    paymentStatus: admin.payment?.status ?? raw.payment_status ?? null,
+    payment: admin.payment
+      ? {
+          type: admin.payment.type,
+          status: admin.payment.status,
+          amount: admin.payment.amount,
+          preferenceId: admin.payment.provider_preference_id ?? undefined,
+          providerPaymentId: admin.payment.provider_payment_id ?? null,
+          approvedAt: admin.payment.approved_at ?? null,
+        }
+      : null,
+    fareBreakdown: raw.fare_breakdown ?? null,
+    routeGeometry: raw.route_geometry ?? null,
+    currentDriverLocation: admin.driver_location
+      ? {
+          latitude: admin.driver_location.latitude,
+          longitude: admin.driver_location.longitude,
+          updatedAt: admin.driver_location.updated_at,
+        }
+      : null,
+    commission: admin.commission
+      ? {
+          percent: admin.commission.percent,
+          platformAmount: admin.commission.platform_amount,
+          driverAmount: admin.commission.driver_amount,
+        }
+      : null,
   };
-
-  return detail;
 };

@@ -184,7 +184,7 @@ export const DriverDetailScreen: React.FC = () => {
       </button>
 
       {/* Banner Documentación 100% Aprobada */}
-      {allDocsApproved && (
+      {allDocsApproved && !hasExpiredDocs && (
         <div className="bg-emerald-50/90 dark:bg-emerald-500/10 border border-emerald-200/90 dark:border-emerald-500/30 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs animate-in fade-in transition-all">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
@@ -270,16 +270,6 @@ export const DriverDetailScreen: React.FC = () => {
                     <p className="text-gray-800 dark:text-white/90 text-[13px] leading-tight pr-4">{personalData.addressText}</p>
                   </div>
                 )}
-                {/* Simulated CUIL missing in API but shown in design */}
-                <div>
-                  <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Cuil</p>
-                  <p className="text-gray-800 dark:text-white/90 text-[13px]">-</p>
-                </div>
-                {/* Simulated Category requested */}
-                <div>
-                  <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Postulación</p>
-                  <p className="text-gray-800 dark:text-white/90 text-[13px] leading-tight">Essential y Comfort</p>
-                </div>
                 {personalData.email && (
                   <div>
                     <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Correo</p>
@@ -327,7 +317,6 @@ export const DriverDetailScreen: React.FC = () => {
                     {vehicleDocuments.filter(d => d.status === 'approved').length} de {vehicleDocuments.length} aprobados
                   </Badge>
                 </div>
-                <Badge variant="default">Apto Comfort</Badge>
               </CardHeader>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5 pb-5 border-b border-gray-100 dark:border-white/5">
@@ -342,10 +331,6 @@ export const DriverDetailScreen: React.FC = () => {
                 <div>
                   <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Modelo</p>
                   <p className="text-gray-800 dark:text-white/90 text-[13px]">{vehicle.model} {vehicle.year}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 dark:text-white/40 text-[10px] font-semibold uppercase tracking-wider mb-0.5">Titularidad</p>
-                  <p className="text-gray-800 dark:text-white/90 text-[13px] leading-tight">A nombre de la conductora</p>
                 </div>
               </div>
 

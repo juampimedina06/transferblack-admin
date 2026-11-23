@@ -9,8 +9,9 @@ import {
   Users,
   Wallet,
   Building,
-  UserCircle,
   Settings,
+
+  UserCircle,
   Undo2,
   X,
   ChevronLeft,
@@ -209,7 +210,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
               />
               <NavItem to="/empresas" icon={Building} label="Empresas" isCollapsed={isSidebarCollapsed} />
               <NavItem to="/pasajeros" icon={UserCircle} label="Pasajeros" isCollapsed={isSidebarCollapsed} />
-              <NavItem to="/configuracion" icon={Settings} label="Configuración" disabled isCollapsed={isSidebarCollapsed} />
+              <NavItem to="/configuracion" icon={Settings} label="Configuración" isCollapsed={isSidebarCollapsed} />
             </nav>
           </div>
         </div>

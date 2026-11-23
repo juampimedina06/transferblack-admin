@@ -14,6 +14,7 @@ import { EditMonthlyLimitModal } from './components/EditMonthlyLimitModal';
 import { MembersTable } from './components/MembersTable';
 import { StatementsSection } from './components/StatementsSection';
 import { formatArgentineDateTime } from './utils/formatArgentineDate';
+import { formatArs } from '../utils/money';
 
 function isNotFound(error: unknown): boolean {
   const status = (error as { response?: { status?: number } })?.response?.status;
@@ -106,7 +107,7 @@ export default function CompanyDetailScreen() {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Tope mensual</p>
               <div className="flex items-center gap-2">
                 <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {company.data.monthly_spend_limit ? `$ ${company.data.monthly_spend_limit}` : 'Sin tope'}
+                  {company.data.monthly_spend_limit ? formatArs(company.data.monthly_spend_limit) : 'Sin tope'}
                 </p>
                 <button
                   onClick={() => setEditingLimit(true)}

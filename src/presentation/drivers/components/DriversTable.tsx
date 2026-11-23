@@ -23,6 +23,16 @@ interface DriversTableProps {
 
 const columnHelper = createColumnHelper<DriverListItem>();
 
+/** Estado de la reunion presencial como lo lee el operador (el backend lo manda en ingles). */
+const MEETING_STATUS_LABELS: Record<string, string> = {
+  scheduled: 'Agendada',
+  rescheduled: 'Reprogramada',
+  completed: 'Realizada',
+  cancelled: 'Cancelada',
+  no_show: 'No se presentó',
+  pending: 'Pendiente',
+};
+
 export const DriversTable: React.FC<DriversTableProps> = ({
   data,
   isLoading,
@@ -66,7 +76,9 @@ export const DriversTable: React.FC<DriversTableProps> = ({
     columnHelper.accessor('meetingStatus', {
       header: 'REUNIÓN',
       cell: (info) => (
-        <span className="text-[12.5px] font-medium text-gray-600 dark:text-gray-300">{info.getValue() || 'Sin agendar'}</span>
+        <span className="text-[12.5px] font-medium text-gray-600 dark:text-gray-300">
+          {info.getValue() ? MEETING_STATUS_LABELS[info.getValue() as string] ?? info.getValue() : 'Sin agendar'}
+        </span>
       ),
     }),
     columnHelper.accessor('approvalStatus', {
@@ -76,14 +88,10 @@ export const DriversTable: React.FC<DriversTableProps> = ({
     columnHelper.display({
       id: 'actions',
       header: '',
-      cell: ({ row }) => (
-        <button
-          onClick={() => navigate(`/conductores/${row.original.id}`)}
-          className="text-[12.5px] font-semibold text-champagne-gold hover:text-yellow-600 transition-colors"
-          aria-label={`Revisar conductor ${row.original.fullName}`}
-        >
-          Revisar
-        </button>
+      cell: () => (
+        <span className="text-[12.5px] font-semibold text-champagne-gold" aria-hidden="true">
+          Ver →
+        </span>
       ),
     }),
   ], [navigate]);
@@ -153,7 +161,16 @@ export const DriversTable: React.FC<DriversTableProps> = ({
             ) : (
               // Data Rows
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors h-[36px] text-gray-800 dark:text-gray-200">
+                <tr
+                  key={row.id}
+                  // Toda la fila abre el legajo (antes solo el boton "Revisar", que ademas quedaba cortado).
+                  onClick={() => navigate(`/conductores/${row.original.id}`)}
+                  onKeyDown={(event) => event.key === 'Enter' && navigate(`/conductores/${row.original.id}`)}
+                  tabIndex={0}
+                  role="link"
+                  aria-label={`Ver legajo de ${row.original.fullName}`}
+                  className="cursor-pointer hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors h-[36px] text-gray-800 dark:text-gray-200"
+                >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-6 whitespace-nowrap">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

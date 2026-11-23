@@ -1,5 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Calendar, Search, ChevronDown, Check, Filter } from 'lucide-react';
+import { Search, ChevronDown, Check, Filter } from 'lucide-react';
+import { DateRangeField } from '../../components/common/DateRangeField';
+import { PersonPicker } from '../../components/common/PersonPicker';
+import { toLocalISODate } from '../../utils/dates';
+import { TRIP_STATUS_LABELS } from '../tripStatusLabels';
 import type { TripStatus } from '../../../core/trips/interfaces/trip.interface';
 import { TRIP_STATUSES } from '../../../core/trips/interfaces/trip.interface';
 
@@ -8,7 +12,10 @@ export interface TripsFilterState {
   endDate: string;
   status: TripStatus[];
   driverId: string;
+  /** Nombre del conductor elegido, solo para mostrarlo (viaja en la URL). */
+  driverLabel: string;
   passengerId: string;
+  passengerLabel: string;
   search: string;
   quickFilter: 'none' | 'today' | 'scheduled' | 'third_party' | 'driver_cancelled' | 'corporate';
 }
@@ -19,17 +26,6 @@ interface TripsToolbarProps {
   onResetFilters: () => void;
 }
 
-const STATUS_LABELS: Record<TripStatus, string> = {
-  in_progress: 'En viaje',
-  completed: 'Completado',
-  cancelled: 'Cancelado',
-  driver_arrived: 'Conductor llegó',
-  driver_arriving: 'Conductor en camino',
-  assigned: 'Asignado',
-  searching: 'Buscando conductor',
-  scheduled: 'Programado',
-  draft: 'Borrador',
-};
 
 export const TripsToolbar: React.FC<TripsToolbarProps> = ({
   filters,
@@ -38,9 +34,7 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
 }) => {
   const [localFilters, setLocalFilters] = useState<TripsFilterState>(filters);
   const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
-  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const statusRef = useRef<HTMLDivElement>(null);
-  const dateRef = useRef<HTMLDivElement>(null);
 
   // Sync state when props change
   useEffect(() => {
@@ -52,9 +46,6 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
     const handleClickOutside = (event: MouseEvent) => {
       if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
         setIsStatusDropdownOpen(false);
-      }
-      if (dateRef.current && !dateRef.current.contains(event.target as Node)) {
-        setIsDatePickerOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -79,13 +70,20 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
     } else {
       let next = { ...localFilters, quickFilter: filterKey };
       if (filterKey === 'today') {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        // Dia local: con toISOString() despues de las 21 h ya era mañana.
+        const todayStr = toLocalISODate(new Date());
         next.startDate = todayStr;
         next.endDate = todayStr;
       }
       setLocalFilters(next);
       onApplyFilters(next);
     }
+  };
+
+  // Fechas, conductor y pasajero se aplican al elegirlos, sin tocar "Aplicar".
+  const applyNow = (next: TripsFilterState) => {
+    setLocalFilters(next);
+    onApplyFilters(next);
   };
 
   const handleApply = () => {
@@ -112,7 +110,7 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
             key={st}
             className="px-1.5 py-0.5 text-[11px] rounded bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-white/10 whitespace-nowrap"
           >
-            {STATUS_LABELS[st]}
+            {TRIP_STATUS_LABELS[st]}
           </span>
         ))}
         {extraCount > 0 && (
@@ -126,71 +124,12 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
     <div className="bg-white dark:bg-dark-surface rounded-xl border border-gray-200/80 dark:border-dark-border p-4 shadow-sm space-y-3.5 transition-colors">
       {/* Top Filter Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-        {/* Date Range */}
-        <div className="space-y-1 relative" ref={dateRef}>
-          <label className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Rango de Fechas
-          </label>
-          <button
-            type="button"
-            onClick={() => setIsDatePickerOpen(!isDatePickerOpen)}
-            className="w-full flex items-center justify-between px-3 py-2 text-xs border border-gray-200 dark:border-dark-border rounded-lg bg-gray-50/50 dark:bg-dark-card hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-gray-800 dark:text-gray-200"
-          >
-            <div className="flex items-center gap-2 truncate">
-              <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <span className="truncate">
-                {localFilters.startDate && localFilters.endDate
-                  ? `${localFilters.startDate} — ${localFilters.endDate}`
-                  : localFilters.startDate
-                  ? `Desde ${localFilters.startDate}`
-                  : 'Todas las fechas'}
-              </span>
-            </div>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-          </button>
-
-          {isDatePickerOpen && (
-            <div className="absolute left-0 mt-1.5 w-72 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-lg shadow-xl p-3 z-50 space-y-3">
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-gray-500">Desde</label>
-                <input
-                  type="date"
-                  value={localFilters.startDate}
-                  onChange={(e) => setLocalFilters((prev) => ({ ...prev, startDate: e.target.value }))}
-                  className="w-full text-xs px-2.5 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-card text-gray-800 dark:text-gray-200"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-gray-500">Hasta</label>
-                <input
-                  type="date"
-                  value={localFilters.endDate}
-                  onChange={(e) => setLocalFilters((prev) => ({ ...prev, endDate: e.target.value }))}
-                  className="w-full text-xs px-2.5 py-1.5 border border-gray-200 dark:border-dark-border rounded bg-gray-50 dark:bg-dark-card text-gray-800 dark:text-gray-200"
-                />
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t border-gray-100 dark:border-dark-border">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLocalFilters((prev) => ({ ...prev, startDate: '', endDate: '' }));
-                    setIsDatePickerOpen(false);
-                  }}
-                  className="text-[11px] text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                >
-                  Limpiar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsDatePickerOpen(false)}
-                  className="px-2.5 py-1 text-[11px] bg-obsidian text-white rounded font-medium hover:bg-black/80"
-                >
-                  Listo
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        <DateRangeField
+          label="Rango de fechas"
+          start={localFilters.startDate}
+          end={localFilters.endDate}
+          onChange={({ start, end }) => applyNow({ ...localFilters, startDate: start, endDate: end, quickFilter: 'none' })}
+        />
 
         {/* Status Multi-Select */}
         <div className="space-y-1 relative" ref={statusRef}>
@@ -229,7 +168,7 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
                     onClick={() => handleToggleStatus(st)}
                     className="w-full flex items-center justify-between px-2 py-1.5 text-xs rounded hover:bg-gray-50 dark:hover:bg-white/5 text-gray-700 dark:text-gray-200 transition-colors text-left"
                   >
-                    <span>{STATUS_LABELS[st]}</span>
+                    <span>{TRIP_STATUS_LABELS[st]}</span>
                     {checked && <Check className="w-3.5 h-3.5 text-champagne-gold shrink-0" />}
                   </button>
                 );
@@ -238,38 +177,24 @@ export const TripsToolbar: React.FC<TripsToolbarProps> = ({
           )}
         </div>
 
-        {/* Conductor Filter */}
-        <div className="space-y-1">
-          <label className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Conductor
-          </label>
-          <input
-            type="text"
-            placeholder="Todos (nombre o ID)"
-            value={localFilters.driverId}
-            onChange={(e) => setLocalFilters((prev) => ({ ...prev, driverId: e.target.value }))}
-            className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-dark-border rounded-lg bg-gray-50/50 dark:bg-dark-card text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-champagne-gold transition-colors"
-          />
-        </div>
+        <PersonPicker
+          label="Conductor"
+          kind="driver"
+          value={localFilters.driverId ? { id: localFilters.driverId, label: localFilters.driverLabel || 'Conductor elegido' } : null}
+          onChange={(person) => applyNow({ ...localFilters, driverId: person?.id ?? '', driverLabel: person?.label ?? '' })}
+        />
 
-        {/* Pasajero Filter */}
-        <div className="space-y-1">
-          <label className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Pasajero
-          </label>
-          <input
-            type="text"
-            placeholder="Todos (nombre o ID)"
-            value={localFilters.passengerId}
-            onChange={(e) => setLocalFilters((prev) => ({ ...prev, passengerId: e.target.value }))}
-            className="w-full px-3 py-2 text-xs border border-gray-200 dark:border-dark-border rounded-lg bg-gray-50/50 dark:bg-dark-card text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-champagne-gold transition-colors"
-          />
-        </div>
+        <PersonPicker
+          label="Pasajero"
+          kind="passenger"
+          value={localFilters.passengerId ? { id: localFilters.passengerId, label: localFilters.passengerLabel || 'Pasajero elegido' } : null}
+          onChange={(person) => applyNow({ ...localFilters, passengerId: person?.id ?? '', passengerLabel: person?.label ?? '' })}
+        />
 
         {/* Free Search */}
         <div className="space-y-1">
           <label className="text-[10.5px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-            Búsqueda Libre
+            Búsqueda libre
           </label>
           <div className="relative">
             <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />

@@ -5,6 +5,9 @@ import { TripsTable } from './components/TripsTable';
 import { TripDetailDrawer } from './components/TripDetailDrawer';
 import { useTrips } from './hooks/useTrips';
 import type { GetTripsFilters, TripStatus } from '../../core/trips/interfaces/trip.interface';
+import { endOfDayISO, startOfDayISO } from '../utils/dates';
+import { Download } from 'lucide-react';
+import { exportTripsCsv, MAX_EXPORT_ROWS } from './exportTripsCsv';
 
 export const TripsScreen: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -26,7 +29,9 @@ export const TripsScreen: React.FC = () => {
       endDate: searchParams.get('dateTo') || '',
       status: parsedStatus,
       driverId: searchParams.get('driverId') || '',
+      driverLabel: searchParams.get('driverName') || '',
       passengerId: searchParams.get('passengerId') || '',
+      passengerLabel: searchParams.get('passengerName') || '',
       search: searchParams.get('search') || '',
       quickFilter: (searchParams.get('quickFilter') as any) || 'none',
     };
@@ -49,10 +54,10 @@ export const TripsScreen: React.FC = () => {
     };
 
     if (filterState.startDate) {
-      q.dateFrom = new Date(filterState.startDate + 'T00:00:00.000Z').toISOString();
+      q.dateFrom = startOfDayISO(filterState.startDate);
     }
     if (filterState.endDate) {
-      q.dateTo = new Date(filterState.endDate + 'T23:59:59.999Z').toISOString();
+      q.dateTo = endOfDayISO(filterState.endDate);
     }
 
     // Apply quick filters
@@ -83,7 +88,9 @@ export const TripsScreen: React.FC = () => {
       if (newFilters.startDate) params.set('dateFrom', newFilters.startDate);
       if (newFilters.endDate) params.set('dateTo', newFilters.endDate);
       if (newFilters.driverId) params.set('driverId', newFilters.driverId);
+      if (newFilters.driverId && newFilters.driverLabel) params.set('driverName', newFilters.driverLabel);
       if (newFilters.passengerId) params.set('passengerId', newFilters.passengerId);
+      if (newFilters.passengerId && newFilters.passengerLabel) params.set('passengerName', newFilters.passengerLabel);
       if (newFilters.status.length > 0) params.set('status', newFilters.status.join(','));
       if (newFilters.quickFilter !== 'none') params.set('quickFilter', newFilters.quickFilter);
       if (tripId) params.set('tripId', tripId);
@@ -104,7 +111,9 @@ export const TripsScreen: React.FC = () => {
       endDate: '',
       status: [],
       driverId: '',
+      driverLabel: '',
       passengerId: '',
+      passengerLabel: '',
       search: '',
       quickFilter: 'none',
     };
@@ -130,6 +139,25 @@ export const TripsScreen: React.FC = () => {
     updateUrlParams(filterState, currentPage, pageSize, null);
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  // Exporta lo filtrado (todas las paginas), no solo la pagina que se ve.
+  const handleExport = async () => {
+    setIsExporting(true);
+    setExportNotice(null);
+    try {
+      const { truncated } = await exportTripsCsv({ ...queryFilters, page: 1 });
+      if (truncated) {
+        setExportNotice(`Se exportaron los primeros ${MAX_EXPORT_ROWS} viajes. Acotá las fechas para bajar el resto.`);
+      }
+    } catch {
+      setExportNotice('No pudimos exportar los viajes. Probá de nuevo.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   if (selectedTripId) {
     return (
       <TripDetailDrawer tripId={selectedTripId} onClose={handleCloseDrawer} />
@@ -139,14 +167,24 @@ export const TripsScreen: React.FC = () => {
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Page Title */}
-      <div>
-        <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
-          Historial de Viajes
-        </h1>
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-          Auditoría en tiempo real, trazabilidad de estados y tarifas de la flota.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Historial de viajes</h1>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+            Todos los viajes pedidos, con su estado, conductor y tarifa.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={handleExport}
+          disabled={isExporting || !data?.total}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 dark:border-dark-border bg-white dark:bg-dark-surface text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 disabled:opacity-50 transition-colors"
+        >
+          <Download className="w-4 h-4" />
+          {isExporting ? 'Exportando…' : 'Exportar CSV'}
+        </button>
       </div>
+      {exportNotice && <p className="text-xs text-amber-600 dark:text-amber-400">{exportNotice}</p>}
 
       {/* Toolbar */}
       <TripsToolbar

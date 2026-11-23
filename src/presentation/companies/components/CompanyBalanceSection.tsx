@@ -6,6 +6,7 @@ import { Button, Card, CardHeader, CardTitle } from '../../components/common';
 import { QueryErrorState } from './QueryErrorState';
 import { TopUpModal } from './TopUpModal';
 import { TopUpsTable } from './TopUpsTable';
+import { formatArs } from '../../utils/money';
 
 function AmountCard({
   label,
@@ -28,7 +29,7 @@ function AmountCard({
     <div className="rounded-lg border border-gray-100 p-4 dark:border-white/10">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
       <p className={`mt-1 text-xl font-semibold ${toneClass}`}>
-        {currency} {amount}
+        {formatArs(amount, currency)}
       </p>
     </div>
   );

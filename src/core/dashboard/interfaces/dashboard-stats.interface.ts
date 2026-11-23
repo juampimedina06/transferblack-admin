@@ -32,7 +32,12 @@ export const TipoViajeDesgloseSchema = z.object({
 export type TipoViajeDesglose = z.infer<typeof TipoViajeDesgloseSchema>;
 
 export const DashboardStatsSchema = z.object({
+  // Pedidos del periodo (sin borradores), completados y cancelados.
   totalViajes: z.number().int().min(0).catch(0),
+  totalCompletados: z.number().int().min(0).catch(0),
+  totalCancelados: z.number().int().min(0).catch(0),
+  /** Facturacion bruta / completados (lo calcula el backend). */
+  ticketMedio: z.number().catch(0),
   facturacionBruta: z.number().catch(0),
   comisionNeta: z.number().catch(0),
   ratioCancelaciones: z.number().min(0).max(1).catch(0),

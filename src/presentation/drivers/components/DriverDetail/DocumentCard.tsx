@@ -129,9 +129,7 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
             <h4 className="text-[13px] font-semibold text-gray-900 dark:text-white truncate" title={displayTitle}>
               {displayTitle}
             </h4>
-            <span className="text-[11px] text-gray-400 dark:text-white/40 block -mt-0.5 capitalize">
-              {rawType.replace(/_/g, ' ')}
-            </span>
+
           </div>
         </div>
 

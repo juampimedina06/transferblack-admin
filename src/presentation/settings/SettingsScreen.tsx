@@ -169,7 +169,7 @@ export default function SettingsScreen() {
         </button>
       )}
       {/* Solo las activas: las desactivadas (Essential, Comfort) siguen en la base
-          porque los viajes viejos las referencian, pero no se ofrecen. */}
+          porque los viajes viejos las referencian, pero no se muestran ni se editan. */}
       {data?.service_types
         .filter((serviceType) => serviceType.is_active)
         .map((serviceType) => (
@@ -180,25 +180,6 @@ export default function SettingsScreen() {
           />
         ))}
 
-      {data && data.service_types.some((serviceType) => !serviceType.is_active) && (
-        <details className="rounded-xl border border-dashed border-gray-200 dark:border-dark-border p-4">
-          <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400">
-            Categorías desactivadas ({data.service_types.filter((serviceType) => !serviceType.is_active).length}) · no se
-            ofrecen a los pasajeros
-          </summary>
-          <div className="mt-4 space-y-4">
-            {data.service_types
-              .filter((serviceType) => !serviceType.is_active)
-              .map((serviceType) => (
-                <ServiceTypeCard
-                  key={cardKey(serviceType)}
-                  serviceType={serviceType}
-                  defaultMinimum={data.default_minimum_fare}
-                />
-              ))}
-          </div>
-        </details>
-      )}
     </div>
   );
 }

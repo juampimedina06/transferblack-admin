@@ -5,8 +5,8 @@ import { DriverDetailSkeleton } from './components/DriverDetail/DriverDetailSkel
 import { DocumentCard } from './components/DriverDetail/DocumentCard';
 import { RejectionModal } from './components/DriverDetail/RejectionModal';
 import { GracePeriodModal } from './components/DriverDetail/GracePeriodModal';
-import { ArrowLeft, Calendar, MapPin, AlertTriangle, Check, X, Lock, CheckCircle2, Sparkles, Clock } from 'lucide-react';
-import { format, differenceInYears, isBefore } from 'date-fns';
+import { ArrowLeft, Calendar, CalendarClock, MapPin, AlertTriangle, Check, X, Lock, CheckCircle2, Sparkles, Clock } from 'lucide-react';
+import { format, differenceInYears, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
 import { Button, Input, Badge, Card, CardHeader, CardTitle } from '../components/common';
@@ -96,6 +96,18 @@ const getMeetingStatusConfig = (status?: DriverMeeting['status']) => {
   }
 };
 
+type ReviewableDocument = {
+  status: string;
+  expiresAt?: string;
+  graceUntil?: string | null;
+};
+
+const hasActiveGrace = (doc: ReviewableDocument): boolean =>
+  Boolean(doc.graceUntil && isAfter(new Date(doc.graceUntil), new Date()));
+
+const isDocCleared = (doc: ReviewableDocument): boolean =>
+  doc.status === 'approved' || hasActiveGrace(doc);
+
 export const DriverDetailScreen: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -139,8 +151,9 @@ export const DriverDetailScreen: React.FC = () => {
   const meetingConfig = getMeetingStatusConfig(latestMeeting?.status);
 
   const allDocuments = [...driverDocuments, ...vehicleDocuments];
-  const allDocsApproved = allDocuments.length > 0 && allDocuments.every(d => d.status === 'approved');
-  const pendingDocsCount = allDocuments.filter(d => d.status !== 'approved').length;
+  const allDocsApproved = allDocuments.length > 0 && allDocuments.every(isDocCleared);
+  const pendingDocsCount = allDocuments.filter((d) => !isDocCleared(d)).length;
+  const graceDocsCount = allDocuments.filter(hasActiveGrace).length;
 
   const handleApproveDocument = (docId: string) => {
     documentMutation.mutate({ docId, status: 'approved' });
@@ -173,7 +186,7 @@ export const DriverDetailScreen: React.FC = () => {
   };
 
   const hasExpiredDocs = allDocuments.some(
-    doc => doc.expiresAt && isBefore(new Date(doc.expiresAt), new Date())
+    (doc) => doc.expiresAt && isBefore(new Date(doc.expiresAt), new Date()) && !hasActiveGrace(doc),
   );
 
   return (
@@ -210,9 +223,21 @@ export const DriverDetailScreen: React.FC = () => {
 
       {hasExpiredDocs && (
         <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-md p-4 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-red-500" />
+          <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
           <p className="text-[13px] font-medium text-red-800 dark:text-red-400">
-            Atención: Hay documentos vencidos. Revisá las tarjetas resaltadas en rojo.
+            Atención: Hay documentos vencidos sin prórroga activa. Revisá las tarjetas resaltadas en rojo.
+          </p>
+        </div>
+      )}
+
+      {!hasExpiredDocs && graceDocsCount > 0 && (
+        <div className="bg-amber-50/80 dark:bg-amber-500/10 border border-amber-200/90 dark:border-amber-500/30 rounded-md p-4 flex items-center gap-3">
+          <CalendarClock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+          <p className="text-[13px] font-medium text-amber-900 dark:text-amber-200">
+            {graceDocsCount === 1
+              ? '1 documento opera con plazo de gracia activo.'
+              : `${graceDocsCount} documentos operan con plazo de gracia activo.`}{' '}
+            El flujo de reunión presencial y aprobación permanece habilitado mientras el conductor renueva la documentación.
           </p>
         </div>
       )}
@@ -286,7 +311,7 @@ export const DriverDetailScreen: React.FC = () => {
               <div className="flex items-center gap-2">
                 <CardTitle>Documentación personal</CardTitle>
                 <Badge variant="success">
-                  {driverDocuments.filter(d => d.status === 'approved').length} de {driverDocuments.length} aprobados
+                  {driverDocuments.filter(isDocCleared).length} de {driverDocuments.length} habilitados
                 </Badge>
               </div>
             </CardHeader>
@@ -314,7 +339,7 @@ export const DriverDetailScreen: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <CardTitle>Vehículo declarado</CardTitle>
                   <Badge variant="success">
-                    {vehicleDocuments.filter(d => d.status === 'approved').length} de {vehicleDocuments.length} aprobados
+                    {vehicleDocuments.filter(isDocCleared).length} de {vehicleDocuments.length} habilitados
                   </Badge>
                 </div>
               </CardHeader>
@@ -404,7 +429,7 @@ export const DriverDetailScreen: React.FC = () => {
 
                   <div className="flex flex-col gap-1.5 pt-1 text-[11px] border-t border-amber-200/60 dark:border-amber-500/15">
                     <div className="flex items-center gap-2">
-                      {driverDocuments.concat(vehicleDocuments).every(d => d.status === 'approved') ? (
+                      {allDocsApproved ? (
                         <span className="w-4 h-4 rounded-full bg-emerald-500/15 border border-emerald-500/40 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                           <Check className="w-2.5 h-2.5 stroke-[3]" />
                         </span>
@@ -413,10 +438,12 @@ export const DriverDetailScreen: React.FC = () => {
                           <X className="w-2.5 h-2.5 stroke-[3]" />
                         </span>
                       )}
-                      <span className={driverDocuments.concat(vehicleDocuments).every(d => d.status === 'approved') ? "text-emerald-700 dark:text-emerald-400 font-medium" : "text-amber-900/90 dark:text-amber-300/90"}>
-                        {driverDocuments.concat(vehicleDocuments).every(d => d.status === 'approved')
-                          ? "Todos los documentos aprobados"
-                          : `Faltan aprobar ${driverDocuments.concat(vehicleDocuments).filter(d => d.status !== 'approved').length} documento(s)`}
+                      <span className={allDocsApproved ? "text-emerald-700 dark:text-emerald-400 font-medium" : "text-amber-900/90 dark:text-amber-300/90"}>
+                        {allDocsApproved
+                          ? graceDocsCount > 0
+                            ? `Documentación habilitada (${graceDocsCount} con prórroga)`
+                            : "Todos los documentos aprobados"
+                          : `Faltan habilitar ${pendingDocsCount} documento(s)`}
                       </span>
                     </div>
 

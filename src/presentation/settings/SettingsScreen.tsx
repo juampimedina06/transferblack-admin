@@ -138,6 +138,10 @@ const ServiceTypeCard: React.FC<{ serviceType: ServiceTypePricing; defaultMinimu
   );
 };
 
+/** Clave que cambia al guardar: la tarjeta se vuelve a montar con los valores nuevos. */
+const cardKey = (serviceType: ServiceTypePricing) =>
+  `${serviceType.id}-${serviceType.is_active}-${serviceType.base_fare}-${serviceType.minimum_fare}-${serviceType.platform_fee_percent}`;
+
 /** Configuración: tarifas por categoría (las únicas que hoy se pueden cambiar sin tocar el servidor). */
 export default function SettingsScreen() {
   const { data, isLoading, isError, refetch } = useQuery({ queryKey: ['pricing-settings'], queryFn: getPricingSettings });
@@ -161,13 +165,37 @@ export default function SettingsScreen() {
           No pudimos cargar las tarifas. Reintentar
         </button>
       )}
-      {data?.service_types.map((serviceType) => (
-        <ServiceTypeCard
-          key={`${serviceType.id}-${serviceType.base_fare}-${serviceType.minimum_fare}-${serviceType.platform_fee_percent}`}
-          serviceType={serviceType}
-          defaultMinimum={data.default_minimum_fare}
-        />
-      ))}
+      {/* Solo las activas: las desactivadas (Essential, Comfort) siguen en la base
+          porque los viajes viejos las referencian, pero no se ofrecen. */}
+      {data?.service_types
+        .filter((serviceType) => serviceType.is_active)
+        .map((serviceType) => (
+          <ServiceTypeCard
+            key={cardKey(serviceType)}
+            serviceType={serviceType}
+            defaultMinimum={data.default_minimum_fare}
+          />
+        ))}
+
+      {data && data.service_types.some((serviceType) => !serviceType.is_active) && (
+        <details className="rounded-xl border border-dashed border-gray-200 dark:border-dark-border p-4">
+          <summary className="cursor-pointer text-sm text-gray-500 dark:text-gray-400">
+            Categorías desactivadas ({data.service_types.filter((serviceType) => !serviceType.is_active).length}) · no se
+            ofrecen a los pasajeros
+          </summary>
+          <div className="mt-4 space-y-4">
+            {data.service_types
+              .filter((serviceType) => !serviceType.is_active)
+              .map((serviceType) => (
+                <ServiceTypeCard
+                  key={cardKey(serviceType)}
+                  serviceType={serviceType}
+                  defaultMinimum={data.default_minimum_fare}
+                />
+              ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

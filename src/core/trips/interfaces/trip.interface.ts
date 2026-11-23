@@ -37,7 +37,8 @@ export interface TripDriver {
   firstName: string;
   lastName: string;
   phone: string | null;
-  rating?: number;
+  avatarUrl?: string | null;
+  rating?: number | null;
   totalTrips?: number;
 }
 
@@ -131,19 +132,22 @@ export interface TripStatusHistoryResponse {
   history: TripStatusHistoryItem[];
 }
 
+/** Desglose de la cotizacion elegida (`fare_breakdown` del backend, montos como texto). */
 export interface TripFareBreakdown {
-  baseAmount?: number;
-  distanceAmount?: number;
-  durationAmount?: number;
-  waitingAmount?: number;
-  tollsAmount?: number;
-  totalAmount?: number;
-  platformCommissionRate?: number;
-  platformCommissionAmount?: number;
-  driverNetAmount?: number;
+  base: string;
+  distance: string;
+  time: string;
+  discount: string;
+  fees: string;
+  total: string;
+  currency: string;
 }
 
 export interface TripPaymentDetail {
+  type?: string;
+  amount?: string;
+  approvedAt?: string | null;
+  providerPaymentId?: string | null;
   method?: string;
   brand?: string;
   lastFour?: string;
@@ -183,9 +187,17 @@ export interface TripDetail {
   payment: TripPaymentDetail | null;
   fareBreakdown: TripFareBreakdown | null;
   routeCoordinates?: [number, number][];
+  /** Ruta cotizada (GeoJSON, [lng, lat]); `null` si el backend no la guardo. */
+  routeGeometry?: { type: 'MultiLineString'; coordinates: number[][][] } | null;
+  /** Paradas intermedias, en orden. */
+  stops?: TripStopPoint[];
+  /** Ultima posicion conocida del chofer asignado. */
   currentDriverLocation?: {
     latitude: number;
     longitude: number;
     addressText?: string;
+    updatedAt?: string;
   } | null;
+  /** Comision real del snapshot de la cotizacion; `null` si no se conoce. */
+  commission?: { percent: string; platformAmount: string; driverAmount: string } | null;
 }

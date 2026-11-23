@@ -6,6 +6,7 @@ import { Badge, Button, Card, CardHeader, CardTitle } from '../../components/com
 import { CreateCostCenterModal } from './CreateCostCenterModal';
 import { EditCostCenterModal } from './EditCostCenterModal';
 import { QueryErrorState } from './QueryErrorState';
+import { formatArs } from '../../utils/money';
 
 export function CostCentersTable({ companyId }: { companyId: string }) {
   const [showCreate, setShowCreate] = useState(false);
@@ -74,7 +75,7 @@ export function CostCentersTable({ companyId }: { companyId: string }) {
                   <td className="px-5 py-3 font-medium text-gray-900 dark:text-white">{costCenter.code}</td>
                   <td className="px-5 py-3">{costCenter.name}</td>
                   <td className="px-5 py-3">
-                    {costCenter.monthly_spend_limit ? `$ ${costCenter.monthly_spend_limit}` : 'Sin tope'}
+                    {costCenter.monthly_spend_limit ? formatArs(costCenter.monthly_spend_limit) : 'Sin tope'}
                   </td>
                   <td className="px-5 py-3">
                     <Badge variant={costCenter.status === 'active' ? 'success' : 'default'}>

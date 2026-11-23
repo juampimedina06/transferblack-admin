@@ -181,6 +181,10 @@ export const TripsTable: React.FC<TripsTableProps> = ({
   );
 
   const table = useReactTable({
+    // El estado va al lado del codigo: antes quedaba ultimo, fuera de la vista sin scroll horizontal.
+    initialState: {
+      columnOrder: ['publicCode', 'status', 'createdAt', 'passenger', 'driver', 'bookingType', 'route', 'fare'],
+    },
     data: data?.data ?? [],
     columns,
     getCoreRowModel: getCoreRowModel(),
@@ -304,7 +308,7 @@ export const TripsTable: React.FC<TripsTableProps> = ({
             <span className="font-semibold text-gray-900 dark:text-white">
               <AnimatedNumber value={total} />
             </span>{' '}
-            viajes
+            {total === 1 ? 'viaje' : 'viajes'}
           </div>
 
           <div className="flex items-center gap-1.5">

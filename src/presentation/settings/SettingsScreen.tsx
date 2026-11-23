@@ -9,6 +9,7 @@ import {
   type ServiceTypePricingChanges,
 } from '../../core/settings/pricingSettings.api';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
+import { DispatchRadiusCard } from './DispatchRadiusCard';
 
 const money = (value: string | number) =>
   new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 2 }).format(Number(value));
@@ -148,6 +149,8 @@ export default function SettingsScreen() {
 
   return (
     <div className="space-y-5">
+      <DispatchRadiusCard />
+
       <div>
         <h1 className="text-xl font-bold text-gray-900 dark:text-white">Tarifas</h1>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">

@@ -43,3 +43,21 @@ export const updateServiceTypePricing = async (id: string, changes: ServiceTypeP
   const { data } = await adminApi.patch<{ data: ServiceTypePricing }>(`/admin/settings/service-types/${id}`, changes);
   return data.data;
 };
+
+export interface DispatchSettings {
+  default_search_radius_meters: number;
+  updated_at: string | null;
+}
+
+/** Radio con el que el despacho busca choferes (`GET /admin/settings/dispatch`). */
+export const getDispatchSettings = async (): Promise<DispatchSettings> => {
+  const { data } = await adminApi.get<{ data: DispatchSettings }>('/admin/settings/dispatch');
+  return data.data;
+};
+
+export const updateDispatchSettings = async (defaultSearchRadiusMeters: number): Promise<DispatchSettings> => {
+  const { data } = await adminApi.patch<{ data: DispatchSettings }>('/admin/settings/dispatch', {
+    default_search_radius_meters: defaultSearchRadiusMeters,
+  });
+  return data.data;
+};

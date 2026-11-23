@@ -121,15 +121,19 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
             <h4 className="text-[13px] font-semibold text-gray-900 dark:text-white truncate" title={displayTitle}>
               {displayTitle}
             </h4>
-            <span className="text-[11px] text-gray-400 dark:text-white/40 block -mt-0.5 capitalize">
-              {rawType.replace(/_/g, ' ')}
-            </span>
+
           </div>
         </div>
 
         {/* Status Badge */}
         <div className="shrink-0">
-          {status === 'approved' && (
+          {/* Vencido manda sobre "Aprobado": un documento vencido no habilita a manejar. */}
+          {status === 'approved' && isExpired && (
+            <Badge variant="danger" size="md">
+              <X className="w-3 h-3 stroke-[2.5]" /> Vencido
+            </Badge>
+          )}
+          {status === 'approved' && !isExpired && (
             <Badge variant="success" size="md">
               <Check className="w-3 h-3 stroke-[2.5]" /> Aprobado
             </Badge>

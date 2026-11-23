@@ -6,7 +6,7 @@
  * La visibilidad del aviso de borrador se configura por página en `LegalLayout`.
  */
 export const LEGAL_ENTITY = {
-  businessName: 'Transferblack',
+  businessName: 'Transferblack SAS',
   taxId: '30-71967194-9',
   address: 'Lázaro Langer 237, barrio Las Flores, Córdoba Capital',
   contactEmail: '[PENDIENTE — EMAIL DE CONTACTO]',

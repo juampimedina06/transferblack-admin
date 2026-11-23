@@ -17,6 +17,7 @@ export default function DriverTermsScreen() {
     <LegalLayout
       title="Términos y Condiciones — Conductores"
       updatedAt={LEGAL_ENTITY.effectiveDate}
+      showDraftBanner={false}
     >
       <LegalSection title="1. Naturaleza del Servicio e Intermediación Tecnológica">
         <p>
@@ -123,8 +124,15 @@ export default function DriverTermsScreen() {
 
       <LegalSection title="9. Contacto">
         <p>
-          Ante cualquier consulta legal u operativa sobre estos Términos, escribinos a{' '}
-          <strong>{LEGAL_ENTITY.contactEmail}</strong>.
+          Ante cualquier consulta legal u operativa sobre estos Términos, podés comunicarte por
+          teléfono al{' '}
+          <a
+            href={`tel:${LEGAL_ENTITY.supportPhone}`}
+            className="font-semibold text-champagne-gold hover:underline"
+          >
+            {LEGAL_ENTITY.supportPhone}
+          </a>
+          .
         </p>
       </LegalSection>
     </LegalLayout>

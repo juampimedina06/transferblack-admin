@@ -34,12 +34,24 @@ test('passenger terms contact section offers the supplied phone instead of an em
   assert.ok(!section.includes('[EMAIL DE CONTACTO]'));
   assert.ok(!section.includes('mailto:'));
 });
+test('driver terms contact section offers the supplied phone instead of a pending email', () => {
+  const Screen = require('../src/presentation/legal/DriverTermsScreen.tsx').default;
+  const html = renderToStaticMarkup(
+    React.createElement(MemoryRouter, null, React.createElement(Screen)),
+  );
+  const section = html.match(/<section><h2[^>]*>9\. Contacto<\/h2>([\s\S]*?)<\/section>/)?.[1];
+  assert.ok(section, 'driver contact section must exist');
+  assert.ok(section.includes('href="tel:3515901798"'));
+  assert.ok(section.includes('3515901798</a>'));
+  assert.ok(!section.includes('PENDIENTE'));
+  assert.ok(!section.includes('mailto:'));
+});
 require.extensions['.png'] = (module) => { module.exports = 'logo.png'; };
 
 const screens = [
   ['TermsScreen', false],
   ['PrivacyScreen', false],
-  ['DriverTermsScreen', true],
+  ['DriverTermsScreen', false],
   ['DriverPrivacyScreen', true],
   ['DeleteAccountInfoScreen', false],
 ];
@@ -54,7 +66,7 @@ for (const [name, draftExpected] of screens) {
     assert.ok(html.includes('República Argentina'));
     assert.ok(html.includes('href="tel:3515901798"'));
     assert.ok(html.includes('3515901798</a>'));
-    assert.ok(html.includes('<strong>Transferblack</strong>'));
+    assert.ok(html.includes('<strong>Transferblack SAS</strong>'));
     assert.ok(html.includes('<strong>30-71967194-9</strong>'));
     assert.equal(html.includes('Borrador'), draftExpected);
     assert.ok(!html.includes('[DOMICILIO]'));

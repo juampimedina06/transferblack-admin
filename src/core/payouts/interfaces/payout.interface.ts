@@ -48,6 +48,8 @@ export interface RunWeeklyBatchResponse {
 export interface AdminPayoutItem {
   id: string;
   driver_id: string;
+  /** Nombre del conductor (lo suma la cola del admin). */
+  driver_name?: string | null;
   type?: AdminPayoutType;
   amount: number | string; // Monto bruto solicitado
   fee_amount?: number | string; // Comisión cobrada

@@ -62,7 +62,7 @@ export const PayoutsTable: React.FC<PayoutsTableProps> = ({
         header: 'CONDUCTOR / TITULAR',
         cell: (info) => {
           const row = info.row.original;
-          const holderName = row.account_holder_name || 'Conductor';
+          const holderName = row.driver_name || row.account_holder_name || 'Sin nombre';
           const document = row.account_holder_document;
           const isDocCopied = copiedKey === `doc-${row.id}`;
           const isNameCopied = copiedKey === `name-${row.id}`;

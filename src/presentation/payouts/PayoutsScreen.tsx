@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, RefreshCw, AlertCircle, CheckCircle2, Zap, Filter } from 'lucide-react';
+import { RefreshCw, AlertCircle, CheckCircle2, Zap, Filter } from 'lucide-react';
 import type {
   AdminPayoutItem,
   AdminPayoutFilterStatus,
@@ -17,6 +17,7 @@ import { PayoutDetailModal } from './components/PayoutDetailModal';
 import { PayoutResolveModal } from './components/PayoutResolveModal';
 import { RunWeeklyBatchModal } from './components/RunWeeklyBatchModal';
 import { extractApiErrorMessage } from '../../core/api/adminApi';
+import { PersonPicker, type PickedPerson } from '../components/common/PersonPicker';
 
 const STATUS_TABS: { value: AdminPayoutFilterStatus; label: string }[] = [
   { value: 'pending', label: 'Pendientes' },
@@ -117,14 +118,16 @@ export const PayoutsScreen: React.FC = () => {
     [setSearchParams]
   );
 
-  const handleDriverSearch = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const val = e.target.value.trim();
+  const driverNameParam = searchParams.get('driver_name') || '';
+  const handleDriverPick = useCallback(
+    (person: PickedPerson | null) => {
       setSearchParams((prev) => {
-        if (!val) {
+        if (!person) {
           prev.delete('driver_id');
+          prev.delete('driver_name');
         } else {
-          prev.set('driver_id', val);
+          prev.set('driver_id', person.id);
+          prev.set('driver_name', person.label);
         }
         prev.set('page', '1');
         return prev;
@@ -303,16 +306,13 @@ export const PayoutsScreen: React.FC = () => {
           </div>
 
           {/* Buscador de Conductor */}
-          <div className="relative w-full sm:w-64">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-              <Search className="w-4 h-4" />
-            </div>
-            <input
-              type="text"
-              placeholder="Filtrar por UUID chofer..."
-              value={driverIdParam}
-              onChange={handleDriverSearch}
-              className="w-full pl-9 pr-4 py-2 bg-white dark:bg-dark-surface border border-gray-200 dark:border-dark-border rounded-xl text-xs text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-champagne-gold/50 focus:border-champagne-gold transition-all shadow-sm"
+          <div className="w-full sm:w-72 -mt-5">
+            <PersonPicker
+              label="Conductor"
+              kind="driver"
+              value={driverIdParam ? { id: driverIdParam, label: driverNameParam || 'Conductor elegido' } : null}
+              onChange={handleDriverPick}
+              placeholder="Todos · buscá por nombre"
             />
           </div>
         </div>

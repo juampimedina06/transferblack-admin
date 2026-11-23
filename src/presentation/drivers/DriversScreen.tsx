@@ -2,6 +2,7 @@ import React, { useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useDrivers } from './hooks/useDrivers';
 import { DriversTable } from './components/DriversTable';
+import { AnimatedNumber } from '../components/common/AnimatedNumber';
 import { Search } from 'lucide-react';
 import type { GetDriversFilters } from '../../core/drivers/interfaces/driver.interface';
 
@@ -75,7 +76,15 @@ export const DriversScreen: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 w-full px-4 py-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h1 className="text-[18px] font-semibold text-gray-900 dark:text-white tracking-tight">Conductores</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-[18px] font-semibold text-gray-900 dark:text-white tracking-tight">Conductores</h1>
+          {data?.pagination && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-white/10">
+              <AnimatedNumber value={data.pagination.totalCount} />
+              <span>{data.pagination.totalCount === 1 ? 'conductor' : 'conductores'}</span>
+            </span>
+          )}
+        </div>
         
         <div className="flex w-full sm:w-auto items-center relative gap-3">
           <div className="relative w-full sm:w-auto">

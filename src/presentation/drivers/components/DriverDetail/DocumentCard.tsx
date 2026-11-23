@@ -1,6 +1,4 @@
-import React from 'react';
-import Zoom from 'react-medium-image-zoom';
-import 'react-medium-image-zoom/dist/styles.css';
+import React, { useEffect, useRef, useState } from 'react';
 import { format, isBefore } from 'date-fns';
 import { 
   AlertTriangle, 
@@ -15,8 +13,9 @@ import {
   Car, 
   FileBadge 
 } from 'lucide-react';
-import { getImageUrl } from '../../../../core/drivers/utils/getImageUrl';
+import { getImageCacheKey, getImageUrl } from '../../../../core/drivers/utils/getImageUrl';
 import { Button, Badge } from '../../../components/common';
+import { DocumentImageModal } from './DocumentImageModal';
 
 const DOCUMENT_META: Record<string, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
   dni: { label: 'DNI (Frente y Dorso)', icon: CreditCard },
@@ -60,6 +59,25 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
   onReject,
 }) => {
   const imageUrl = getImageUrl(filePath);
+  const imageCacheKey = getImageCacheKey(imageUrl);
+  const [stableImageUrl, setStableImageUrl] = useState(imageUrl);
+  const lastCacheKeyRef = useRef(imageCacheKey);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Mantiene la URL ya cargada si solo rotó la firma presigned de S3 durante el polling.
+  useEffect(() => {
+    if (imageCacheKey !== lastCacheKeyRef.current || (!stableImageUrl && imageUrl)) {
+      lastCacheKeyRef.current = imageCacheKey;
+      setStableImageUrl(imageUrl);
+    }
+  }, [imageCacheKey, imageUrl, stableImageUrl]);
+
+  const handleImageError = () => {
+    if (imageUrl && imageUrl !== stableImageUrl) {
+      setStableImageUrl(imageUrl);
+    }
+  };
+
   const rawType = (type || name || documentType || '').toLowerCase();
   const meta = DOCUMENT_META[rawType];
   const IconComponent = meta?.icon || FileText;
@@ -133,19 +151,23 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
       <div className="flex items-center gap-3.5 bg-gray-50/70 dark:bg-white/[0.02] border border-gray-100 dark:border-white/5 rounded-lg p-2.5">
         {/* Thumbnail Preview */}
         <div className="w-20 h-14 bg-gray-100 dark:bg-obsidian rounded-md border border-gray-200 dark:border-white/10 overflow-hidden shrink-0 relative group/thumb">
-          {imageUrl ? (
-            <div className="w-full h-full relative cursor-pointer">
-              <Zoom>
-                <img
-                  src={imageUrl}
-                  alt={displayTitle}
-                  className="w-20 h-14 object-cover transition-transform duration-300 group-hover/thumb:scale-105"
-                />
-              </Zoom>
+          {stableImageUrl ? (
+            <button
+              type="button"
+              onClick={() => setIsPreviewOpen(true)}
+              className="w-full h-full relative block cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-champagne-gold"
+              aria-label={`Ver ${displayTitle} en detalle`}
+            >
+              <img
+                src={stableImageUrl}
+                alt={displayTitle}
+                onError={handleImageError}
+                className="w-20 h-14 object-cover transition-transform duration-300 group-hover/thumb:scale-105"
+              />
               <div className="absolute inset-0 bg-black/30 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                 <Eye className="w-4 h-4 text-white drop-shadow-md" />
               </div>
-            </div>
+            </button>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-white/5 text-gray-400 dark:text-white/30">
               <FileText className="w-6 h-6" />
@@ -262,6 +284,13 @@ export const DocumentCard: React.FC<DocumentCardProps> = ({
           </div>
         )}
       </div>
+      <DocumentImageModal
+        isOpen={isPreviewOpen}
+        imageUrl={stableImageUrl}
+        title={displayTitle}
+        onClose={() => setIsPreviewOpen(false)}
+        onImageError={handleImageError}
+      />
     </div>
   );
 };

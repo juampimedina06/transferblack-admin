@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import type { DriverListItem, PaginatedDriversResponse } from '../../../core/drivers/interfaces/driver.interface';
 import { DriverBadge } from './DriverBadge';
+import { AnimatedNumber } from '../../components/common/AnimatedNumber';
 import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -169,7 +170,13 @@ export const DriversTable: React.FC<DriversTableProps> = ({
       {data?.pagination && data.pagination.totalPages > 0 && (
         <div className="px-6 py-4 border-t border-gray-100 dark:border-dark-border flex items-center justify-between bg-white dark:bg-dark-surface transition-colors">
           <div className="text-sm text-gray-500 dark:text-gray-400">
-            Mostrando página <span className="font-medium text-gray-900 dark:text-white">{currentPage}</span> de <span className="font-medium text-gray-900 dark:text-white">{data.pagination.totalPages}</span>
+            Mostrando página <span className="font-medium text-gray-900 dark:text-white">{currentPage}</span> de{' '}
+            <span className="font-medium text-gray-900 dark:text-white">{data.pagination.totalPages}</span>
+            <span className="mx-2 text-gray-300 dark:text-gray-600">•</span>
+            <span className="font-medium text-gray-900 dark:text-white">
+              <AnimatedNumber value={data.pagination.totalCount} />
+            </span>{' '}
+            {data.pagination.totalCount === 1 ? 'conductor' : 'conductores'}
           </div>
           <div className="flex items-center space-x-2">
             <button

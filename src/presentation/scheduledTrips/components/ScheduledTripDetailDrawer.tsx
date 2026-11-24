@@ -282,12 +282,22 @@ export function ScheduledTripDetailDrawer({ trip, onClose, onUpdated, onCancelle
             </div>
           )}
 
-          <ScheduledTripPaymentsSection
-            tripId={trip.id}
-            agreedFare={trip.agreed_fare}
-            isPrepaid={Boolean(trip.prepaid_at)}
-            onPaid={() => onUpdated({ ...trip, prepaid_at: new Date().toISOString() })}
-          />
+          {trip.payment_method === 'cash' ? (
+            <div className="flex flex-col gap-2 rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm dark:border-dark-border dark:bg-dark-surface">
+              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Cobro en efectivo</h3>
+              <p className="text-xs text-gray-500 dark:text-white/60">
+                El pasajero le paga al chofer al terminar el viaje. No lleva cobro por adelantado: se activa
+                solo cerca de la hora de retiro.
+              </p>
+            </div>
+          ) : (
+            <ScheduledTripPaymentsSection
+              tripId={trip.id}
+              agreedFare={trip.agreed_fare}
+              isPrepaid={Boolean(trip.prepaid_at)}
+              onPaid={() => onUpdated({ ...trip, prepaid_at: new Date().toISOString() })}
+            />
+          )}
         </div>
       </div>
     </div>

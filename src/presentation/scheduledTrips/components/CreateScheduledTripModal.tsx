@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Controller, useForm } from 'react-hook-form';
-import { CalendarPlus } from 'lucide-react';
+import { Banknote, CalendarPlus, CreditCard } from 'lucide-react';
 import { applyServerErrors } from '../../../core/api/adminApi';
 import {
   createScheduledTrip,
@@ -10,6 +10,7 @@ import {
   createScheduledTripFormSchema,
   friendlyScheduledTripErrorMessage,
   type CreateScheduledTripFormValues,
+  type ScheduledTripPaymentMethod,
   type ScheduledTripPointFormValues,
 } from '../../../core/scheduledTrips/scheduledTrip.api';
 import { Button, Input, Textarea } from '../../components/common';
@@ -17,6 +18,27 @@ import { Modal } from '../../companies/components/Modal';
 import { AddressAutocompleteField } from './AddressAutocompleteField';
 import { DriverPickerSelect } from './DriverPickerSelect';
 import { RouteMapPreview } from './RouteMapPreview';
+import { cn } from '../../utils/cn';
+
+const PAYMENT_METHOD_OPTIONS: {
+  value: ScheduledTripPaymentMethod;
+  label: string;
+  hint: string;
+  icon: typeof Banknote;
+}[] = [
+  {
+    value: 'account_money',
+    label: 'Prepago',
+    hint: 'Lo cobrás antes con link de Mercado Pago o transferencia. Sin pago no se activa.',
+    icon: CreditCard,
+  },
+  {
+    value: 'cash',
+    label: 'Efectivo',
+    hint: 'El pasajero le paga al chofer al terminar. Se activa solo, sin cobro previo.',
+    icon: Banknote,
+  },
+];
 
 interface CreateScheduledTripModalProps {
   onClose: () => void;
@@ -26,7 +48,8 @@ interface CreateScheduledTripModalProps {
 /**
  * Alta de un viaje reservado: la agencia ya arreglo precio y cobro con el
  * pasajero por WhatsApp, esto solo registra el viaje (`POST
- * /admin/scheduled-trips`). El cobro se genera despues, desde el detalle.
+ * /admin/scheduled-trips`). Prepago: el cobro se genera despues, desde el
+ * detalle. Efectivo: no hay cobro previo, lo cobra el chofer al terminar.
  *
  * Origen y destino se manejan afuera de react-hook-form: son objetos que
  * elige `AddressAutocompleteField` (direccion + lat/lng), no inputs sueltos,
@@ -55,6 +78,7 @@ export function CreateScheduledTripModal({ onClose, onCreated }: CreateScheduled
       agreed_fare: '',
       reserved_driver_id: undefined,
       notes: undefined,
+      payment_method: 'account_money',
     },
   });
 
@@ -130,6 +154,45 @@ export function CreateScheduledTripModal({ onClose, onCreated }: CreateScheduled
           placeholder="Ej. 15000.00"
           error={errors.agreed_fare?.message}
           {...register('agreed_fare')}
+        />
+
+        <Controller
+          control={control}
+          name="payment_method"
+          render={({ field }) => {
+            const selected = PAYMENT_METHOD_OPTIONS.find((option) => option.value === field.value);
+            return (
+              <div className="flex flex-col gap-1.5">
+                <span className="block text-[11px] font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  Forma de pago
+                </span>
+                <div
+                  role="radiogroup"
+                  aria-label="Forma de pago"
+                  className="flex gap-1 rounded-lg border border-gray-200 p-1 dark:border-white/10"
+                >
+                  {PAYMENT_METHOD_OPTIONS.map(({ value, label, icon: Icon }) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="radio"
+                      aria-checked={field.value === value}
+                      onClick={() => field.onChange(value)}
+                      className={cn(
+                        'flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-[13px] font-medium transition-colors',
+                        field.value === value
+                          ? 'bg-champagne-gold/15 text-[#9A7D3A] dark:text-champagne-gold'
+                          : 'text-gray-500 hover:bg-gray-50 dark:text-white/60 dark:hover:bg-white/5',
+                      )}
+                    >
+                      <Icon size={14} /> {label}
+                    </button>
+                  ))}
+                </div>
+                {selected && <p className="text-xs text-gray-500 dark:text-white/60">{selected.hint}</p>}
+              </div>
+            );
+          }}
         />
 
         <Controller

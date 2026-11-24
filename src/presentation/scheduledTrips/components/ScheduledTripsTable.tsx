@@ -132,7 +132,7 @@ export const ScheduledTripsTable: React.FC<ScheduledTripsTableProps> = ({
       columnHelper.display({
         id: 'payment',
         header: 'COBRO',
-        cell: ({ row }) => <ScheduledTripPaymentBadge prepaidAt={row.original.prepaid_at} />,
+        cell: ({ row }) => <ScheduledTripPaymentBadge prepaidAt={row.original.prepaid_at} paymentMethod={row.original.payment_method} />,
       }),
       columnHelper.display({
         id: 'driver',

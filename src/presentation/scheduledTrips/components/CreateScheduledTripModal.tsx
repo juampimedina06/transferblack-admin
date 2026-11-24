@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { Banknote, CalendarPlus, CreditCard } from 'lucide-react';
 import { applyServerErrors } from '../../../core/api/adminApi';
 import {
@@ -10,6 +10,7 @@ import {
   createScheduledTripFormSchema,
   friendlyScheduledTripErrorMessage,
   type CreateScheduledTripFormValues,
+  type ScheduledTrip,
   type ScheduledTripPaymentMethod,
   type ScheduledTripPointFormValues,
 } from '../../../core/scheduledTrips/scheduledTrip.api';
@@ -18,6 +19,7 @@ import { Modal } from '../../companies/components/Modal';
 import { AddressAutocompleteField } from './AddressAutocompleteField';
 import { DriverPickerSelect } from './DriverPickerSelect';
 import { RouteMapPreview } from './RouteMapPreview';
+import { ScheduledTripPaymentsSection } from './ScheduledTripPaymentsSection';
 import { cn } from '../../utils/cn';
 
 const PAYMENT_METHOD_OPTIONS: {
@@ -29,7 +31,7 @@ const PAYMENT_METHOD_OPTIONS: {
   {
     value: 'account_money',
     label: 'Prepago',
-    hint: 'Lo cobrás antes con link de Mercado Pago o transferencia. Sin pago no se activa.',
+    hint: 'Lo cobrás antes con link de pago (Mercado Pago o tarjeta de crédito/débito) o transferencia. Al crear la reserva pasás directo al cobro. Sin pago no se activa.',
     icon: CreditCard,
   },
   {
@@ -48,8 +50,10 @@ interface CreateScheduledTripModalProps {
 /**
  * Alta de un viaje reservado: la agencia ya arreglo precio y cobro con el
  * pasajero por WhatsApp, esto solo registra el viaje (`POST
- * /admin/scheduled-trips`). Prepago: el cobro se genera despues, desde el
- * detalle. Efectivo: no hay cobro previo, lo cobra el chofer al terminar.
+ * /admin/scheduled-trips`). Prepago: al crearla, el mismo modal pasa al
+ * cobro (link de pago o transferencia) sin tener que abrir el detalle; se
+ * puede dejar para despues desde ahi. Efectivo: no hay cobro previo, lo
+ * cobra el chofer al terminar, y el modal se cierra al crear.
  *
  * Origen y destino se manejan afuera de react-hook-form: son objetos que
  * elige `AddressAutocompleteField` (direccion + lat/lng), no inputs sueltos,
@@ -62,6 +66,9 @@ export function CreateScheduledTripModal({ onClose, onCreated }: CreateScheduled
   const [origin, setOrigin] = useState<ScheduledTripPointFormValues | null>(null);
   const [destination, setDestination] = useState<ScheduledTripPointFormValues | null>(null);
   const [pointsError, setPointsError] = useState<string | null>(null);
+  // Reserva prepago recien creada: el modal pasa al paso de cobro.
+  const [createdTrip, setCreatedTrip] = useState<ScheduledTrip | null>(null);
+  const [isPaid, setIsPaid] = useState(false);
 
   const {
     control,
@@ -82,12 +89,18 @@ export function CreateScheduledTripModal({ onClose, onCreated }: CreateScheduled
     },
   });
 
+  const paymentMethod = useWatch({ control, name: 'payment_method' });
+
   const mutation = useMutation({
     mutationFn: createScheduledTrip,
     onMutate: () => setFormError(null),
-    onSuccess: () => {
+    onSuccess: (trip) => {
       void queryClient.invalidateQueries({ queryKey: ['scheduled-trips'] });
-      onCreated();
+      if (trip.payment_method === 'cash') {
+        onCreated();
+        return;
+      }
+      setCreatedTrip(trip);
     },
     onError: (error) => {
       setFormError(
@@ -105,6 +118,32 @@ export function CreateScheduledTripModal({ onClose, onCreated }: CreateScheduled
     setPointsError(null);
     mutation.mutate({ ...values, origin, destination });
   };
+
+  if (createdTrip) {
+    return (
+      <Modal title={`Cobro de la reserva ${createdTrip.public_code}`} onClose={onCreated}>
+        <div className="flex flex-col gap-4 p-5">
+          <p className="text-sm text-gray-600 dark:text-white/70">
+            La reserva quedó creada. Generá el link de pago o registrá la transferencia: sin cobro no se activa.
+            También podés hacerlo después desde el detalle de la reserva.
+          </p>
+
+          <ScheduledTripPaymentsSection
+            tripId={createdTrip.id}
+            agreedFare={createdTrip.agreed_fare}
+            isPrepaid={isPaid}
+            onPaid={() => setIsPaid(true)}
+          />
+
+          <div className="flex justify-end gap-3 border-t border-gray-100 pt-4 dark:border-white/10">
+            <Button type="button" variant={isPaid ? 'gold' : 'secondary'} onClick={onCreated}>
+              {isPaid ? 'Listo' : 'Cobrar después'}
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal title="Nueva reserva" onClose={onClose} dismissible={!mutation.isPending}>
@@ -224,7 +263,7 @@ export function CreateScheduledTripModal({ onClose, onCreated }: CreateScheduled
             Cancelar
           </Button>
           <Button type="submit" variant="gold" isLoading={mutation.isPending} leftIcon={<CalendarPlus size={15} />}>
-            Crear reserva
+            {paymentMethod === 'cash' ? 'Crear reserva' : 'Crear y cobrar'}
           </Button>
         </div>
       </form>

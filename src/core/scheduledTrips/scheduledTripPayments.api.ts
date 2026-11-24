@@ -86,6 +86,8 @@ export async function registerScheduledTripTransfer(
  */
 export function friendlyScheduledTripPaymentErrorMessage(error: unknown): string | null {
   switch (extractErrorCode(error)) {
+    case 'SCHEDULED_TRIP_CASH_PAYMENT':
+      return 'Este viaje se cobra en efectivo al terminar: no lleva cobro por adelantado.';
     case 'SCHEDULED_TRIP_ALREADY_PREPAID':
       return 'Este viaje ya está pago.';
     case 'SCHEDULED_TRIP_CANCELLED':

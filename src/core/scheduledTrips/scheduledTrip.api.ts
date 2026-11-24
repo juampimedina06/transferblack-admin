@@ -29,6 +29,14 @@ export const scheduledTripStatuses = [
 ] as const;
 export type ScheduledTripStatus = (typeof scheduledTripStatuses)[number];
 
+/**
+ * `account_money`: la agencia lo cobra por adelantado (link de Mercado Pago o
+ * transferencia) y recien pago se activa. `cash`: el pasajero le paga al chofer
+ * al terminar; se activa sin prepago.
+ */
+export const scheduledTripPaymentMethods = ['account_money', 'cash'] as const;
+export type ScheduledTripPaymentMethod = (typeof scheduledTripPaymentMethods)[number];
+
 const pointSchema = z.object({
   address: z.string(),
   lat: z.number(),
@@ -68,6 +76,8 @@ const scheduledTripSchema = z.object({
   agreed_fare: z.string(),
   currency: z.string(),
   prepaid_at: z.string().nullable(),
+  // Un backend anterior no lo manda: todos sus reservados eran prepagos.
+  payment_method: z.enum(scheduledTripPaymentMethods).default('account_money'),
   notes: z.string().nullable(),
   origin: pointSchema,
   destination: pointSchema,
@@ -141,6 +151,7 @@ export const createScheduledTripFormSchema = z
     agreed_fare: moneyAmount,
     reserved_driver_id: z.string().trim().optional(),
     notes: z.string().trim().max(2000).optional(),
+    payment_method: z.enum(scheduledTripPaymentMethods),
   })
   .refine(
     (values) => {
@@ -164,6 +175,7 @@ export const createScheduledTripFormFields = [
   'agreed_fare',
   'reserved_driver_id',
   'notes',
+  'payment_method',
 ] as const satisfies readonly (keyof CreateScheduledTripFormValues)[];
 
 export interface CreateScheduledTripInput extends CreateScheduledTripFormValues {
@@ -178,6 +190,7 @@ export async function createScheduledTrip(values: CreateScheduledTripInput): Pro
     destination: values.destination,
     scheduled_at: toArgentineIso(values.scheduled_date, values.scheduled_time),
     agreed_fare: values.agreed_fare,
+    payment_method: values.payment_method,
     ...(values.reserved_driver_id ? { reserved_driver_id: values.reserved_driver_id } : {}),
     ...(values.notes ? { notes: values.notes } : {}),
   });

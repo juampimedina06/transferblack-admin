@@ -145,8 +145,8 @@ export function ScheduledTripPaymentsSection({ tripId, agreedFare, isPrepaid, on
           {option === 'payment_link' ? (
             <div className="flex flex-col gap-3">
               <p className="text-xs text-gray-500 dark:text-white/60">
-                Genera un link de Checkout Pro por {formatCurrency(agreedFare)}. Cada click usa una clave de
-                idempotencia nueva.
+                Genera un link de pago por {formatCurrency(agreedFare)} para mandarle al pasajero. Sirve para
+                pagar con Mercado Pago o con tarjeta de crédito o débito. Cada click genera un link nuevo.
               </p>
 
               {linkError && (

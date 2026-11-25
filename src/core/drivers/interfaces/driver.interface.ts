@@ -5,6 +5,8 @@ export interface DriverListItem {
   phone?: string;
   approvalStatus: 'pending' | 'approved' | 'rejected' | 'suspended';
   meetingStatus: string;
+  walletBalance?: string | null;
+  isCashRestricted?: boolean;
   createdAt: string;
 }
 

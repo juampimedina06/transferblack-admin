@@ -24,6 +24,7 @@ export const useDriverWallet = (driverId: string) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['driver-wallet', driverId] });
       queryClient.invalidateQueries({ queryKey: ['driver-detail', driverId] });
+      queryClient.invalidateQueries({ queryKey: ['drivers'] });
     },
   });
 

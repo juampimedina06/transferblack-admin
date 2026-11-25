@@ -5,6 +5,7 @@ import { DriverDetailSkeleton } from './components/DriverDetail/DriverDetailSkel
 import { DocumentCard } from './components/DriverDetail/DocumentCard';
 import { RejectionModal } from './components/DriverDetail/RejectionModal';
 import { GracePeriodModal } from './components/DriverDetail/GracePeriodModal';
+import { DriverWalletCard } from './components/DriverDetail/DriverWalletCard';
 import { ArrowLeft, Calendar, CalendarClock, MapPin, AlertTriangle, Check, X, Lock, CheckCircle2, Sparkles, Clock } from 'lucide-react';
 import { format, differenceInYears, isAfter, isBefore } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -831,6 +832,12 @@ export const DriverDetailScreen: React.FC = () => {
               </div>
             )}
           </Card>
+
+          {/* Billetera y cobro de deuda */}
+          <DriverWalletCard
+            driverId={driverProfile.id}
+            driverName={personalData?.fullName || 'Conductor'}
+          />
 
         </div>
       </div>

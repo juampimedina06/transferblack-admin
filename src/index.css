@@ -19,3 +19,31 @@
     color-scheme: light;
   }
 }
+
+/* Mapa en vivo: patente debajo del marcador clasico del chofer. */
+.tb-marker-label {
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+/* Card del chofer: sin el marco blanco ni el padding del InfoWindow de Google. */
+.gm-style .gm-style-iw-c:has(.tb-driver-info),
+.gm-style .gm-style-iw-c.tb-driver-info {
+  padding: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border-radius: 16px !important;
+}
+.gm-style .gm-style-iw-c:has(.tb-driver-info) .gm-style-iw-d,
+.gm-style .gm-style-iw-c.tb-driver-info .gm-style-iw-d {
+  overflow: visible !important;
+  padding: 0 !important;
+}
+.gm-style .gm-style-iw-t:has(.tb-driver-info) .gm-style-iw-tc::after {
+  background: #0a0a0a;
+}

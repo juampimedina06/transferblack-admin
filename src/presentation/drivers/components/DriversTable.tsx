@@ -10,8 +10,15 @@ import { es } from 'date-fns/locale';
 import type { DriverListItem, PaginatedDriversResponse } from '../../../core/drivers/interfaces/driver.interface';
 import { DriverBadge } from './DriverBadge';
 import { AnimatedNumber } from '../../components/common/AnimatedNumber';
-import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    maximumFractionDigits: 2,
+  }).format(value);
 
 interface DriversTableProps {
   data: PaginatedDriversResponse | undefined;
@@ -85,6 +92,42 @@ export const DriversTable: React.FC<DriversTableProps> = ({
       header: 'ESTADO DEL LEGAJO',
       cell: (info) => <DriverBadge status={info.getValue()} />,
     }),
+    columnHelper.accessor('walletBalance', {
+      header: 'SALDO',
+      cell: ({ row }) => {
+        const raw = row.original.walletBalance;
+        if (raw == null || raw === '') {
+          return <span className="text-[12.5px] text-gray-400 dark:text-gray-500">-</span>;
+        }
+        const balance = Number(raw);
+        if (Number.isNaN(balance)) {
+          return <span className="text-[12.5px] text-gray-400 dark:text-gray-500">-</span>;
+        }
+        if (balance < 0) {
+          return (
+            <div className="inline-flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11.5px] font-semibold bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/30">
+                {row.original.isCashRestricted && (
+                  <AlertTriangle className="w-3 h-3 text-red-600 dark:text-red-400 shrink-0" />
+                )}
+                {formatCurrency(balance)}
+              </span>
+            </div>
+          );
+        }
+        return (
+          <span
+            className={`text-[12.5px] font-medium ${
+              balance > 0
+                ? 'text-emerald-700 dark:text-emerald-400'
+                : 'text-gray-600 dark:text-gray-300'
+            }`}
+          >
+            {formatCurrency(balance)}
+          </span>
+        );
+      },
+    }),
     columnHelper.display({
       id: 'actions',
       header: '',
@@ -144,6 +187,7 @@ export const DriversTable: React.FC<DriversTableProps> = ({
                   <td className="py-4 px-6"><div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-24"></div></td>
                   <td className="py-4 px-6"><div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-24"></div></td>
                   <td className="py-4 px-6"><div className="h-6 bg-gray-200 dark:bg-white/10 rounded-full w-28"></div></td>
+                  <td className="py-4 px-6"><div className="h-5 bg-gray-200 dark:bg-white/10 rounded-full w-20"></div></td>
                   <td className="py-4 px-6"><div className="h-4 bg-gray-200 dark:bg-white/10 rounded w-16"></div></td>
                 </tr>
               ))
@@ -160,24 +204,34 @@ export const DriversTable: React.FC<DriversTableProps> = ({
               </tr>
             ) : (
               // Data Rows
-              table.getRowModel().rows.map((row) => (
-                <tr
-                  key={row.id}
-                  // Toda la fila abre el legajo (antes solo el boton "Revisar", que ademas quedaba cortado).
-                  onClick={() => navigate(`/conductores/${row.original.id}`)}
-                  onKeyDown={(event) => event.key === 'Enter' && navigate(`/conductores/${row.original.id}`)}
-                  tabIndex={0}
-                  role="link"
-                  aria-label={`Ver legajo de ${row.original.fullName}`}
-                  className="cursor-pointer hover:bg-gray-50/50 dark:hover:bg-white/5 transition-colors h-[36px] text-gray-800 dark:text-gray-200"
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-6 whitespace-nowrap">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const rawBalance = row.original.walletBalance;
+                const hasNegativeBalance =
+                  rawBalance != null && rawBalance !== '' && Number(rawBalance) < 0;
+
+                return (
+                  <tr
+                    key={row.id}
+                    // Toda la fila abre el legajo (antes solo el boton "Revisar", que ademas quedaba cortado).
+                    onClick={() => navigate(`/conductores/${row.original.id}`)}
+                    onKeyDown={(event) => event.key === 'Enter' && navigate(`/conductores/${row.original.id}`)}
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`Ver legajo de ${row.original.fullName}`}
+                    className={`cursor-pointer transition-colors h-[40px] ${
+                      hasNegativeBalance
+                        ? 'bg-red-50/75 hover:bg-red-100/70 dark:bg-red-950/25 dark:hover:bg-red-950/40 text-red-950 dark:text-red-100 border-l-2 border-l-red-500'
+                        : 'hover:bg-gray-50/50 dark:hover:bg-white/5 text-gray-800 dark:text-gray-200'
+                    }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-6 whitespace-nowrap">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

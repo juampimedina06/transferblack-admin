@@ -200,6 +200,11 @@ export const useLiveMap = () => {
     const features = fleetData?.features || [];
     return features.filter((feat) => {
       const props = feat.properties;
+      // Los desconectados no se dibujan: su ultima ubicacion puede tener horas
+      // y solo ensuciaba el mapa. Siguen contados en el KPI.
+      if (props.availabilityStatus === 'offline') {
+        return false;
+      }
       // Filtro de estado
       if (filterStatus !== 'all' && props.availabilityStatus !== filterStatus) {
         return false;

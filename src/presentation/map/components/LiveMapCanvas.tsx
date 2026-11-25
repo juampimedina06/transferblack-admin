@@ -8,7 +8,20 @@ import {
   useAdvancedMarkerRef,
   useMarkerRef,
 } from '@vis.gl/react-google-maps';
-import { Locate, Star, Phone, Car, Compass, Clock, Maximize2, Minimize2, Flame, MapPin } from 'lucide-react';
+import {
+  Locate,
+  Star,
+  Phone,
+  Car,
+  Compass,
+  Clock,
+  Maximize2,
+  Minimize2,
+  Flame,
+  MapPin,
+  MessageCircle,
+  IdCard,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { HeatLayer, type HeatPoint } from './HeatLayer';
@@ -17,61 +30,93 @@ import { GoogleMapsProvider } from '../../shared/googleMaps/GoogleMapsProvider';
 import { GOOGLE_MAPS_MAP_ID, supportsAdvancedMarkers } from '../../shared/googleMaps/googleMapsConfig';
 import { GOOGLE_MAPS_DARK_STYLE } from '../../shared/googleMaps/googleMapsDarkStyle';
 import type { DriverLocationFeature, DriverAvailabilityStatus } from '../../../core/map/interfaces/live-map.interface';
+import { TRIP_STATUS_LABELS } from '../../trips/tripStatusLabels';
 
 // Coordenadas default de centro (Córdoba Capital)
 const DEFAULT_CENTER = { lat: -31.4201, lng: -64.1834 };
 const AIRPORT_COORDS = { lat: -31.3155, lng: -64.2084 };
 
-const STATUS_COLORS: Record<DriverAvailabilityStatus, { ring: string; dot: string; car: string }> = {
-  online: { ring: '#10B981', dot: 'bg-emerald-500', car: '#10B981' },
-  in_trip: { ring: '#F59E0B', dot: 'bg-amber-500', car: '#F59E0B' },
-  offline: { ring: '#9CA3AF', dot: 'bg-gray-400', car: '#9CA3AF' },
+/** Solo se dibujan choferes conectados: los desconectados no estan en el mapa. */
+type VisibleStatus = Exclude<DriverAvailabilityStatus, 'offline'>;
+
+const STATUS_STYLE: Record<VisibleStatus, { color: string; glow: string; label: string }> = {
+  online: { color: '#10B981', glow: 'rgba(16,185,129,0.55)', label: 'Disponible' },
+  in_trip: { color: '#F59E0B', glow: 'rgba(245,158,11,0.55)', label: 'En viaje' },
 };
 
-function resolveStatusColors(status: DriverAvailabilityStatus) {
-  return STATUS_COLORS[status] ?? STATUS_COLORS.online;
+function resolveStatusStyle(status: DriverAvailabilityStatus) {
+  return status === 'in_trip' ? STATUS_STYLE.in_trip : STATUS_STYLE.online;
 }
 
-/** Contenido HTML del marcador para AdvancedMarker (requiere Map ID), igual al divIcon que usaba Leaflet. */
-function CarMarkerContent({ status }: { status: DriverAvailabilityStatus }) {
-  const { ring, car } = resolveStatusColors(status);
-  const ringClass =
-    status === 'in_trip'
-      ? 'border-amber-500 shadow-[0_0_14px_rgba(245,158,11,0.7)]'
-      : status === 'offline'
-      ? 'border-gray-500/80 shadow-none opacity-75'
-      : 'border-emerald-500 shadow-[0_0_14px_rgba(16,185,129,0.7)]';
-  const dotClass =
-    status === 'in_trip' ? 'bg-amber-500' : status === 'offline' ? 'bg-gray-400' : 'bg-emerald-500';
+const CAR_PATH =
+  'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4.66l.12-.34h13.77l.11.34V17z';
+
+/** Patente (o nombre) que se muestra pegada al marcador, para saber cual es cada uno sin abrirlo. */
+function markerCaption(feature: DriverLocationFeature): string {
+  const { vehicle, fullName } = feature.properties;
+  return vehicle?.plate?.toUpperCase() || fullName.split(' ')[0] || '';
+}
+
+/**
+ * Marcador con AdvancedMarker (Map ID presente): pin grande con halo que
+ * late en el color del estado y la patente debajo.
+ */
+function CarMarkerContent({ status, caption }: { status: DriverAvailabilityStatus; caption: string }) {
+  const { color, glow } = resolveStatusStyle(status);
 
   return (
-    <div
-      className={`relative flex items-center justify-center w-8 h-8 rounded-full bg-neutral-900 border-2 ${ringClass} transition-all duration-300 hover:scale-125 cursor-pointer`}
-    >
-      <svg className="w-4 h-4" viewBox="0 0 24 24" fill={car} xmlns="http://www.w3.org/2000/svg">
-        <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4.66l.12-.34h13.77l.11.34V17z" />
-        <circle cx="7.5" cy="14.5" r="1.5" fill="#ffffff" />
-        <circle cx="16.5" cy="14.5" r="1.5" fill="#ffffff" />
-      </svg>
-      <span className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-neutral-900 ${dotClass}`} />
-      <span className="sr-only">{ring}</span>
+    <div className="group relative flex cursor-pointer flex-col items-center" style={{ transform: 'translateY(50%)' }}>
+      <span
+        className="pointer-events-none absolute top-0 h-12 w-12 animate-ping rounded-full opacity-60"
+        style={{ backgroundColor: glow }}
+      />
+      <div
+        className="relative flex h-12 w-12 items-center justify-center rounded-full border-[3px] bg-neutral-950 transition-transform duration-200 group-hover:scale-110"
+        style={{ borderColor: color, boxShadow: `0 0 0 4px ${glow}, 0 0 22px 6px ${glow}` }}
+      >
+        <svg className="h-6 w-6" viewBox="0 0 24 24" fill={color} xmlns="http://www.w3.org/2000/svg">
+          <path d={CAR_PATH} />
+          <circle cx="7.5" cy="14.5" r="1.5" fill="#ffffff" />
+          <circle cx="16.5" cy="14.5" r="1.5" fill="#ffffff" />
+        </svg>
+      </div>
+      {caption && (
+        <span
+          className="mt-1 rounded-md border px-1.5 py-0.5 font-mono text-[11px] font-bold tracking-wider text-white shadow-lg"
+          style={{ backgroundColor: '#0a0a0a', borderColor: color }}
+        >
+          {caption}
+        </span>
+      )}
     </div>
   );
 }
 
-/** Icono clasico (data URI) para cuando no hay Map ID / no se puede usar AdvancedMarker. */
+/**
+ * Icono clasico (data URI) cuando no hay Map ID: el mismo pin grande, con el
+ * halo animado en SVG (el marcador va con `optimized: false` para que la
+ * animacion corra) y la patente como etiqueta del marcador.
+ */
 function buildClassicCarIcon(status: DriverAvailabilityStatus): google.maps.Icon {
-  const { ring, car } = resolveStatusColors(status);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-    <circle cx="16" cy="16" r="14" fill="#171717" stroke="${ring}" stroke-width="2.5" />
-    <g transform="translate(5.5 6.5) scale(0.6)">
-      <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.85 7h10.29l1.04 3H5.81l1.04-3zM19 17H5v-4.66l.12-.34h13.77l.11.34V17z" fill="${car}" />
+  const { color } = resolveStatusStyle(status);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="72" height="72" viewBox="0 0 72 72">
+    <circle cx="36" cy="36" r="22" fill="${color}" fill-opacity="0.35">
+      <animate attributeName="r" values="22;34;22" dur="1.8s" repeatCount="indefinite" />
+      <animate attributeName="fill-opacity" values="0.45;0;0.45" dur="1.8s" repeatCount="indefinite" />
+    </circle>
+    <circle cx="36" cy="36" r="24" fill="${color}" fill-opacity="0.25" />
+    <circle cx="36" cy="36" r="19" fill="#0a0a0a" stroke="${color}" stroke-width="3.5" />
+    <g transform="translate(22 22) scale(1.17)">
+      <path d="${CAR_PATH}" fill="${color}" />
+      <circle cx="7.5" cy="14.5" r="1.5" fill="#ffffff" />
+      <circle cx="16.5" cy="14.5" r="1.5" fill="#ffffff" />
     </g>
   </svg>`;
   return {
     url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`,
-    scaledSize: { width: 32, height: 32 } as google.maps.Size,
-    anchor: { x: 16, y: 16 } as google.maps.Point,
+    scaledSize: { width: 72, height: 72 } as google.maps.Size,
+    anchor: { x: 36, y: 36 } as google.maps.Point,
+    labelOrigin: { x: 36, y: 70 } as google.maps.Point,
   };
 }
 
@@ -90,6 +135,11 @@ function timeAgo(iso: string): string {
   return `hace ${Math.round(hours / 24)} días`;
 }
 
+function tripStatusLabel(status: string | null): string {
+  if (!status) return 'En curso';
+  return (TRIP_STATUS_LABELS as Record<string, string>)[status] ?? status;
+}
+
 function DriverPopupContent({ feature, onSelectTrip }: DriverPopupContentProps) {
   const navigate = useNavigate();
   const {
@@ -105,107 +155,131 @@ function DriverPopupContent({ feature, onSelectTrip }: DriverPopupContentProps) 
     vehicle,
     lastLocationUpdateAt,
   } = feature.properties;
+  const { color, glow, label } = resolveStatusStyle(availabilityStatus);
+  const initials = fullName
+    .split(' ')
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('');
+  const phoneDigits = phone?.replace(/\D/g, '') ?? '';
 
   return (
-    <div className="p-3 bg-neutral-950 text-white rounded-xl shadow-2xl border border-white/10 min-w-[260px]">
-      <div className="flex items-center justify-between gap-2 border-b border-white/10 pb-2 mb-2">
-        <div className="flex items-center gap-2.5">
+    <div className="w-[300px] overflow-hidden rounded-2xl font-montserrat border border-white/10 bg-neutral-950 text-white shadow-2xl">
+      <div className="h-1.5 w-full" style={{ backgroundColor: color }} />
+
+      <div className="flex items-center gap-3 p-4 pb-3">
+        <div className="relative shrink-0">
           {avatarUrl ? (
-            <img src={avatarUrl} alt={fullName} className="w-12 h-12 rounded-full object-cover border border-white/20" />
+            <img
+              src={avatarUrl}
+              alt={fullName}
+              className="h-16 w-16 rounded-full border-[3px] object-cover"
+              style={{ borderColor: color, boxShadow: `0 0 16px ${glow}` }}
+            />
           ) : (
-            <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-champagne-gold">
-              {fullName
-                .split(' ')
-                .map((part) => part[0])
-                .slice(0, 2)
-                .join('')}
+            <div
+              className="flex h-16 w-16 items-center justify-center rounded-full border-[3px] bg-white/10 text-lg font-bold text-champagne-gold"
+              style={{ borderColor: color, boxShadow: `0 0 16px ${glow}` }}
+            >
+              {initials}
             </div>
           )}
-          <div>
-            <h4 className="font-bold text-sm text-white">{fullName}</h4>
-            <div className="flex items-center gap-1 text-xs text-amber-400 mt-0.5">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              {ratingCount > 0 ? (
-                <>
-                  <span>{ratingAverage.toFixed(1)}</span>
-                  <span className="text-gray-400 text-[10px]">({ratingCount})</span>
-                </>
-              ) : (
-                <span className="text-gray-400 text-[10px]">Sin calificaciones</span>
-              )}
-            </div>
-          </div>
+          <span
+            className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-neutral-950"
+            style={{ backgroundColor: color }}
+          />
         </div>
 
-        <span
-          className={`text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-            availabilityStatus === 'online'
-              ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-              : availabilityStatus === 'in_trip'
-              ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-              : 'bg-gray-500/20 text-gray-400 border border-gray-500/30'
-          }`}
-        >
-          {availabilityStatus === 'online' ? 'Disponible' : availabilityStatus === 'in_trip' ? 'En viaje' : 'Desconectado'}
-        </span>
+        <div className="min-w-0 flex-1">
+          <h4 className="truncate text-base font-bold leading-tight text-white">{fullName}</h4>
+          <div className="mt-1 flex items-center gap-1 text-xs text-amber-400">
+            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+            {ratingCount > 0 ? (
+              <>
+                <span className="font-semibold">{ratingAverage.toFixed(1)}</span>
+                <span className="text-[11px] text-gray-400">({ratingCount} viajes)</span>
+              </>
+            ) : (
+              <span className="text-[11px] text-gray-400">Sin calificaciones</span>
+            )}
+          </div>
+          <span
+            className="mt-1.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+            style={{ backgroundColor: `${color}26`, color }}
+          >
+            <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: color }} />
+            {label}
+          </span>
+        </div>
       </div>
 
       {vehicle && (
-        <div className="flex items-center gap-2 text-xs text-gray-300 py-1">
-          <Car className="w-3.5 h-3.5 text-gray-400" />
-          <span>
-            {vehicle.brand} {vehicle.model}
+        <div className="mx-4 flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-2 text-sm text-gray-200">
+            <Car className="h-4 w-4 shrink-0 text-gray-400" />
+            <span className="truncate">
+              {vehicle.brand} {vehicle.model}
+            </span>
+          </div>
+          <span className="shrink-0 rounded-md border-2 border-neutral-300 bg-white px-2 py-0.5 font-mono text-sm font-bold tracking-widest text-neutral-900">
+            {vehicle.plate.toUpperCase()}
           </span>
-          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-white/10 rounded text-gray-200">
-            {vehicle.plate}
-          </span>
-        </div>
-      )}
-
-      {phone && (
-        <div className="flex items-center gap-2 text-xs text-gray-400 py-0.5">
-          <Phone className="w-3.5 h-3.5" />
-          <span>{phone}</span>
-          <a
-            href={`https://wa.me/${phone.replace(/\D/g, '')}`}
-            target="_blank"
-            rel="noreferrer"
-            className="ml-auto text-[11px] text-emerald-400 hover:underline"
-          >
-            WhatsApp
-          </a>
         </div>
       )}
 
       {currentTripId && (
-        <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between">
-          <span className="text-xs text-champagne-gold font-medium">
-            Viaje en curso: {currentTripStatus || 'Activo'}
-          </span>
+        <div className="mx-4 mt-2 flex items-center justify-between gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2">
+          <div className="text-xs">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-amber-300/80">Viaje actual</span>
+            <span className="font-semibold text-amber-200">{tripStatusLabel(currentTripStatus)}</span>
+          </div>
           {onSelectTrip && (
             <button
               type="button"
               onClick={() => onSelectTrip(currentTripId)}
-              className="text-[11px] underline text-gray-300 hover:text-white"
+              className="rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-bold text-neutral-950 transition-colors hover:bg-amber-400"
             >
-              Ver
+              Ver viaje
             </button>
           )}
         </div>
       )}
 
-      <div className="mt-2 text-[10px] text-gray-500 flex items-center gap-1">
-        <Clock className="w-3 h-3" />
-        <span>
-          {lastLocationUpdateAt ? `Última ubicación ${timeAgo(lastLocationUpdateAt)}` : 'Sin ubicación reciente'}
-        </span>
+      <div className="grid grid-cols-3 gap-2 p-4 pt-3">
+        {phoneDigits ? (
+          <>
+            <a
+              href={`https://wa.me/${phoneDigits}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2 py-2 text-xs font-semibold text-emerald-300 transition-colors hover:bg-emerald-500/20"
+            >
+              <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+            </a>
+            <a
+              href={`tel:${phone}`}
+              className="flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs font-semibold text-gray-200 transition-colors hover:bg-white/10"
+            >
+              <Phone className="h-3.5 w-3.5" /> Llamar
+            </a>
+          </>
+        ) : (
+          <span className="col-span-2 flex items-center justify-center rounded-lg border border-white/10 px-2 py-2 text-xs text-gray-500">
+            Sin teléfono
+          </span>
+        )}
         <button
           type="button"
           onClick={() => navigate(`/conductores/${driverId}`)}
-          className="ml-auto text-[11px] text-champagne-gold hover:underline"
+          className="flex items-center justify-center gap-1.5 rounded-lg bg-champagne-gold px-2 py-2 text-xs font-bold text-neutral-950 transition-colors hover:brightness-110"
         >
-          Ver legajo
+          <IdCard className="h-3.5 w-3.5" /> Legajo
         </button>
+      </div>
+
+      <div className="flex items-center gap-1.5 border-t border-white/10 px-4 py-2 text-[11px] text-gray-500">
+        <Clock className="h-3 w-3" />
+        {lastLocationUpdateAt ? `Última ubicación ${timeAgo(lastLocationUpdateAt)}` : 'Sin ubicación reciente'}
       </div>
     </div>
   );
@@ -216,7 +290,7 @@ interface DriverMarkerProps {
   onSelectTrip?: (tripId: string) => void;
 }
 
-/** Marcador con AdvancedMarker (Map ID presente): contenido HTML en vivo igual al divIcon de Leaflet. */
+/** Marcador con AdvancedMarker (Map ID presente). */
 const AdvancedDriverMarker: React.FC<DriverMarkerProps> = React.memo(({ feature, onSelectTrip }) => {
   const [infoOpen, setInfoOpen] = useState(false);
   const [markerRef, marker] = useAdvancedMarkerRef();
@@ -227,12 +301,13 @@ const AdvancedDriverMarker: React.FC<DriverMarkerProps> = React.memo(({ feature,
       <AdvancedMarker
         ref={markerRef}
         position={{ lat, lng }}
+        zIndex={infoOpen ? 1000 : feature.properties.availabilityStatus === 'in_trip' ? 20 : 10}
         onClick={() => setInfoOpen((open) => !open)}
       >
-        <CarMarkerContent status={feature.properties.availabilityStatus} />
+        <CarMarkerContent status={feature.properties.availabilityStatus} caption={markerCaption(feature)} />
       </AdvancedMarker>
       {infoOpen && marker && (
-        <InfoWindow anchor={marker} headerDisabled onCloseClick={() => setInfoOpen(false)}>
+        <InfoWindow anchor={marker} headerDisabled className="tb-driver-info" onCloseClick={() => setInfoOpen(false)}>
           <DriverPopupContent feature={feature} onSelectTrip={onSelectTrip} />
         </InfoWindow>
       )}
@@ -241,12 +316,21 @@ const AdvancedDriverMarker: React.FC<DriverMarkerProps> = React.memo(({ feature,
 });
 AdvancedDriverMarker.displayName = 'AdvancedDriverMarker';
 
-/** Marcador clasico (sin Map ID): icono svg horneado por status. */
+/** Marcador clasico (sin Map ID): icono svg horneado por estado y la patente como etiqueta. */
 const ClassicDriverMarker: React.FC<DriverMarkerProps> = React.memo(({ feature, onSelectTrip }) => {
   const [infoOpen, setInfoOpen] = useState(false);
   const [markerRef, marker] = useMarkerRef();
   const [lng, lat] = feature.geometry.coordinates;
-  const icon = useMemo(() => buildClassicCarIcon(feature.properties.availabilityStatus), [feature.properties.availabilityStatus]);
+  const status = feature.properties.availabilityStatus;
+  const caption = markerCaption(feature);
+  const icon = useMemo(() => buildClassicCarIcon(status), [status]);
+  const label = useMemo<google.maps.MarkerLabel | undefined>(
+    () =>
+      caption
+        ? { text: caption, color: '#ffffff', fontSize: '11px', fontWeight: '700', className: 'tb-marker-label' }
+        : undefined,
+    [caption],
+  );
 
   return (
     <>
@@ -254,10 +338,13 @@ const ClassicDriverMarker: React.FC<DriverMarkerProps> = React.memo(({ feature, 
         ref={markerRef}
         position={{ lat, lng }}
         icon={icon}
+        label={label}
+        optimized={false}
+        zIndex={infoOpen ? 1000 : status === 'in_trip' ? 20 : 10}
         onClick={() => setInfoOpen((open) => !open)}
       />
       {infoOpen && marker && (
-        <InfoWindow anchor={marker} headerDisabled onCloseClick={() => setInfoOpen(false)}>
+        <InfoWindow anchor={marker} headerDisabled className="tb-driver-info" onCloseClick={() => setInfoOpen(false)}>
           <DriverPopupContent feature={feature} onSelectTrip={onSelectTrip} />
         </InfoWindow>
       )}
@@ -265,6 +352,25 @@ const ClassicDriverMarker: React.FC<DriverMarkerProps> = React.memo(({ feature, 
   );
 });
 ClassicDriverMarker.displayName = 'ClassicDriverMarker';
+
+/** Zoom maximo al encuadrar la flota: con uno o dos choferes juntos, fitBounds se iba al zoom de calle. */
+const MAX_FLEET_ZOOM = 15;
+
+/** Encuadra a todos los choferes sin pasar de `MAX_FLEET_ZOOM`. */
+function fitFleet(map: google.maps.Map, features: DriverLocationFeature[]) {
+  if (features.length === 1) {
+    const [lng, lat] = features[0].geometry.coordinates;
+    map.setCenter({ lat, lng });
+    map.setZoom(MAX_FLEET_ZOOM);
+    return;
+  }
+  const bounds = new google.maps.LatLngBounds();
+  features.forEach((f) => bounds.extend({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] }));
+  map.fitBounds(bounds, 80);
+  google.maps.event.addListenerOnce(map, 'idle', () => {
+    if ((map.getZoom() ?? 0) > MAX_FLEET_ZOOM) map.setZoom(MAX_FLEET_ZOOM);
+  });
+}
 
 interface MapControllerProps {
   features: DriverLocationFeature[];
@@ -280,9 +386,7 @@ function MapController({ features, recenterTrigger, flyTarget, isFullscreen }: M
 
   useEffect(() => {
     if (!map || features.length === 0 || hasFittedRef.current) return;
-    const bounds = new google.maps.LatLngBounds();
-    features.forEach((f) => bounds.extend({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] }));
-    map.fitBounds(bounds, 40);
+    fitFleet(map, features);
     hasFittedRef.current = true;
   }, [map, features]);
 
@@ -293,9 +397,7 @@ function MapController({ features, recenterTrigger, flyTarget, isFullscreen }: M
       map.setZoom(13);
       return;
     }
-    const bounds = new google.maps.LatLngBounds();
-    features.forEach((f) => bounds.extend({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] }));
-    map.fitBounds(bounds, 40);
+    fitFleet(map, features);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, recenterTrigger]);
 
@@ -357,9 +459,7 @@ export const LiveMapCanvas: React.FC<Props> = ({
   // Oferta: los choferes conectados (en linea o en viaje), cada uno con peso 1.
   const supplyPoints = useMemo<HeatPoint[]>(
     () =>
-      features
-        .filter((feat) => feat.properties.availabilityStatus !== 'offline')
-        .map((feat) => ({ lat: feat.geometry.coordinates[1], lng: feat.geometry.coordinates[0], weight: 1 })),
+      features.map((feat) => ({ lat: feat.geometry.coordinates[1], lng: feat.geometry.coordinates[0], weight: 1 })),
     [features],
   );
 
@@ -419,22 +519,21 @@ export const LiveMapCanvas: React.FC<Props> = ({
       {/* Overlay Superior Izquierdo: Leyenda de estados */}
       <div className="absolute top-4 left-4 z-[400] bg-neutral-900/90 backdrop-blur-md border border-white/10 rounded-xl p-3 shadow-xl pointer-events-auto">
         <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 block mb-2">
-          Estado del conductor
+          Choferes conectados
         </span>
         <div className="space-y-1.5 text-xs text-gray-200">
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-            <span>En línea - disponible</span>
+            <span>Disponible</span>
           </div>
           <div className="flex items-center gap-2">
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]" />
             <span>En viaje</span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-            <span>Desconectado</span>
-          </div>
         </div>
+        {features.length === 0 && (
+          <p className="mt-2 max-w-[180px] text-[11px] text-gray-400">No hay choferes conectados ahora.</p>
+        )}
       </div>
 
       {/* Overlay Superior Derecho: Botón Ampliar Mapa */}

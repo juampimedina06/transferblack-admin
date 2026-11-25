@@ -120,14 +120,9 @@ export const LiveMapKpiBar: React.FC<Props> = ({
         </div>
 
         {/* Desconectados */}
-        <button
-          type="button"
-          onClick={() => onFilterChange(activeFilter === 'offline' ? 'all' : 'offline')}
-          className={`flex flex-col items-start p-2.5 rounded-lg transition-all text-left border ${
-            activeFilter === 'offline'
-              ? 'bg-gray-100 dark:bg-gray-800/60 border-gray-400/40 ring-1 ring-gray-400/30'
-              : 'hover:bg-gray-50 dark:hover:bg-white/5 border-transparent'
-          }`}
+        <div
+          className="flex flex-col items-start p-2.5 rounded-lg text-left"
+          title="Los desconectados no se muestran en el mapa"
         >
           <div className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wider uppercase text-gray-600 dark:text-gray-300">
             <span className="w-2 h-2 rounded-full bg-gray-400" />
@@ -136,7 +131,8 @@ export const LiveMapKpiBar: React.FC<Props> = ({
           <div className="mt-1 text-2xl font-bold text-gray-900 dark:text-white">
             <AnimatedNumber value={metrics.offlineDrivers} />
           </div>
-        </button>
+          <span className="text-[10px] text-gray-500 dark:text-gray-400">No se muestran en el mapa</span>
+        </div>
       </div>
     </div>
   );

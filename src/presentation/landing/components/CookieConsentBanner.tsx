@@ -84,12 +84,12 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
 
   return (
     <>
-      {/* Banner inicial (esquina inferior izquierda para no chocar con el QR de abajo a la derecha) */}
+      {/* Banner inicial (en mobile arriba del dock flotante; en desktop esquina inferior izquierda) */}
       {!stored && !isModalOpen && (
         <div
           role="region"
           aria-label="Aviso de privacidad y cookies"
-          className="fixed bottom-5 left-5 right-5 sm:right-auto sm:max-w-md z-40 rounded-2xl bg-white/95 dark:bg-obsidian/95 backdrop-blur-xl border border-gray-200 dark:border-white/15 shadow-2xl p-5 transition-all"
+          className="fixed bottom-20 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-auto sm:max-w-md z-40 rounded-2xl bg-white/95 dark:bg-obsidian/95 backdrop-blur-xl border border-gray-200 dark:border-white/15 shadow-2xl p-4 sm:p-5 transition-all"
         >
           <div className="flex items-start gap-3">
             <div className="w-9 h-9 rounded-xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0 mt-0.5">

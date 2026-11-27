@@ -73,12 +73,15 @@ const PassengerQrSvg: React.FC = () => (
 );
 
 export const PassengerAppFloatingDock: React.FC = () => {
-  const [isMinimized, setIsMinimized] = useState(false);
+  // En celular arranca minimizado en píldora para no tapar el contenido; en desktop muestra el QR.
+  const [isMinimized, setIsMinimized] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : true,
+  );
 
   return (
     <aside
       aria-label="Descargar aplicación Transfer Black Pasajero"
-      className="fixed bottom-5 right-5 z-50 select-none"
+      className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-50 select-none"
     >
       {isMinimized ? (
         <button

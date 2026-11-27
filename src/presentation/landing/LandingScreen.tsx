@@ -42,14 +42,14 @@ export const LandingScreen: React.FC = () => {
   const corporateCompanies = landingStats?.corporateCompanies ?? 24;
 
   return (
-    <div className="min-h-screen bg-[#FAFAFA] dark:bg-obsidian text-gray-900 dark:text-white font-montserrat transition-colors selection:bg-champagne-gold selection:text-obsidian">
+    <div className="min-h-screen overflow-x-clip bg-[#FAFAFA] dark:bg-obsidian text-gray-900 dark:text-white font-montserrat transition-colors selection:bg-champagne-gold selection:text-obsidian">
       <LandingNavbar />
 
       <main>
         {/* FULL-BLEED CINEMATIC HERO WITH REAL EDITORIAL PHOTOGRAPHY */}
         <section
           id="viajar"
-          className="relative min-h-[92vh] flex items-center bg-obsidian text-white overflow-hidden pt-24 pb-16 sm:pt-28 sm:pb-24"
+          className="relative min-h-[88vh] lg:min-h-[92vh] flex items-center bg-obsidian text-white overflow-hidden pt-20 pb-14 sm:pt-28 sm:pb-24"
         >
           {/* Background Photo + Cinematic Obsidian Gradient */}
           <img
@@ -71,45 +71,45 @@ export const LandingScreen: React.FC = () => {
           <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
               {/* Left Column: Open Editorial Typography + Live KPIs (No boxed card) */}
-              <div className="lg:col-span-6 space-y-7">
-                <p className="text-xs font-bold uppercase tracking-[0.24em]">
+              <div className="lg:col-span-6 space-y-5 sm:space-y-7">
+                <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.2em] sm:tracking-[0.24em]">
                   <ShinyText>Movilidad Ejecutiva y Corporativa · Córdoba</ShinyText>
                 </p>
 
-                <h1 className="text-4xl sm:text-5xl xl:text-6xl font-bold tracking-tight text-white leading-[1.08]">
+                <h1 className="text-3xl sm:text-5xl xl:text-6xl font-bold tracking-tight text-white leading-[1.1]">
                   <BlurText
                     text="Movete con prioridad. Viajá con estándar ejecutivo."
                     highlightWords={['prioridad', 'estándar', 'ejecutivo']}
                   />
                 </h1>
 
-                <p className="text-base sm:text-lg text-gray-300 leading-relaxed max-w-xl">
+                <p className="text-sm sm:text-lg text-gray-300 leading-relaxed max-w-xl">
                   Traslados inmediatos, reservas al aeropuerto, cuentas corporativas por PIN y logística especial con conductores entrevistados presencialmente en Córdoba.
                 </p>
 
                 {/* Open Hairline KPI Strip (No cards) */}
-                <div className="pt-4 border-t border-white/15 grid grid-cols-3 gap-6 max-w-lg">
+                <div className="pt-4 border-t border-white/15 grid grid-cols-3 gap-3 sm:gap-6 max-w-lg">
                   <div>
-                    <div className="text-2xl sm:text-3xl font-bold text-champagne-gold">
+                    <div className="text-xl sm:text-3xl font-bold text-champagne-gold">
                       <AnimatedNumber value={activeDrivers} />
                     </div>
-                    <p className="text-[11px] text-gray-400 uppercase tracking-wider mt-1">
+                    <p className="text-[10px] sm:text-[11px] text-gray-400 uppercase tracking-wider mt-1">
                       Conductores activos
                     </p>
                   </div>
-                  <div className="border-l border-white/15 pl-5">
-                    <div className="text-2xl sm:text-3xl font-bold text-white">
+                  <div className="border-l border-white/15 pl-3 sm:pl-5">
+                    <div className="text-xl sm:text-3xl font-bold text-white">
                       <AnimatedNumber value={corporateCompanies} />
                     </div>
-                    <p className="text-[11px] text-gray-400 uppercase tracking-wider mt-1">
+                    <p className="text-[10px] sm:text-[11px] text-gray-400 uppercase tracking-wider mt-1">
                       Cuentas empresas
                     </p>
                   </div>
-                  <div className="border-l border-white/15 pl-5">
-                    <div className="text-2xl sm:text-3xl font-bold text-emerald-400">
+                  <div className="border-l border-white/15 pl-3 sm:pl-5">
+                    <div className="text-xl sm:text-3xl font-bold text-emerald-400">
                       <AnimatedNumber value={7} />/7
                     </div>
-                    <p className="text-[11px] text-gray-400 uppercase tracking-wider mt-1">
+                    <p className="text-[10px] sm:text-[11px] text-gray-400 uppercase tracking-wider mt-1">
                       Controles + entrevista
                     </p>
                   </div>

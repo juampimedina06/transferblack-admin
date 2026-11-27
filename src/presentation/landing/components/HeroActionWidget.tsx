@@ -123,9 +123,9 @@ export const HeroActionWidget: React.FC = () => {
       <div aria-hidden="true" className="hidden sm:block absolute -right-[3px] top-44 h-16 w-[3px] rounded-r bg-white/20" />
 
       {/* Flagship Phone Bezel */}
-      <div className="relative rounded-[48px] p-[10px] bg-gradient-to-b from-[#34343D] via-[#19191F] to-[#0D0D11] shadow-[0_32px_90px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.14)]">
+      <div className="relative rounded-[38px] sm:rounded-[48px] p-[7px] sm:p-[10px] bg-gradient-to-b from-[#34343D] via-[#19191F] to-[#0D0D11] shadow-[0_32px_90px_rgba(0,0,0,0.85),0_0_0_1px_rgba(255,255,255,0.14)]">
         {/* Inner OLED Screen */}
-        <div className="relative rounded-[39px] bg-[#0D0D11] text-white overflow-hidden border border-white/10 flex flex-col min-h-[630px]">
+        <div className="relative rounded-[31px] sm:rounded-[39px] bg-[#0D0D11] text-white overflow-hidden border border-white/10 flex flex-col min-h-[580px] sm:min-h-[630px]">
           {/* Floating iOS Status Bar + Dynamic Island (overlaps edge-to-edge map!) */}
           <div className="absolute top-0 inset-x-0 z-20 px-6 pt-3 pb-2 flex items-center justify-between text-[11px] font-semibold text-white">
             <span className="tracking-tight drop-shadow">9:41</span>
@@ -154,7 +154,7 @@ export const HeroActionWidget: React.FC = () => {
               />
 
               {/* Native Rising Bottom Sheet (NO nested boxed cards inside) */}
-              <div className="relative z-10 -mt-5 flex-1 rounded-t-[26px] bg-[#0D0D11] border-t border-white/10 px-5 pt-2.5 pb-4 flex flex-col justify-between gap-3.5 shadow-[0_-16px_40px_rgba(0,0,0,0.7)]">
+              <div className="relative z-10 -mt-5 flex-1 rounded-t-[24px] sm:rounded-t-[26px] bg-[#0D0D11] border-t border-white/10 px-4 sm:px-5 pt-2.5 pb-4 flex flex-col justify-between gap-3.5 shadow-[0_-16px_40px_rgba(0,0,0,0.7)]">
                 {/* Drag Handle */}
                 <div className="w-9 h-1 rounded-full bg-white/20 mx-auto" />
 

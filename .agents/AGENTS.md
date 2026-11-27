@@ -95,4 +95,4 @@
 - Al finalizar cualquier tarea o feature solicitada por el usuario:
   - Ejecutar siempre `git add .` y crear el commit correspondiente siguiendo la convención de `conventional commits` (sin autoría de IA ni `Co-Authored-By`).
   - **Nunca hacer push** (`git push`) salvo indicación expresa del usuario.
-  - Proporcionar siempre la propuesta de Pull Request formateada en Markdown de GitHub (Título semántico, Descripción/Motivación, Cambios Principales y Checklist de Validación).
+  - Proporcionar la propuesta de Pull Request formateada en Markdown de GitHub (Título semántico, Descripción/Motivación, Cambios Principales y Checklist de Validación) **únicamente al completar un plan/feature completo o cuando el usuario lo pida explícitamente** — nunca después de correcciones o ajustes puntuales intermedios.

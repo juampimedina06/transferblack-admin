@@ -16,6 +16,7 @@ import {
   Wifi,
 } from 'lucide-react';
 import { AnimatedNumber } from '../../components/common/AnimatedNumber';
+import { PhoneLiveMapPreview } from './PhoneLiveMapPreview';
 import {
   APP_DOWNLOAD_LINKS,
   CORDOBA_PRESET_CORRIDORS,
@@ -179,47 +180,12 @@ export const HeroActionWidget: React.FC = () => {
           <div className="flex-1 px-4 py-3.5 flex flex-col justify-between gap-3">
             {activeTab === 'ride' && (
               <>
-                {/* Mini Live Route Map Header inside the Phone */}
-                <div className="relative h-24 rounded-2xl bg-[#111218] border border-white/10 overflow-hidden">
-                  <svg
-                    viewBox="0 0 360 110"
-                    className="w-full h-full object-cover"
-                    aria-hidden="true"
-                  >
-                    <defs>
-                      <pattern id="phone-grid" width="22" height="22" patternUnits="userSpaceOnUse">
-                        <path
-                          d="M 22 0 L 0 0 0 22"
-                          fill="none"
-                          stroke="rgba(255,255,255,0.045)"
-                          strokeWidth="1"
-                        />
-                      </pattern>
-                    </defs>
-                    <rect width="360" height="110" fill="url(#phone-grid)" />
-                    <path
-                      d="M 38 82 C 110 78, 150 38, 225 40 C 270 42, 298 30, 322 26"
-                      fill="none"
-                      stroke="#D4AF37"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeDasharray="6 4"
-                    />
-                    <circle cx="38" cy="82" r="5" fill="#D4AF37" />
-                    <circle cx="205" cy="41" r="7" fill="rgba(212,175,55,0.22)" />
-                    <circle cx="205" cy="41" r="3.5" fill="#FFFFFF" />
-                    <circle cx="322" cy="26" r="5" fill="#10B981" />
-                  </svg>
-
-                  <div className="absolute top-2 left-2.5 right-2.5 flex items-center justify-between text-[10px]">
-                    <span className="px-2 py-0.5 rounded-full bg-obsidian/85 border border-white/10 font-semibold text-gray-200 truncate max-w-[68%]">
-                      {SHORT_CORRIDOR_LABELS[activeCorridor.id] ?? activeCorridor.label}
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-champagne-gold/20 text-champagne-gold font-bold">
-                      ~{estimatedMinutes} min
-                    </span>
-                  </div>
-                </div>
+                {/* Realistic Dark-Mode Córdoba Live Map Preview inside the Phone */}
+                <PhoneLiveMapPreview
+                  corridorId={activeCorridor.id}
+                  routeLabel={SHORT_CORRIDOR_LABELS[activeCorridor.id] ?? activeCorridor.label}
+                  estimatedMinutes={estimatedMinutes}
+                />
 
                 {/* Day / Night Pill */}
                 <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-white/[0.04] border border-white/10">

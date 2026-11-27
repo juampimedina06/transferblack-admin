@@ -1,175 +1,122 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import {
-  ArrowRight,
-  Banknote,
-  CalendarCheck2,
-  Eye,
-  Navigation,
-  ShieldCheck,
-  Wallet,
-} from 'lucide-react';
+import { ArrowUpRight, CheckCircle2 } from 'lucide-react';
+import driverCockpitImg from '../../../assets/landing/driver-cockpit.jpg';
 import { APP_DOWNLOAD_LINKS } from '../constants/landingData';
+import { RevealOnScroll, ShinyText } from './motion/ReactBitsPrimitives';
+
+const DRIVER_PILLARS = [
+  {
+    title: 'Comisiones siempre transparentes en cada viaje',
+    desc: 'Al finalizar cada traslado ves con claridad la tarifa abonada por el pasajero, la comisión exacta que retiene la empresa y tu ganancia neta, sin descuentos sorpresa.',
+  },
+  {
+    title: 'Liquidación semanal o retiro inmediato a tu CBU / Alias',
+    desc: 'Elegí cobrar automáticamente cada semana o solicitar tu saldo disponible cuando lo necesites directamente desde la billetera.',
+  },
+  {
+    title: 'Navegación giro a giro y viajes corporativos',
+    desc: 'Accedé a pasajeros verificados, reservas al aeropuerto y traslados recurrentes con navegación integrada en la app.',
+  },
+  {
+    title: 'Política justa de cancelación y respaldo local',
+    desc: 'Sin penalizaciones tras 5 minutos de cortesía en el punto de retiro, con oficina y mesa operativa real en Córdoba.',
+  },
+] as const;
 
 export const DriversRecruitmentSection: React.FC = () => {
   return (
     <section
       id="conductores"
-      className="py-20 sm:py-24 bg-obsidian text-white border-t border-white/10 relative overflow-hidden"
+      className="relative bg-obsidian text-white border-t border-white/10 overflow-hidden"
     >
-      {/* Subtle Ambient Gold Gradient */}
-      <div
-        aria-hidden="true"
-        className="absolute right-0 top-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-champagne-gold/10 blur-3xl pointer-events-none"
-      />
+      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 items-stretch">
+        {/* Left Column: Open Editorial Driver Pitch */}
+        <div className="lg:col-span-6 px-6 py-20 sm:px-12 lg:px-16 lg:py-24 flex flex-col justify-center order-2 lg:order-1">
+          <RevealOnScroll className="space-y-6">
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-champagne-gold">
+              <ShinyText>Para Conductores Profesionales</ShinyText>
+            </p>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-          {/* Left Column: Earnings Transparency Mockup Card */}
-          <div className="lg:col-span-5 order-2 lg:order-1">
-            <div className="rounded-3xl bg-[#141418] border border-white/15 p-6 sm:p-7 shadow-2xl space-y-5">
-              <div className="flex items-center justify-between pb-4 border-b border-white/10">
-                <div>
-                  <span className="text-[10.5px] font-bold uppercase tracking-widest text-champagne-gold">
-                    Transfer Black Conductor
-                  </span>
-                  <h3 className="text-base font-bold text-white mt-0.5">
-                    Resumen transparente por viaje
-                  </h3>
-                </div>
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                  100% Claro
-                </span>
-              </div>
-
-              {/* Transparent Trip Breakdown Visual */}
-              <div className="rounded-2xl bg-obsidian border border-white/10 p-4 space-y-3 text-xs">
-                <div className="flex items-center justify-between text-gray-300">
-                  <span>Tarifa total abonada por el pasajero</span>
-                  <span className="font-mono font-semibold text-white">Visible al instante</span>
-                </div>
-                <div className="flex items-center justify-between text-gray-300">
-                  <span>Comisión retenida por la empresa</span>
-                  <span className="font-mono font-semibold text-champagne-gold">
-                    Desglosada en cada viaje
-                  </span>
-                </div>
-                <div className="pt-2.5 border-t border-white/10 flex items-center justify-between text-sm">
-                  <span className="font-bold text-white">Tu ganancia neta acreditada</span>
-                  <span className="font-bold text-emerald-400">Sin costos ocultos</span>
-                </div>
-              </div>
-
-              {/* Payout Modes */}
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
-                  <CalendarCheck2 className="w-4 h-4 text-champagne-gold mb-1.5" />
-                  <p className="font-bold text-white">Liquidación Semanal</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    Acreditación automática en tu CBU, CVU o Alias registrado.
-                  </p>
-                </div>
-
-                <div className="p-3.5 rounded-xl bg-white/[0.03] border border-white/10">
-                  <Banknote className="w-4 h-4 text-emerald-400 mb-1.5" />
-                  <p className="font-bold text-white">Retiro Inmediato</p>
-                  <p className="text-[11px] text-gray-400 mt-0.5">
-                    Solicitá tu saldo disponible cuando lo necesites desde la billetera.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Driver Pitch & Benefits */}
-          <div className="lg:col-span-7 order-1 lg:order-2 space-y-6">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-champagne-gold/15 text-champagne-gold border border-champagne-gold/30">
-              Para Conductores Profesionales
-            </span>
-
-            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-tight">
-              Manejá con reglas claras, viajes corporativos y comisiones siempre visibles.
+            <h2 className="text-3xl sm:text-4xl font-bold text-white tracking-tight leading-[1.15]">
+              Manejá con reglas claras y comisiones siempre visibles.
             </h2>
 
             <p className="text-base text-gray-300 leading-relaxed">
-              En Transfer Black valoramos tu trabajo y tu vehículo. Sabés cuánto ganás en cada trayecto, accedés a pasajeros verificados y contás con una oficina real en Córdoba que te respalda.
+              En Transfer Black cuidamos a quienes trabajan todos los días en la calle: transparencia total en cada liquidación, pasajeros verificados y soporte humano en Córdoba.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0 mt-0.5">
-                  <Eye className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">
-                    Comisiones siempre transparentes
-                  </h4>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    En cada viaje ves exactamente qué comisión lleva la empresa y cuál es tu ganancia neta, sin descuentos sorpresa.
+            <ul className="divide-y divide-white/10 pt-2">
+              {DRIVER_PILLARS.map((item) => (
+                <li key={item.title} className="py-4 first:pt-2 last:pb-2">
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-champagne-gold shrink-0" />
+                    {item.title}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1 pl-6 leading-relaxed">
+                    {item.desc}
                   </p>
-                </div>
-              </div>
+                </li>
+              ))}
+            </ul>
 
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0 mt-0.5">
-                  <Wallet className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">
-                    Billetera clara y retiros a tu banco
-                  </h4>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    Seguí tus ganancias del día, viajes en efectivo y transferencias directas a tu CBU, CVU o Alias.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0 mt-0.5">
-                  <Navigation className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">
-                    Navegación giro a giro integrada
-                  </h4>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    Recibí ofertas de viaje, reservas de aeropuerto y traslados corporativos sin salir de la aplicación.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0 mt-0.5">
-                  <ShieldCheck className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-white">
-                    Política justa de cancelación
-                  </h4>
-                  <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                    Sin penalizaciones tras 5 minutos de cortesía en el punto de retiro o ante exceso de pasajeros/equipaje.
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-4 pt-3">
+            <div className="pt-4 flex flex-wrap items-center gap-5">
               <a
                 href={APP_DOWNLOAD_LINKS.driverAndroidUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-champagne-gold text-obsidian text-sm font-bold hover:brightness-110 transition-all shadow-lg"
+                className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full bg-champagne-gold text-obsidian text-sm font-bold hover:brightness-110 transition-all shadow-[0_0_28px_rgba(212,175,55,0.28)]"
               >
                 <span>Postularme en App Conductor</span>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowUpRight className="w-4 h-4" />
               </a>
 
               <Link
                 to="/terminos-conductores"
                 className="text-xs font-semibold text-gray-300 hover:text-champagne-gold underline underline-offset-4 transition-colors"
               >
-                Ver requisitos y términos para conductores
+                Requisitos y términos de conductores
               </Link>
+            </div>
+          </RevealOnScroll>
+        </div>
+
+        {/* Right Column: Full-Bleed Driver Cockpit Photography + Floating Transparent Strip */}
+        <div className="lg:col-span-6 relative min-h-[420px] lg:min-h-[680px] overflow-hidden order-1 lg:order-2">
+          <img
+            src={driverCockpitImg}
+            alt="Vista desde el interior de un vehículo ejecutivo Transfer Black conduciendo al atardecer"
+            loading="lazy"
+            width={1200}
+            height={900}
+            className="absolute inset-0 w-full h-full object-cover object-center scale-[1.01] transition-transform duration-700 hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/35 to-obsidian/15 lg:bg-gradient-to-r lg:from-obsidian/70 lg:via-transparent lg:to-transparent" />
+
+          {/* Floating Transparent Breakdown Strip */}
+          <div className="absolute bottom-6 left-6 right-6 sm:bottom-8 sm:left-8 sm:right-8 backdrop-blur-xl bg-obsidian/82 border border-white/15 rounded-2xl p-5 text-white shadow-2xl">
+            <div className="flex items-center justify-between gap-2 pb-3 border-b border-white/10">
+              <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-champagne-gold">
+                Transfer Black Conductor
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-400">
+                Desglose en vivo
+              </span>
+            </div>
+
+            <div className="mt-3 grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <span className="block text-gray-400 text-[11px]">Tarifa viaje</span>
+                <span className="font-bold text-white mt-0.5 block">100% visible</span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-[11px]">Comisión empresa</span>
+                <span className="font-bold text-champagne-gold mt-0.5 block">Transparente</span>
+              </div>
+              <div>
+                <span className="block text-gray-400 text-[11px]">Ganancia neta</span>
+                <span className="font-bold text-emerald-400 mt-0.5 block">Directo a CBU</span>
+              </div>
             </div>
           </div>
         </div>

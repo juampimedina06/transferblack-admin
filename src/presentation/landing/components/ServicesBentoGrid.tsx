@@ -3,221 +3,182 @@ import { Link } from 'react-router-dom';
 import {
   ArrowUpRight,
   Bus,
-  CalendarClock,
-  CreditCard,
-  MapPinned,
   MessageCircle,
-  Share2,
-  Sparkles,
   Truck,
   Wrench,
 } from 'lucide-react';
 import { WHATSAPP_LINES, buildWhatsAppUrl } from '../constants/landingData';
+import { RevealOnScroll, ShinyText, SpotlightSurface } from './motion/ReactBitsPrimitives';
+
+const EDITORIAL_PILLARS = [
+  {
+    number: '01',
+    tag: 'Categoría Prioridad',
+    title: 'Viajes inmediatos con paradas múltiples y tarifa conocida antes de subir',
+    description:
+      'Cotizá tu recorrido punto a punto o agregá paradas intermedias en la misma solicitud. Seguimiento satelital real, chat en vivo con el conductor y tarifa transparente por fracción cada 110 m.',
+    meta: ['Paradas múltiples', 'Chat en vivo', 'Diurna y nocturna clara'],
+  },
+  {
+    number: '02',
+    tag: 'Reservas Programadas',
+    title: 'Aeropuerto, congresos y agenda crítica sin margen de demora',
+    description:
+      'Agendá con fecha y hora exacta. Nuestra central monitorea cada reserva con alertas previas y chofer pre-asignado, con opción de pago anticipado o en efectivo.',
+    meta: ['Asignación anticipada', 'Alertas en central', 'Aeropuerto Taravella'],
+  },
+  {
+    number: '03',
+    tag: 'Modo Invitado (/track)',
+    title: 'Pedí un auto para un familiar o cliente y compartile el mapa en vivo',
+    description:
+      'Solicitá el traslado desde tu cuenta para un tercero. El invitado recibe un enlace por WhatsApp y sigue el vehículo en tiempo real desde cualquier navegador sin instalar la app.',
+    meta: ['Sin bajar la app', 'Patente y chofer visibles', 'Link compartible'],
+    linkTo: '/track',
+    linkLabel: 'Abrir visor de seguimiento',
+  },
+  {
+    number: '04',
+    tag: 'Pagos & Reembolso Automático',
+    title: 'Mercado Pago, Efectivo o Saldo Corporativo con cancelación justa',
+    description:
+      'Elegí cómo pagar antes de confirmar. Si abonás con Mercado Pago y cancelás dentro de los primeros 5 minutos antes del arribo, el reembolso se acredita automáticamente.',
+    meta: ['Mercado Pago', 'Efectivo', 'Modo Empresa'],
+  },
+] as const;
 
 export const ServicesBentoGrid: React.FC = () => {
   const primaryLine = WHATSAPP_LINES[0].number;
 
   return (
-    <section id="servicios" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-      {/* Section Header */}
-      <div className="max-w-3xl mb-12">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-widest bg-champagne-gold/15 text-champagne-gold border border-champagne-gold/30">
-          <Sparkles className="w-3.5 h-3.5" /> Ecosistema de Movilidad
-        </span>
-        <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white tracking-tight">
-          Todo lo que mueve a Córdoba, resuelto sin fricción.
-        </h2>
-        <p className="mt-3 text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-          Desde un traslado ejecutivo inmediato con múltiples paradas hasta reservas programadas, seguimiento para invitados o logística especial coordinada con nuestra mesa operativa.
-        </p>
+    <section id="servicios" className="py-24 sm:py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      {/* Editorial Section Intro (Open layout, no card wrapper) */}
+      <RevealOnScroll className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-end pb-14 border-b border-gray-200 dark:border-white/10">
+        <div className="lg:col-span-7">
+          <p className="text-xs font-bold uppercase tracking-[0.22em] text-champagne-gold mb-3">
+            <ShinyText>Ecosistema de Movilidad</ShinyText>
+          </p>
+          <h2 className="text-3xl sm:text-5xl font-bold text-gray-900 dark:text-white tracking-tight leading-[1.1]">
+            Todo lo que mueve a Córdoba, sin fricción.
+          </h2>
+        </div>
+        <div className="lg:col-span-5">
+          <p className="text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+            Combinamos la inmediatez de una aplicación moderna con el respaldo real de una mesa operativa local en Córdoba. Sin bots infinitos ni tarifas opacas.
+          </p>
+        </div>
+      </RevealOnScroll>
+
+      {/* Open Hairline Editorial Rows (NOT boxed cards) */}
+      <div className="divide-y divide-gray-200 dark:divide-white/10">
+        {EDITORIAL_PILLARS.map((pillar, index) => (
+          <RevealOnScroll key={pillar.number} delayMs={index * 60}>
+            <SpotlightSurface className="py-10 sm:py-12 px-2 sm:px-4 transition-colors hover:bg-gray-100/50 dark:hover:bg-white/[0.02]">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="lg:col-span-2 flex items-center lg:flex-col lg:items-start gap-3">
+                  <span className="font-mono text-2xl sm:text-3xl font-bold text-champagne-gold">
+                    {pillar.number}
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500 dark:text-gray-400">
+                    {pillar.tag}
+                  </span>
+                </div>
+
+                <div className="lg:col-span-5">
+                  <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white leading-snug">
+                    {pillar.title}
+                  </h3>
+                </div>
+
+                <div className="lg:col-span-5 space-y-4">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed">
+                    {pillar.description}
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    {pillar.meta.map((tag) => (
+                      <span key={tag} className="inline-flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-champagne-gold" />
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+
+                  {'linkTo' in pillar && pillar.linkTo && (
+                    <Link
+                      to={pillar.linkTo}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-champagne-gold hover:underline pt-1"
+                    >
+                      {pillar.linkLabel} <ArrowUpRight className="w-3.5 h-3.5" />
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </SpotlightSurface>
+          </RevealOnScroll>
+        ))}
       </div>
 
-      {/* Asymmetric Bento Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-6 lg:grid-cols-12 gap-5">
-        {/* 1. Categoría Prioridad (Span 7 cols) */}
-        <div className="md:col-span-6 lg:col-span-7 group relative rounded-3xl bg-obsidian text-white border border-gray-800 dark:border-white/10 p-7 sm:p-8 flex flex-col justify-between overflow-hidden shadow-xl">
-          <div
-            aria-hidden="true"
-            className="absolute -right-12 -top-12 w-60 h-60 rounded-full bg-champagne-gold/10 blur-2xl group-hover:bg-champagne-gold/20 transition-all duration-500"
-          />
-
-          <div className="relative z-10">
-            <div className="flex items-center justify-between gap-2 mb-4">
-              <span className="px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-champagne-gold text-obsidian">
-                Categoría Prioridad
-              </span>
-              <MapPinned className="w-5 h-5 text-champagne-gold" />
-            </div>
-
-            <h3 className="text-2xl font-bold text-white leading-snug">
-              Viajes inmediatos con paradas múltiples y tarifa conocida antes de subir
-            </h3>
-            <p className="mt-2.5 text-sm text-gray-300 leading-relaxed max-w-xl">
-              Cotizá tu recorrido punto a punto o sumá paradas intermedias en el mismo viaje. Seguimiento GPS real, chat integrado con el conductor y unidades seleccionadas en Córdoba Capital y Gran Córdoba.
-            </p>
-          </div>
-
-          <div className="relative z-10 mt-8 pt-5 border-t border-white/10 grid grid-cols-3 gap-4 text-xs">
-            <div>
-              <span className="block text-champagne-gold font-bold">Paradas múltiples</span>
-              <span className="text-gray-400">En una sola solicitud</span>
-            </div>
-            <div>
-              <span className="block text-champagne-gold font-bold">Chat en vivo</span>
-              <span className="text-gray-400">Directo en la app</span>
-            </div>
-            <div>
-              <span className="block text-champagne-gold font-bold">Tarifa clara</span>
-              <span className="text-gray-400">Fracción cada 110 m</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Viajes Reservados (Span 5 cols) */}
-        <div className="md:col-span-6 lg:col-span-5 rounded-3xl bg-white dark:bg-dark-surface border border-gray-200/90 dark:border-white/10 p-7 sm:p-8 flex flex-col justify-between hover:border-champagne-gold/50 transition-all shadow-sm">
-          <div>
-            <div className="w-11 h-11 rounded-2xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center mb-5">
-              <CalendarClock className="w-5 h-5" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              Viajes Reservados y Aeropuerto
-            </h3>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Agendá tu traslado con fecha y hora exacta. Nuestra consola monitorea cada reserva con alertas previas y asignación anticipada de conductor para que nunca llegues tarde a un vuelo o reunión.
-            </p>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/10 flex items-center justify-between text-xs">
-            <span className="font-semibold text-gray-700 dark:text-gray-300">
-              Pago anticipado o en efectivo
+      {/* Horizontal Special Logistics Band (Grúa, Colectivo, Flete) — Clean open strip */}
+      <RevealOnScroll className="mt-14 pt-12 border-t-2 border-obsidian dark:border-champagne-gold/40">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="max-w-xl">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-champagne-gold">
+              Logística & Auxilio Especial por WhatsApp
             </span>
+            <h3 className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">
+              ¿Necesitás Grúa, Colectivo para eventos o Flete?
+            </h3>
+            <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-400">
+              Coordinación directa con nuestra mesa operativa en Córdoba sin formularios interminables.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
             <a
               href={buildWhatsAppUrl(
                 primaryLine,
-                'Hola, quiero programar un viaje reservado con Transfer Black.',
+                'Hola, quiero consultar por un servicio de Grúa desde Transfer Black.',
               )}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 font-bold text-champagne-gold hover:underline"
+              className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-obsidian dark:bg-white/10 text-white hover:bg-champagne-gold hover:text-obsidian text-xs font-bold transition-all"
             >
-              Reservar ahora <ArrowUpRight className="w-3.5 h-3.5" />
+              <Wrench className="w-4 h-4" />
+              <span>Pedir Grúa</span>
+              <MessageCircle className="w-3.5 h-3.5 opacity-70" />
+            </a>
+
+            <a
+              href={buildWhatsAppUrl(
+                primaryLine,
+                'Hola, quiero consultar por un servicio de Colectivo para grupo desde Transfer Black.',
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-obsidian dark:bg-white/10 text-white hover:bg-champagne-gold hover:text-obsidian text-xs font-bold transition-all"
+            >
+              <Bus className="w-4 h-4" />
+              <span>Colectivo / Grupos</span>
+              <MessageCircle className="w-3.5 h-3.5 opacity-70" />
+            </a>
+
+            <a
+              href={buildWhatsAppUrl(
+                primaryLine,
+                'Hola, quiero consultar por un servicio de Flete desde Transfer Black.',
+              )}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2.5 px-5 py-3 rounded-full bg-obsidian dark:bg-white/10 text-white hover:bg-champagne-gold hover:text-obsidian text-xs font-bold transition-all"
+            >
+              <Truck className="w-4 h-4" />
+              <span>Fletes y Cargas</span>
+              <MessageCircle className="w-3.5 h-3.5 opacity-70" />
             </a>
           </div>
         </div>
-
-        {/* 3. Viajes para Terceros / Modo Invitado (Span 4 cols) */}
-        <div className="md:col-span-3 lg:col-span-4 rounded-3xl bg-white dark:bg-dark-surface border border-gray-200/90 dark:border-white/10 p-6 sm:p-7 flex flex-col justify-between hover:border-champagne-gold/50 transition-all shadow-sm">
-          <div>
-            <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
-              <Share2 className="w-5 h-5" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              Viajes para Terceros (Modo Invitado)
-            </h3>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Pedí un auto para un familiar, cliente o colaborador desde tu cuenta. El invitado recibe un link por WhatsApp y sigue el auto en vivo desde el navegador sin instalar la app.
-            </p>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/10">
-            <Link
-              to="/track"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline"
-            >
-              Conocer visor de seguimiento (/track) <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-
-        {/* 4. Medios de Pago y Reembolso Automático (Span 4 cols) */}
-        <div className="md:col-span-3 lg:col-span-4 rounded-3xl bg-white dark:bg-dark-surface border border-gray-200/90 dark:border-white/10 p-6 sm:p-7 flex flex-col justify-between hover:border-champagne-gold/50 transition-all shadow-sm">
-          <div>
-            <div className="w-11 h-11 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center mb-4">
-              <CreditCard className="w-5 h-5" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-              Mercado Pago, Efectivo y Reembolso Rápido
-            </h3>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-              Elegí cómo pagar antes de confirmar. Si abonás con Mercado Pago y cancelás dentro de los primeros 5 minutos, el reembolso se acredita automáticamente sin trámites.
-            </p>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-gray-100 dark:border-white/10 flex flex-wrap gap-1.5">
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300">
-              Mercado Pago
-            </span>
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-300">
-              Efectivo
-            </span>
-            <span className="px-2.5 py-1 rounded-md text-[11px] font-semibold bg-champagne-gold/15 text-champagne-gold">
-              Saldo Corporativo
-            </span>
-          </div>
-        </div>
-
-        {/* 5. Grúa, Colectivo y Flete por WhatsApp (Span 4 cols) */}
-        <div className="md:col-span-6 lg:col-span-4 rounded-3xl bg-gradient-to-br from-obsidian to-[#17171C] text-white border border-champagne-gold/30 p-6 sm:p-7 flex flex-col justify-between shadow-lg">
-          <div>
-            <span className="text-[10.5px] font-bold uppercase tracking-widest text-champagne-gold">
-              Logística & Auxilio Especial
-            </span>
-            <h3 className="mt-1.5 text-lg font-bold text-white">
-              Grúa, Colectivos y Fletes en un toque
-            </h3>
-            <p className="mt-2 text-xs text-gray-300 leading-relaxed">
-              Servicios especiales gestionados por nuestros operadores vía WhatsApp con cotización a medida:
-            </p>
-
-            <div className="mt-4 space-y-2">
-              <a
-                href={buildWhatsAppUrl(
-                  primaryLine,
-                  'Hola, quiero consultar por un servicio de Grúa desde Transfer Black.',
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs transition-colors"
-              >
-                <span className="flex items-center gap-2 font-semibold">
-                  <Wrench className="w-3.5 h-3.5 text-champagne-gold" /> Auxilio y Grúa
-                </span>
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-              </a>
-
-              <a
-                href={buildWhatsAppUrl(
-                  primaryLine,
-                  'Hola, quiero consultar por un servicio de Colectivo para grupo desde Transfer Black.',
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs transition-colors"
-              >
-                <span className="flex items-center gap-2 font-semibold">
-                  <Bus className="w-3.5 h-3.5 text-champagne-gold" /> Colectivo / Eventos
-                </span>
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-              </a>
-
-              <a
-                href={buildWhatsAppUrl(
-                  primaryLine,
-                  'Hola, quiero consultar por un servicio de Flete desde Transfer Black.',
-                )}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs transition-colors"
-              >
-                <span className="flex items-center gap-2 font-semibold">
-                  <Truck className="w-3.5 h-3.5 text-champagne-gold" /> Fletes y Cargas
-                </span>
-                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
+      </RevealOnScroll>
     </section>
   );
 };

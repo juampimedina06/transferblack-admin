@@ -60,12 +60,12 @@ export const LandingNavbar: React.FC = () => {
         </div>
 
         {/* Center Editorial Navigation with Animated Gold Underline */}
-        <nav aria-label="Navegación principal" className="hidden lg:flex items-center gap-7">
+        <nav aria-label="Navegación principal" className="hidden lg:flex items-center gap-4 xl:gap-7 min-w-0">
           {NAV_LINKS.map((item) => (
             <a
               key={item.href}
               href={item.href}
-              className="relative py-1 text-xs font-semibold uppercase tracking-[0.12em] text-gray-200 hover:text-white transition-colors after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-champagne-gold hover:after:w-full after:transition-all after:duration-300"
+              className="relative py-1 whitespace-nowrap text-[11px] xl:text-xs font-semibold uppercase tracking-[0.1em] xl:tracking-[0.12em] text-gray-200 hover:text-white transition-colors after:content-[''] after:absolute after:left-0 after:bottom-0 after:h-[2px] after:w-0 after:bg-champagne-gold hover:after:w-full after:transition-all after:duration-300"
             >
               {item.label}
             </a>
@@ -73,11 +73,11 @@ export const LandingNavbar: React.FC = () => {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 xl:gap-3 shrink-0">
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-gray-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
             aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
             title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           >
@@ -90,17 +90,17 @@ export const LandingNavbar: React.FC = () => {
 
           <Link
             to="/track"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white hover:bg-white/10 transition-colors"
+            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap shrink-0"
           >
-            <Compass className="w-3.5 h-3.5 text-champagne-gold" />
+            <Compass className="w-3.5 h-3.5 text-champagne-gold shrink-0" />
             <span>Seguir viaje</span>
           </Link>
 
           <Link
             to={isAuthenticated ? '/dashboard' : '/login'}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white border border-white/15 hover:border-champagne-gold/50 transition-all"
+            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white border border-white/15 hover:border-champagne-gold/50 transition-all whitespace-nowrap shrink-0"
           >
-            <Lock className="w-3 h-3 text-champagne-gold" />
+            <Lock className="w-3 h-3 text-champagne-gold shrink-0" />
             <span>{isAuthenticated ? 'Panel' : 'Operaciones'}</span>
           </Link>
 
@@ -108,16 +108,16 @@ export const LandingNavbar: React.FC = () => {
             href={APP_DOWNLOAD_LINKS.passengerAndroidUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 sm:px-5 py-2.5 rounded-full bg-champagne-gold text-obsidian text-xs font-bold tracking-wide hover:brightness-110 transition-all shadow-[0_0_24px_rgba(212,175,55,0.28)]"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-champagne-gold text-obsidian text-xs font-bold tracking-wide hover:brightness-110 transition-all shadow-[0_0_24px_rgba(212,175,55,0.28)] whitespace-nowrap shrink-0"
           >
             <span>Descargar App</span>
-            <ArrowUpRight className="w-3.5 h-3.5" />
+            <ArrowUpRight className="w-3.5 h-3.5 shrink-0" />
           </a>
 
           <button
             type="button"
             onClick={() => setIsMobileMenuOpen((prev) => !prev)}
-            className="lg:hidden p-2 rounded-full text-gray-200 hover:bg-white/10 cursor-pointer"
+            className="lg:hidden p-2 rounded-full text-gray-200 hover:bg-white/10 cursor-pointer shrink-0"
             aria-label="Abrir menú de navegación"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}

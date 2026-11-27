@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Compass, Lock, Menu, Moon, Sun, X } from 'lucide-react';
+import { ArrowUpRight, Compass, Menu, Moon, Sun, X } from 'lucide-react';
 import transferLogo from '../../../assets/img/logo_transferblack_sinfodo.png';
 import { useUIStore } from '../../store/useUIStore';
-import { useAuthStore } from '../../auth/store/useAuthStore';
 import { APP_DOWNLOAD_LINKS } from '../constants/landingData';
 
 const NAV_LINKS = [
@@ -17,7 +16,6 @@ const NAV_LINKS = [
 
 export const LandingNavbar: React.FC = () => {
   const { theme, toggleTheme } = useUIStore();
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -36,23 +34,23 @@ export const LandingNavbar: React.FC = () => {
           : 'bg-gradient-to-b from-obsidian/85 via-obsidian/45 to-transparent border-b border-white/5'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Brand + Live Operational Pill */}
-        <div className="flex items-center gap-4 shrink-0">
+        <div className="flex items-center shrink-0">
           <a href="#viajar" className="flex items-center gap-3 group">
             <img
               src={transferLogo}
               alt="Transfer Black"
               width={38}
               height={38}
-              className="h-9 w-auto transition-transform duration-300 group-hover:scale-105"
+              className="h-9 w-auto transition-transform duration-300 group-hover:scale-105 shrink-0"
             />
             <div className="flex flex-col">
-              <span className="font-bold tracking-[0.22em] text-sm text-white leading-none">
+              <span className="font-bold tracking-[0.2em] text-sm text-white leading-none whitespace-nowrap">
                 TRANSFER BLACK
               </span>
-              <span className="text-[10px] font-medium tracking-[0.18em] text-champagne-gold uppercase mt-1 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+              <span className="text-[10px] font-medium tracking-[0.16em] text-champagne-gold uppercase mt-1 flex items-center gap-1.5 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shrink-0" />
                 Córdoba · 24/7
               </span>
             </div>
@@ -60,7 +58,10 @@ export const LandingNavbar: React.FC = () => {
         </div>
 
         {/* Center Editorial Navigation with Animated Gold Underline */}
-        <nav aria-label="Navegación principal" className="hidden lg:flex items-center gap-4 xl:gap-7 min-w-0">
+        <nav
+          aria-label="Navegación principal"
+          className="hidden lg:flex items-center justify-center flex-1 gap-5 xl:gap-7 px-2"
+        >
           {NAV_LINKS.map((item) => (
             <a
               key={item.href}
@@ -73,7 +74,7 @@ export const LandingNavbar: React.FC = () => {
         </nav>
 
         {/* Right Actions */}
-        <div className="flex items-center gap-2 xl:gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <button
             type="button"
             onClick={toggleTheme}
@@ -90,18 +91,10 @@ export const LandingNavbar: React.FC = () => {
 
           <Link
             to="/track"
-            className="hidden xl:inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap shrink-0"
+            className="hidden md:inline-flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white hover:bg-white/10 transition-colors whitespace-nowrap shrink-0"
           >
             <Compass className="w-3.5 h-3.5 text-champagne-gold shrink-0" />
             <span>Seguir viaje</span>
-          </Link>
-
-          <Link
-            to={isAuthenticated ? '/dashboard' : '/login'}
-            className="hidden md:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-gray-200 hover:text-white border border-white/15 hover:border-champagne-gold/50 transition-all whitespace-nowrap shrink-0"
-          >
-            <Lock className="w-3 h-3 text-champagne-gold shrink-0" />
-            <span>{isAuthenticated ? 'Panel' : 'Operaciones'}</span>
           </Link>
 
           <a
@@ -148,14 +141,6 @@ export const LandingNavbar: React.FC = () => {
             >
               <Compass className="w-3.5 h-3.5 text-champagne-gold" />
               Seguir viaje en vivo
-            </Link>
-            <Link
-              to={isAuthenticated ? '/dashboard' : '/login'}
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold border border-white/20 text-white"
-            >
-              <Lock className="w-3.5 h-3.5 text-champagne-gold" />
-              {isAuthenticated ? 'Ir al panel' : 'Acceso Operaciones'}
             </Link>
           </div>
         </div>

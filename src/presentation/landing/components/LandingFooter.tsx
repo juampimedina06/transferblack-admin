@@ -189,11 +189,6 @@ export const LandingFooter: React.FC<LandingFooterProps> = ({ onOpenCookiePrefer
                   Conductor · Postularse
                 </a>
               </li>
-              <li>
-                <Link to="/login" className="hover:text-champagne-gold transition-colors">
-                  Consola Operaciones
-                </Link>
-              </li>
             </ul>
           </div>
 

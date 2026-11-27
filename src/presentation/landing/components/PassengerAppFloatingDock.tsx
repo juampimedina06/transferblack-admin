@@ -1,30 +1,25 @@
 import React, { useState } from 'react';
-import { Download, Minimize2, QrCode, Smartphone, Sparkles } from 'lucide-react';
+import { Minus, QrCode } from 'lucide-react';
 import { APP_DOWNLOAD_LINKS } from '../constants/landingData';
 
-/**
- * Código QR vectorial de alto contraste con monograma TB central.
- * Evita depender de imágenes externas o llamadas de red y siempre renderiza nítido.
- */
+/** Código QR vectorial monocromático de alto contraste. */
 const PassengerQrSvg: React.FC = () => (
   <svg
     viewBox="0 0 120 120"
-    className="w-28 h-28 text-obsidian"
+    className="w-20 h-20 text-obsidian"
     role="img"
     aria-label="Código QR para descargar Transfer Black Pasajero"
   >
-    <rect width="120" height="120" rx="8" fill="#FFFFFF" />
-    {/* Finder Pattern Top-Left */}
+    <rect width="120" height="120" rx="6" fill="#FFFFFF" />
+    {/* Finder Patterns */}
     <rect x="10" y="10" width="28" height="28" rx="3" fill="none" stroke="currentColor" strokeWidth="4" />
     <rect x="17" y="17" width="14" height="14" rx="1.5" fill="currentColor" />
-    {/* Finder Pattern Top-Right */}
     <rect x="82" y="10" width="28" height="28" rx="3" fill="none" stroke="currentColor" strokeWidth="4" />
     <rect x="89" y="17" width="14" height="14" rx="1.5" fill="currentColor" />
-    {/* Finder Pattern Bottom-Left */}
     <rect x="10" y="82" width="28" height="28" rx="3" fill="none" stroke="currentColor" strokeWidth="4" />
     <rect x="17" y="89" width="14" height="14" rx="1.5" fill="currentColor" />
 
-    {/* Data modules matrix */}
+    {/* Data modules */}
     <g fill="currentColor">
       <rect x="46" y="10" width="6" height="6" rx="1" />
       <rect x="58" y="10" width="6" height="6" rx="1" />
@@ -56,14 +51,14 @@ const PassengerQrSvg: React.FC = () => (
       <rect x="104" y="98" width="6" height="12" rx="1" />
     </g>
 
-    {/* Center Brand Badge */}
-    <rect x="45" y="45" width="30" height="30" rx="6" fill="#0A0A0C" stroke="#D4AF37" strokeWidth="2.5" />
+    {/* Minimal Center Monogram */}
+    <rect x="46" y="46" width="28" height="28" rx="5" fill="#0A0A0C" />
     <text
       x="60"
       y="64"
       textAnchor="middle"
-      fill="#D4AF37"
-      fontSize="12"
+      fill="#FFFFFF"
+      fontSize="11"
       fontWeight="700"
       fontFamily="Montserrat, sans-serif"
     >
@@ -73,7 +68,6 @@ const PassengerQrSvg: React.FC = () => (
 );
 
 export const PassengerAppFloatingDock: React.FC = () => {
-  // En celular arranca minimizado en píldora para no tapar el contenido; en desktop muestra el QR.
   const [isMinimized, setIsMinimized] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth < 1024 : true,
   );
@@ -87,75 +81,54 @@ export const PassengerAppFloatingDock: React.FC = () => {
         <button
           type="button"
           onClick={() => setIsMinimized(false)}
-          className="group flex items-center gap-3 px-4 py-3 rounded-full bg-obsidian text-white border border-champagne-gold/60 shadow-[0_12px_35px_rgba(0,0,0,0.55)] hover:border-champagne-gold hover:scale-[1.02] transition-all duration-200 cursor-pointer"
-          aria-label="Mostrar código QR para descargar la app de pasajero"
+          className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-obsidian text-white border border-white/15 shadow-xl hover:border-white/35 transition-colors cursor-pointer"
+          aria-label="Mostrar descarga de la app de pasajero"
         >
-          <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-champagne-gold text-obsidian font-bold">
-            <QrCode className="w-4 h-4" />
-            <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-obsidian" />
-          </span>
-          <div className="text-left pr-1">
-            <span className="block text-[10px] font-bold uppercase tracking-widest text-champagne-gold">
-              App Pasajero
-            </span>
-            <span className="block text-xs font-semibold text-white">
-              Descargar gratis
-            </span>
-          </div>
+          <QrCode className="w-4 h-4 text-white/85" />
+          <span className="text-xs font-semibold tracking-wide">Descargar app</span>
         </button>
       ) : (
-        <div className="w-[290px] sm:w-[310px] rounded-2xl bg-obsidian/95 text-white backdrop-blur-xl border border-champagne-gold/40 shadow-[0_20px_50px_rgba(0,0,0,0.65)] overflow-hidden transition-all duration-300">
-          {/* Top bar */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-white/[0.04] border-b border-white/10">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-3.5 h-3.5 text-champagne-gold" />
-              <span className="text-[11px] font-bold uppercase tracking-wider text-champagne-gold">
-                Transfer Black Pasajero
-              </span>
-            </div>
+        <div className="w-64 rounded-2xl bg-obsidian text-white border border-white/15 shadow-2xl p-3.5 transition-all">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-semibold text-gray-300 tracking-wide">
+              App Pasajero
+            </span>
             <button
               type="button"
               onClick={() => setIsMinimized(true)}
-              className="p-1 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              aria-label="Minimizar tarjeta de descarga"
+              className="p-1 rounded-md text-gray-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              aria-label="Minimizar descarga"
               title="Minimizar"
             >
-              <Minimize2 className="w-3.5 h-3.5" />
+              <Minus className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          {/* Body: QR + Direct Store Actions */}
-          <div className="p-4 flex items-center gap-3.5">
-            <div className="shrink-0 p-1.5 rounded-xl bg-white shadow-inner border border-champagne-gold/30">
+          <div className="flex items-center gap-3">
+            <div className="shrink-0 p-1 rounded-lg bg-white">
               <PassengerQrSvg />
             </div>
 
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-bold text-white leading-snug">
-                Viajá con prioridad desde tu celular
+            <div className="flex-1 min-w-0 space-y-2">
+              <p className="text-[11px] text-gray-300 leading-snug">
+                Escaneá el QR o descargá en tu tienda.
               </p>
-              <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
-                Escaneá el QR o descargala directo en tu tienda:
-              </p>
-
-              <div className="mt-2.5 flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5">
                 <a
                   href={APP_DOWNLOAD_LINKS.passengerAndroidUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-champagne-gold text-obsidian text-[11.5px] font-bold hover:brightness-110 transition-all"
+                  className="text-center py-1.5 px-2.5 rounded-lg bg-white text-obsidian text-[11px] font-semibold hover:bg-gray-200 transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" />
                   Google Play
                 </a>
                 <a
                   href={APP_DOWNLOAD_LINKS.passengerIosUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-white border border-white/15 text-[11.5px] font-semibold transition-all"
+                  className="text-center py-1.5 px-2.5 rounded-lg bg-white/10 text-white text-[11px] font-medium hover:bg-white/20 transition-colors"
                 >
-                  <Smartphone className="w-3.5 h-3.5 text-champagne-gold" />
-                  App Store (iOS)
+                  App Store
                 </a>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Cookie, ShieldCheck, SlidersHorizontal, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const COOKIE_STORAGE_KEY = 'tb_cookie_consent_v1';
 
@@ -68,7 +68,7 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
     try {
       localStorage.setItem(COOKIE_STORAGE_KEY, JSON.stringify(payload));
     } catch {
-      // Ignore storage quota / private mode errors
+      // Ignore storage errors
     }
     setStored(payload);
     setPreferencesEnabled(preferences);
@@ -84,162 +84,134 @@ export const CookieConsentBanner: React.FC<CookieConsentBannerProps> = ({
 
   return (
     <>
-      {/* Banner inicial (en mobile arriba del dock flotante; en desktop esquina inferior izquierda) */}
+      {/* Banner minimalista monocromático */}
       {!stored && !isModalOpen && (
         <div
           role="region"
           aria-label="Aviso de privacidad y cookies"
-          className="fixed bottom-20 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-auto sm:max-w-md z-40 rounded-2xl bg-white/95 dark:bg-obsidian/95 backdrop-blur-xl border border-gray-200 dark:border-white/15 shadow-2xl p-4 sm:p-5 transition-all"
+          className="fixed bottom-16 left-4 right-4 sm:bottom-5 sm:left-5 sm:right-auto sm:max-w-sm z-40 rounded-xl bg-white dark:bg-obsidian border border-gray-200 dark:border-white/15 shadow-xl p-4 transition-all"
         >
-          <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-champagne-gold/15 text-champagne-gold flex items-center justify-center shrink-0 mt-0.5">
-              <Cookie className="w-4 h-4" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-gray-900 dark:text-white">
-                Privacidad y uso de cookies
-              </h3>
-              <p className="text-xs text-gray-600 dark:text-gray-300 mt-1.5 leading-relaxed">
-                Utilizamos cookies esenciales para el funcionamiento seguro del sitio y cookies opcionales de preferencias y medición conforme a la Ley 25.326. Consultá nuestra{' '}
-                <Link
-                  to="/privacidad"
-                  className="font-semibold text-champagne-gold underline underline-offset-2"
-                >
-                  Política de Privacidad
-                </Link>
-                .
-              </p>
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+            Usamos cookies esenciales y opcionales conforme a la Ley 25.326.{' '}
+            <Link
+              to="/privacidad"
+              className="text-gray-900 dark:text-white underline underline-offset-2 font-medium"
+            >
+              Privacidad
+            </Link>
+          </p>
 
-              <div className="mt-4 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => saveConsent(true, true)}
-                  className="px-3.5 py-2 rounded-lg bg-obsidian dark:bg-champagne-gold text-white dark:text-obsidian text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
-                >
-                  Aceptar todas
-                </button>
-                <button
-                  type="button"
-                  onClick={() => saveConsent(false, false)}
-                  className="px-3.5 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-gray-800 dark:text-gray-200 text-xs font-semibold hover:bg-gray-200 dark:hover:bg-white/15 transition-colors cursor-pointer"
-                >
-                  Solo esenciales
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  Configurar
-                </button>
-              </div>
-            </div>
+          <div className="mt-3 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => saveConsent(true, true)}
+              className="px-3.5 py-1.5 rounded-lg bg-obsidian dark:bg-white text-white dark:text-obsidian text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
+            >
+              Aceptar
+            </button>
+            <button
+              type="button"
+              onClick={() => saveConsent(false, false)}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/15 text-gray-700 dark:text-gray-300 text-xs font-medium hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              Esenciales
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="ml-auto text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors cursor-pointer"
+            >
+              Configurar
+            </button>
           </div>
         </div>
       )}
 
-      {/* Modal de preferencias granulares */}
+      {/* Modal minimalista de preferencias */}
       {isModalOpen && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Preferencias de cookies"
           onClick={closeModal}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4"
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-lg rounded-2xl bg-white dark:bg-obsidian border border-gray-200 dark:border-white/15 shadow-2xl overflow-hidden"
+            className="w-full max-w-md rounded-2xl bg-white dark:bg-obsidian border border-gray-200 dark:border-white/15 shadow-2xl overflow-hidden"
           >
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-white/10">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-champagne-gold" />
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white">
-                  Centro de Preferencias de Cookies
-                </h3>
-              </div>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-white/10">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                Preferencias de cookies
+              </h3>
               <button
                 type="button"
                 onClick={closeModal}
                 aria-label="Cerrar preferencias de cookies"
-                className="p-1.5 rounded-lg text-gray-400 hover:text-gray-800 dark:hover:text-white cursor-pointer"
+                className="p-1 rounded-md text-gray-400 hover:text-gray-900 dark:hover:text-white cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
-              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
-                Podés gestionar qué categorías de almacenamiento local y cookies permitís en Transfer Black. Tu elección queda registrada y podés modificarla en cualquier momento desde el pie de página.
-              </p>
-
-              {/* Categoría 1: Esenciales */}
-              <div className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100 dark:border-white/10">
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-4 pb-3.5 border-b border-gray-100 dark:border-white/10">
                 <div>
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">
-                    Estrictamente necesarias
-                  </p>
-                  <p className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-1">
-                    Imprescindibles para seguridad, sesión autenticada y seguimiento público de viajes (`/track`). No pueden desactivarse.
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">Esenciales</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Necesarias para seguridad y seguimiento de viajes.
                   </p>
                 </div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 shrink-0">
-                  <Check className="w-3 h-3" /> Activas
+                <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400 shrink-0">
+                  Siempre activas
                 </span>
               </div>
 
-              {/* Categoría 2: Preferencias */}
-              <label className="flex items-start justify-between gap-4 pb-4 border-b border-gray-100 dark:border-white/10 cursor-pointer">
+              <label className="flex items-start justify-between gap-4 pb-3.5 border-b border-gray-100 dark:border-white/10 cursor-pointer">
                 <div>
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">
-                    Preferencias de interfaz
-                  </p>
-                  <p className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-1">
-                    Recuerdan tu tema visual (modo claro/oscuro) y ajustes de visualización en próximas visitas.
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">Preferencias</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Recuerdan tu tema visual (claro u oscuro).
                   </p>
                 </div>
                 <input
                   type="checkbox"
                   checked={preferencesEnabled}
                   onChange={(e) => setPreferencesEnabled(e.target.checked)}
-                  className="mt-1 h-4 w-4 accent-champagne-gold cursor-pointer"
+                  className="mt-0.5 h-4 w-4 accent-obsidian dark:accent-white cursor-pointer"
                 />
               </label>
 
-              {/* Categoría 3: Analítica */}
               <label className="flex items-start justify-between gap-4 cursor-pointer">
                 <div>
-                  <p className="text-xs font-bold text-gray-900 dark:text-white">
-                    Medición y rendimiento
-                  </p>
-                  <p className="text-[11.5px] text-gray-500 dark:text-gray-400 mt-1">
-                    Nos ayudan a entender qué secciones resultan más útiles y mejorar los tiempos de carga. Nunca vendemos tus datos.
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">Medición</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Ayudan a mejorar rendimiento y experiencia.
                   </p>
                 </div>
                 <input
                   type="checkbox"
                   checked={analyticsEnabled}
                   onChange={(e) => setAnalyticsEnabled(e.target.checked)}
-                  className="mt-1 h-4 w-4 accent-champagne-gold cursor-pointer"
+                  className="mt-0.5 h-4 w-4 accent-obsidian dark:accent-white cursor-pointer"
                 />
               </label>
             </div>
 
-            <div className="px-6 py-4 bg-gray-50 dark:bg-white/[0.03] border-t border-gray-100 dark:border-white/10 flex flex-wrap items-center justify-end gap-2.5">
+            <div className="px-5 py-3.5 border-t border-gray-100 dark:border-white/10 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={() => saveConsent(false, false)}
-                className="px-4 py-2 rounded-lg text-xs font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-200/70 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
-                Rechazar opcionales
+                Solo esenciales
               </button>
               <button
                 type="button"
                 onClick={() => saveConsent(preferencesEnabled, analyticsEnabled)}
-                className="px-4 py-2 rounded-lg bg-obsidian dark:bg-champagne-gold text-white dark:text-obsidian text-xs font-bold hover:brightness-110 transition-all cursor-pointer"
+                className="px-4 py-1.5 rounded-lg bg-obsidian dark:bg-white text-white dark:text-obsidian text-xs font-semibold hover:opacity-90 transition-opacity cursor-pointer"
               >
-                Guardar preferencias
+                Guardar
               </button>
             </div>
           </div>

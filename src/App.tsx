@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useServerHealth } from './presentation/hooks/useServerHealth';
+import LandingScreen from './presentation/landing/LandingScreen';
 import Login from './presentation/screens/Login';
 import ForgotPasswordScreen from './presentation/screens/ForgotPasswordScreen';
 import Dashboard from './presentation/screens/Dashboard';
@@ -33,6 +34,9 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Landing publica principal */}
+        <Route path="/" element={<LandingScreen />} />
+
         <Route path="/login" element={<Login />} />
         <Route path="/recuperar-password" element={<ForgotPasswordScreen />} />
 
@@ -64,13 +68,11 @@ function App() {
             <Route path="/pasajeros" element={<PassengersScreen />} />
             <Route path="/pasajeros/:id" element={<PassengerDetailScreen />} />
             <Route path="/configuracion" element={<SettingsScreen />} />
-            
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
           </Route>
         </Route>
         
         {/* Catch all */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

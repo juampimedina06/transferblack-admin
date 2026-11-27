@@ -1,30 +1,33 @@
-import React, { useState } from 'react';
-import { ArrowUpRight, CheckCircle2, MessageCircle } from 'lucide-react';
+import React from 'react';
+import { ArrowUpRight, MessageCircle } from 'lucide-react';
 import corporateBackseatImg from '../../../assets/landing/corporate-backseat.jpg';
 import { WHATSAPP_LINES, buildWhatsAppUrl } from '../constants/landingData';
 import { RevealOnScroll, ShinyText } from './motion/ReactBitsPrimitives';
 
 const CORPORATE_CAPABILITIES = [
   {
-    title: 'Activación en 1 paso con PIN Corporativo',
-    desc: 'Cada colaborador ingresa el PIN de tu empresa una sola vez en su app y selecciona "Modo Empresa" al viajar.',
+    step: '01',
+    title: 'Activación única con PIN Corporativo',
+    desc: 'Cada colaborador carga el PIN de tu organización una sola vez en su app y queda vinculado automáticamente.',
   },
   {
-    title: 'Centros de Costo y Topes por Área',
-    desc: 'Definí límites por usuario o equipo con saldo prepago o cuenta corriente auditable en tiempo real.',
+    step: '02',
+    title: 'Viajá eligiendo "Modo Empresa"',
+    desc: 'Al pedir o reservar un traslado, se imputa directo al centro de costo asignado sin adelantar dinero.',
   },
   {
-    title: 'Traslados Recurrentes Programados',
-    desc: 'Rutas fijas diarias o semanales para turnos de personal y directivos con flota asignada.',
+    step: '03',
+    title: 'Traslados recurrentes y topes por área',
+    desc: 'Programá rutas fijas diarias o semanales para tu equipo y controlá límites de consumo en tiempo real.',
   },
   {
-    title: 'Estados de Cuenta sin Rendiciones en Papel',
-    desc: 'Detalle completo de cada traslado (pasajero, fecha, origen, destino, centro de costo e importe).',
+    step: '04',
+    title: 'Estados de cuenta auditables',
+    desc: 'Trazabilidad completa de cada viaje (pasajero, fecha, ruta, centro de costo e importe) sin tickets en papel.',
   },
 ] as const;
 
 export const CorporateSection: React.FC = () => {
-  const [activeStep, setActiveStep] = useState<1 | 2>(1);
   const corporateLine = WHATSAPP_LINES[1].number;
 
   return (
@@ -33,8 +36,8 @@ export const CorporateSection: React.FC = () => {
       className="relative bg-gray-100/70 dark:bg-[#0D0D11] border-y border-gray-200 dark:border-white/10 overflow-hidden transition-colors"
     >
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 items-stretch">
-        {/* Left Column: Full-Height Editorial Photography + Floating PIN Switcher */}
-        <div className="lg:col-span-6 relative min-h-[420px] lg:min-h-[680px] overflow-hidden bg-obsidian">
+        {/* Left Column: Clean Full-Bleed Editorial Photography (no boxed overlays) */}
+        <div className="lg:col-span-6 relative min-h-[380px] lg:min-h-[680px] overflow-hidden bg-obsidian">
           <img
             src={corporateBackseatImg}
             alt="Ejecutivo trabajando en el asiento trasero de un vehículo Transfer Black Empresas"
@@ -43,66 +46,23 @@ export const CorporateSection: React.FC = () => {
             height={900}
             className="absolute inset-0 w-full h-full object-cover object-center scale-[1.01] transition-transform duration-700 hover:scale-105"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-obsidian via-obsidian/45 to-obsidian/15" />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-transparent to-obsidian/15"
+          />
 
-          {/* Floating Interactive 2-Step PIN Experience over Photo */}
-          <div className="absolute bottom-6 left-6 right-6 sm:bottom-8 sm:left-8 sm:right-8 backdrop-blur-xl bg-obsidian/80 border border-white/15 rounded-2xl p-5 text-white shadow-2xl">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-              <span className="text-[10.5px] font-bold uppercase tracking-[0.2em] text-champagne-gold">
-                Experiencia del Colaborador
-              </span>
-              <div className="inline-flex rounded-full bg-white/10 p-0.5 text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setActiveStep(1)}
-                  className={`px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    activeStep === 1 ? 'bg-champagne-gold text-obsidian' : 'text-gray-300'
-                  }`}
-                >
-                  1. Ingresar PIN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveStep(2)}
-                  className={`px-3 py-1 rounded-full transition-colors cursor-pointer ${
-                    activeStep === 2 ? 'bg-champagne-gold text-obsidian' : 'text-gray-300'
-                  }`}
-                >
-                  2. Modo Empresa
-                </button>
-              </div>
-            </div>
-
-            {activeStep === 1 ? (
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold text-white">Vinculación única con PIN corporativo</p>
-                  <p className="text-xs text-gray-300 mt-1">
-                    Ingresá el código de tu organización una sola vez y queda guardado en tu cuenta.
-                  </p>
-                </div>
-                <span className="hidden sm:inline-flex items-center gap-1.5 font-mono text-xs font-bold px-3 py-1.5 rounded-lg bg-champagne-gold/15 text-champagne-gold border border-champagne-gold/40 shrink-0">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  PIN ACTIVO
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <p className="text-sm font-bold text-white">Viajá sin adelantar dinero</p>
-                  <p className="text-xs text-gray-300 mt-1">
-                    Al pedir o reservar tu traslado, elegís "Modo Empresa" y se imputa directo a tu centro de costo.
-                  </p>
-                </div>
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                  Cargo a empresa
-                </span>
-              </div>
-            )}
+          {/* Minimal Editorial Signature Caption */}
+          <div className="absolute bottom-7 left-7 right-7 border-l-2 border-champagne-gold pl-4 text-white">
+            <p className="text-[11px] font-bold uppercase tracking-[0.22em] text-champagne-gold">
+              Transfer Black Empresas
+            </p>
+            <p className="text-sm text-gray-200 mt-1 max-w-sm">
+              Traslados corporativos con trazabilidad completa y cero rendiciones manuales.
+            </p>
           </div>
         </div>
 
-        {/* Right Column: Open Editorial Copy & Hairline List */}
+        {/* Right Column: Open Editorial Flow */}
         <div className="lg:col-span-6 px-6 py-16 sm:px-12 lg:px-16 lg:py-24 flex flex-col justify-center">
           <RevealOnScroll className="space-y-6">
             <p className="text-xs font-bold uppercase tracking-[0.22em] text-champagne-gold">
@@ -114,22 +74,26 @@ export const CorporateSection: React.FC = () => {
             </h2>
 
             <p className="text-base text-gray-600 dark:text-gray-400 leading-relaxed">
-              Reemplazá tickets sueltos y reintegros manuales por una plataforma pensada para empresas de Córdoba.
+              Reemplazá tickets sueltos y reintegros manuales por una cuenta empresarial pensada para equipos de Córdoba.
             </p>
 
-            <ul className="divide-y divide-gray-200 dark:divide-white/10 pt-2">
+            <ol className="divide-y divide-gray-200 dark:divide-white/10 pt-2">
               {CORPORATE_CAPABILITIES.map((cap) => (
-                <li key={cap.title} className="py-4 first:pt-2 last:pb-2">
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-champagne-gold shrink-0" />
-                    {cap.title}
-                  </h3>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 pl-3.5 leading-relaxed">
-                    {cap.desc}
-                  </p>
+                <li key={cap.step} className="py-4 first:pt-2 last:pb-2 flex items-baseline gap-4">
+                  <span className="font-mono text-xs font-bold text-champagne-gold shrink-0">
+                    {cap.step}
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+                      {cap.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">
+                      {cap.desc}
+                    </p>
+                  </div>
                 </li>
               ))}
-            </ul>
+            </ol>
 
             <div className="pt-4 flex flex-wrap items-center gap-4">
               <a

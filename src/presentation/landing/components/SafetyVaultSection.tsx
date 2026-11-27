@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, ChevronRight, Clock, Radio, ShieldAlert } from 'lucide-react';
+import { ChevronRight, Clock, Radio, ShieldAlert } from 'lucide-react';
 import safetyChauffeurImg from '../../../assets/landing/safety-chauffeur.jpg';
 import { SAFETY_SEVEN_POINTS } from '../constants/landingData';
 import { RevealOnScroll, ShinyText } from './motion/ReactBitsPrimitives';
@@ -26,7 +26,7 @@ export const SafetyVaultSection: React.FC = () => {
             No delegamos la seguridad a un formulario automático. Auditamos cada documento y conocemos en persona a cada conductor en nuestra oficina de Córdoba.
           </p>
 
-          {/* Editorial Portrait with Subtle Overlay Badges */}
+          {/* Clean Editorial Portrait with Minimal Signature */}
           <div className="relative rounded-2xl overflow-hidden aspect-[4/3] bg-obsidian shadow-2xl">
             <img
               src={safetyChauffeurImg}
@@ -36,19 +36,17 @@ export const SafetyVaultSection: React.FC = () => {
               height={900}
               className="w-full h-full object-cover object-center"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-obsidian/90 via-obsidian/20 to-transparent" />
-            <div className="absolute bottom-4 left-4 right-4 flex flex-wrap items-center justify-between gap-2 text-white">
-              <div>
-                <p className="text-xs font-bold text-champagne-gold uppercase tracking-wider">
-                  Entrevista Presencial Obligatoria
-                </p>
-                <p className="text-xs text-gray-200 mt-0.5">
-                  Oficina Transfer Black · Córdoba Capital
-                </p>
-              </div>
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 backdrop-blur-md">
-                <CheckCircle2 className="w-3.5 h-3.5" /> 7/7 Verificado
-              </span>
+            <div
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-t from-obsidian/80 via-transparent to-transparent"
+            />
+            <div className="absolute bottom-5 left-5 right-5 border-l-2 border-champagne-gold pl-3.5 text-white">
+              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-champagne-gold">
+                Entrevista Presencial · Oficina Córdoba
+              </p>
+              <p className="text-xs text-gray-200 mt-0.5">
+                Validación personal y documental antes de habilitar cada unidad.
+              </p>
             </div>
           </div>
 
